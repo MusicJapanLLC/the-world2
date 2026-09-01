@@ -11,6 +11,17 @@ const executionTimers=new Map();
 const ENHANCEMENT_MODE=true;
 const CONTINUOUS_IMPROVEMENT_ENABLED=true;
 
+// Latency + cost tracking (meta-002)
+const MODEL_COSTS={claude:{input:3.0,output:15.0},gemini:{input:0.075,output:0.30},gpt:{input:2.50,output:10.0}};
+let _sessionInputTokens=0,_sessionOutputTokens=0;
+function updatePerfPanel(latencyMs,usage,model){
+  const el=document.getElementById('latencyDisplay');if(el)el.textContent=latencyMs>0?latencyMs+'ms':'—';
+  if(usage){_sessionInputTokens+=usage.promptTokens||0;_sessionOutputTokens+=usage.completionTokens||0}
+  const costs=MODEL_COSTS[model]||MODEL_COSTS.gpt;
+  const est=(_sessionInputTokens/1e6*costs.input)+(_sessionOutputTokens/1e6*costs.output);
+  const ce=document.getElementById('costDisplay');if(ce)ce.textContent='$'+est.toFixed(4);
+}
+
 function loadThreads(){try{return JSON.parse(localStorage.getItem(STORE)||'[]')}catch{return[]}}
 function saveThreads(){localStorage.setItem(STORE,JSON.stringify(threads))}
 function uid(){return crypto.randomUUID?crypto.randomUUID():`${Date.now()}-${Math.random()}`}
@@ -167,6 +178,7 @@ async function send(){
   let accumulated='';
   let lastUsage=null;
   let lastModel=model;
+  const _t0=Date.now();
   try{
     const reader=await streamChat({messages:t.messages,model,githubContext:githubContext||undefined});
     const decoder=new TextDecoder();
@@ -181,7 +193,7 @@ async function send(){
         try{
           const evt=JSON.parse(line.slice(5).trim());
           if(evt.chunk){accumulated+=evt.chunk;const el=document.getElementById(contentId);if(el){el.innerHTML=formatText(accumulated)+'<span class="cursor"></span>';scrollMessagesToBottom()}}
-          if(evt.done){lastUsage=evt.usage||null;lastModel=evt.model||modelName(model);log(`stream complete · ${lastModel}${lastUsage?` · ${(lastUsage.promptTokens||0)+(lastUsage.completionTokens||0)} tok`:''}`)}
+          if(evt.done){lastUsage=evt.usage||null;lastModel=evt.model||modelName(model);const lat=Date.now()-_t0;updatePerfPanel(lat,lastUsage,model);log(`stream complete · ${lastModel}${lastUsage?` · ${(lastUsage.promptTokens||0)+(lastUsage.completionTokens||0)} tok`:''} · ${lat}ms`)}
           if(evt.error){throw new Error(evt.error)}
         }catch(parseErr){if(!parseErr.message?.includes('JSON')&&!parseErr.message?.includes('Unexpected'))throw parseErr}
       }

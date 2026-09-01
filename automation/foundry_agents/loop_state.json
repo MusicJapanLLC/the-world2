@@ -1,0 +1,67 @@
+{
+  "schema": "foundry-loop-state/v1",
+  "mission": "Transform https://test-musicjapanllc.vercel.app/ into a Claude Code / Codex-level browser IDE",
+  "loop_interval_minutes": 5,
+  "started_at": "2026-09-01T00:00:00Z",
+  "cycle_count": 0,
+  "last_cycle": null,
+  "velocity": {
+    "targets_shipped_total": 5,
+    "targets_shipped_today": 0,
+    "broken_streaming_incidents": 0,
+    "dog_food_runs_today": 0
+  },
+  "current_focus": {
+    "agent": "senju",
+    "target_id": "perf-002",
+    "title": "Supabase thread persistence",
+    "started_at": null,
+    "eta_minutes": 25
+  },
+  "queue": [
+    {
+      "id": "perf-002",
+      "agent": "senju",
+      "priority": 80,
+      "title": "Supabase cross-device thread sync",
+      "status": "pending"
+    },
+    {
+      "id": "ux-002",
+      "agent": "X",
+      "priority": 75,
+      "title": "File diff viewer in tools pane",
+      "status": "pending"
+    },
+    {
+      "id": "ux-003",
+      "agent": "X",
+      "priority": 72,
+      "title": "Inline eval / live code preview",
+      "status": "pending"
+    },
+    {
+      "id": "meta-002",
+      "agent": "META",
+      "priority": 70,
+      "title": "Model latency + token cost panel",
+      "status": "pending"
+    },
+    {
+      "id": "meta-003",
+      "agent": "META",
+      "priority": 65,
+      "title": "Self-reporting loop (posts summary to app)",
+      "status": "pending"
+    },
+    {
+      "id": "ux-004",
+      "agent": "X",
+      "priority": 60,
+      "title": "Split pane: chat + editor + preview",
+      "status": "pending"
+    }
+  ],
+  "dog_food_log": [],
+  "dev_report_path": "automation/foundry_agents/dev_report.md"
+}

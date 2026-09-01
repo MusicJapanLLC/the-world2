@@ -1,0 +1,111 @@
+name: Foundry Autonomous Dev — SENJU / X / META
+
+on:
+  schedule:
+    # 10分ごと（GitHub Actions最小間隔: 5分）
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+    inputs:
+      agent:
+        description: "Which agent to run (senju/X/META/all)"
+        required: false
+        default: "all"
+        type: choice
+        options: [all, senju, X, META]
+      dry_run:
+        description: "Dry run (no PR creation)"
+        required: false
+        default: false
+        type: boolean
+      merge_only:
+        description: "Only merge already-verified PRs"
+        required: false
+        default: false
+        type: boolean
+  push:
+    branches: ["audit/reality-gate-v1"]
+    paths:
+      - ".github/workflows/foundry-autonomous-dev.yml"
+      - "automation/foundry_agents/**"
+      - "public/**"
+      - "api/**"
+
+concurrency:
+  group: foundry-autonomous-dev
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pull-requests: write
+  actions: read
+  copilot-requests: write
+
+jobs:
+  dev-cycle:
+    name: "Foundry Dev Cycle (${{ inputs.agent || 'all' }})"
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: "3.12"
+
+      - name: Setup Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: "22"
+
+      - name: Install Copilot CLI
+        run: npm install -g @github/copilot@1.0.80
+
+      - name: Snapshot guardrails (immutable during run)
+        run: |
+          cp automation/foundry_agents/agents.json /tmp/foundry-agents.json
+          cp automation/foundry_agents/dev_loop.py /tmp/foundry-dev-loop.py
+          chmod 400 /tmp/foundry-agents.json
+
+      - name: Phase 1 — Merge verified foundry PRs
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          python /tmp/foundry-dev-loop.py \
+            --repo-root . \
+            --merge-only \
+            2>&1 | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Phase 2 — Generate and apply best improvement
+        if: ${{ inputs.merge_only != 'true' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          COPILOT_GITHUB_TOKEN: ${{ github.token }}
+          BASE_REF: ${{ github.event.repository.default_branch || 'audit/reality-gate-v1' }}
+        run: |
+          EXTRA_ARGS=""
+          if [[ "${{ inputs.dry_run }}" == "true" ]]; then
+            EXTRA_ARGS="--dry-run"
+          fi
+          python /tmp/foundry-dev-loop.py \
+            --repo-root . \
+            --base "$BASE_REF" \
+            $EXTRA_ARGS \
+            2>&1 | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload dev report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: foundry-dev-report-${{ github.run_id }}
+          path: /tmp/foundry-dev-report.md
+          retention-days: 14

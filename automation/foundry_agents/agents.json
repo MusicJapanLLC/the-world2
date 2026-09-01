@@ -1,0 +1,45 @@
+{
+  "schema": "foundry-agent-registry/v1",
+  "target_app": "https://test-musicjapanllc.vercel.app/",
+  "target_repo_paths": ["public/", "api/"],
+  "priority": "P0",
+  "agents": [
+    {
+      "id": "senju",
+      "name": "SENJU",
+      "role": "engineering_rigor",
+      "mandate": "Apply the Senju self-improvement loop to the Vercel app. Focus on reliability, correctness, test coverage, and bounded improvements backed by evidence. Never weaken safety gates.",
+      "focus_areas": ["api_reliability", "error_handling", "test_coverage", "performance", "security_headers"],
+      "allowed_paths": ["public/", "api/"],
+      "forge_allowed": true,
+      "priority_weight": 1.0
+    },
+    {
+      "id": "X",
+      "name": "X",
+      "role": "experimental_integration",
+      "mandate": "Identify and implement high-value experimental features and external integrations for the AI Foundry IDE. Focus on new capabilities: multi-model support (Claude, Gemini), GitHub repo read/write, live eval dashboards, and rapid prototyping paths.",
+      "focus_areas": ["multi_model_support", "github_integration", "new_features", "ux_improvements", "api_extensions"],
+      "allowed_paths": ["public/", "api/"],
+      "forge_allowed": true,
+      "priority_weight": 0.9
+    },
+    {
+      "id": "META",
+      "name": "META",
+      "role": "meta_architecture",
+      "mandate": "Improve the meta-level architecture of the AI Foundry IDE. Focus on system coherence, cross-agent coordination, deployment pipeline, observability, and making the app itself more self-improving. Think at the system level.",
+      "focus_areas": ["system_architecture", "deployment_pipeline", "observability", "cross_agent_coordination", "self_improvement_hooks"],
+      "allowed_paths": ["public/", "api/", "vercel.json", ".github/workflows/"],
+      "forge_allowed": true,
+      "priority_weight": 0.8
+    }
+  ],
+  "tournament_rule": "Each agent proposes one bounded improvement per cycle. The highest-priority valid proposal (passing local lint and smoke test) is promoted. Ties broken by priority_weight.",
+  "merge_policy": {
+    "auto_merge": true,
+    "merge_method": "squash",
+    "require_passing_checks": true,
+    "branch_prefix": "foundry/auto-dev-"
+  }
+}

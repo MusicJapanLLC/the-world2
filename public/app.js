@@ -7,6 +7,8 @@ let busy=false;
 let githubContext='';
 let currentModel='gpt';
 const executionTimers=new Map();
+const ENHANCEMENT_MODE=true;
+const CONTINUOUS_IMPROVEMENT_ENABLED=true;
 
 function loadThreads(){try{return JSON.parse(localStorage.getItem(STORE)||'[]')}catch{return[]}}
 function saveThreads(){localStorage.setItem(STORE,JSON.stringify(threads))}

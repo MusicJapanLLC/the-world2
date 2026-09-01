@@ -30,9 +30,10 @@
     </main>
 
     <aside class="tools-pane">
-      <header class="tools-head"><div class="eyebrow">EXECUTION</div><h2>DEV TOOLS</h2></header>
+      <header class="tools-head"><div class="eyebrow">EXECUTION & CONTINUOUS ENHANCEMENT</div><h2>DEV TOOLS</h2></header>
       <div class="pipeline">
         <button id="runPipeline" class="primary">RUN BUILD PIPELINE</button>
+        <button id="autoImproveBtn" class="secondary">AUTO ENHANCE (5m)</button>
         <button id="clearLog" class="secondary">CLEAR LOG</button>
       </div>
       <div class="tool-status">
@@ -40,6 +41,10 @@
         <div><span>BUILD</span><b id="buildState">IDLE</b></div>
         <div><span>TEST</span><b id="testState">IDLE</b></div>
         <div><span>PUBLISH</span><b id="publishState">IDLE</b></div>
+      </div>
+      <div class="tool-status" style="grid-template-columns:1fr 1fr;border-top:1px solid #172019">
+        <div><span>ENHANCE</span><b id="enhanceState">READY</b></div>
+        <div><span>MERGE</span><b id="mergeState">IDLE</b></div>
       </div>
       <div class="terminal-head"><span>TERMINAL</span><span id="clock"></span></div>
       <pre id="terminal" class="terminal"></pre>

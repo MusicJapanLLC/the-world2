@@ -55,9 +55,11 @@
       <header class="tools-head"><div class="eyebrow">EXECUTION & CONTINUOUS ENHANCEMENT</div><h2>DEV TOOLS</h2></header>
       <div class="pipeline">
         <button id="runPipeline" class="primary">RUN BUILD PIPELINE</button>
+        <button id="selfForgeBtn" class="primary" style="background:#1a3a25;border-color:#65ff9b;color:#65ff9b">⚙ SELF-FORGE</button>
         <button id="autoImproveBtn" class="secondary">AUTO ENHANCE (5m)</button>
         <button id="clearLog" class="secondary">CLEAR LOG</button>
       </div>
+      <div id="forgeStatus" style="display:none;padding:8px 14px;font-size:9px;color:#65ff9b;letter-spacing:.08em;border-bottom:1px solid #172019;background:#020403"></div>
       <div class="tool-status">
         <div><span>MODEL</span><b id="modelDisplay">openai/gpt-5.6-sol</b></div>
         <div><span>BUILD</span><b id="buildState">IDLE</b></div>

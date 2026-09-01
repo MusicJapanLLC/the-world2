@@ -242,6 +242,68 @@ $('#modelPicker').addEventListener('change',e=>{
   log(`model switched → ${name}`);
 });
 
+// ── SELF-FORGE: アプリが自分自身のコードを改良する ────────────────────────────
+let forgeTargets=[];
+let forgeAutoInterval=null;
+
+async function loadForgeTargets(){
+  try{const r=await postJson('/api/forge',{action:'list'});forgeTargets=r.targets||[]}catch(e){log(`forge target load failed: ${e.message}`,'warn')}
+}
+
+function forgeStatus(msg,color='#65ff9b'){
+  const el=$('#forgeStatus');if(!el)return;
+  el.style.display='block';el.style.color=color;el.textContent=msg;
+}
+
+async function runSelfForge(targetId){
+  const tok=githubToken||$('#githubToken').value.trim();
+  if(!tok){
+    forgeStatus('⚠ SELF-FORGEにはGitHub PATが必要です。上バーのPATを入力してください。','#ff8e8e');
+    log('SELF-FORGE: GitHub PAT required','err');
+    return;
+  }
+  const btn=$('#selfForgeBtn');btn.disabled=true;btn.textContent='⚙ FORGING…';
+  forgeStatus('⚙ AI FOUNDRY — 自己改良コードを生成中…');
+  log('SELF-FORGE: generating improvement via AI…');
+  try{
+    const payload={action:'forge',token:tok,model:modelName(currentModel)};
+    if(targetId)payload.target_id=targetId;
+    const r=await postJson('/api/forge',payload);
+    forgeStatus(`✓ FORGED: ${r.title} → commit ${r.commit} — Vercel deploying…`);
+    log(`SELF-FORGE SUCCESS: ${r.target} · ${r.title}`,'ok');
+    log(`commit: ${r.commit} → ${r.url}`,'ok');
+    log(`deploy: ${r.deploy_url} (Vercel自動デプロイ中)`,'ok');
+    // Show in chat as system message
+    const t=active()||newThread();
+    t.messages.push({
+      role:'assistant',
+      content:`⚙ SELF-FORGE 完了\n\n**${r.title}**\n\ncommit: \`${r.commit}\`\nファイル: \`${r.file}\`\n\n生成コードプレビュー:\n\`\`\`javascript\n${r.code_preview}\n\`\`\`\n\nVercel自動デプロイ中 → ${r.deploy_url}\n\nNEXT: 次の改良ターゲットを選択して再度 SELF-FORGE を実行`
+    });
+    t.updatedAt=Date.now();saveThreads();renderMessages(true);
+  }catch(e){
+    forgeStatus(`✗ FORGE FAILED: ${e.message}`,'#ff8e8e');
+    log(`SELF-FORGE failed: ${e.message}`,'err');
+  }finally{
+    btn.disabled=false;btn.textContent='⚙ SELF-FORGE';
+  }
+}
+
+$('#selfForgeBtn').addEventListener('click',()=>runSelfForge());
+
+// Auto-forge every 5 minutes when enabled
+$('#autoImproveBtn').addEventListener('click',()=>{
+  if(forgeAutoInterval){
+    clearInterval(forgeAutoInterval);forgeAutoInterval=null;
+    $('#autoImproveBtn').textContent='AUTO ENHANCE (5m)';
+    log('auto-forge disabled');
+    return;
+  }
+  forgeAutoInterval=setInterval(()=>runSelfForge(),5*60*1000);
+  $('#autoImproveBtn').textContent='STOP AUTO (running)';
+  log('auto-forge enabled — runs every 5 minutes');
+  runSelfForge(); // immediate first run
+});
+
 $('#newThread').addEventListener('click',newThread);
 $('#sendBtn').addEventListener('click',send);
 $('#composer').addEventListener('input',resizeComposer);
@@ -254,4 +316,9 @@ $('#githubUrl').addEventListener('keydown',e=>{if(e.key==='Enter')loadGithubRepo
 
 setInterval(()=>{$('#clock').textContent=stamp()},1000);
 if(!activeId)newThread();else{renderAll(true);threads.forEach(resumeExecution)}
-log('AI FOUNDRY IDE boot — Claude Code level');log('streaming SSE: active · copy-code: active · /pr: active');log('GitHub integration: read_repo / create_pr');log('models: GPT-5.6-SOL · Claude Sonnet · Gemini 2.0');
+loadForgeTargets();
+log('AI FOUNDRY IDE boot — Claude Code level');
+log('SELF-FORGE: active — ⚙ボタンでAIがアプリ自身を改良');
+log('streaming SSE: active · copy-code: active · /pr: active');
+log('GitHub integration: read_repo / create_pr / self-forge');
+log('models: GPT-5.6-SOL · Claude Sonnet · Gemini 2.0');

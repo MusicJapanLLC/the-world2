@@ -1,16 +1,30 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-08-29T19:18:00+09:00",
+  "updated_at": "2026-09-01T20:30:00+09:00",
   "purpose": "Single machine-readable registry for CEO reporting across all meaningful GitHub systems. Support folders, tests and shared libraries are not counted as separate systems.",
-  "system_count": 12,
+  "system_count": 13,
   "systems": [
+    {
+      "id": "ai-foundry-ide",
+      "name": "AI Foundry IDE (Vercel App)",
+      "state": "BUILDING",
+      "priority": "P0",
+      "category": "product",
+      "url": "https://test-musicjapanllc.vercel.app/",
+      "paths": ["public/", "api/", "vercel.json"],
+      "purpose": "AI開発専用IDE。SENJU・X・METAエージェントが自律的に機能強化し、GitHubネイティブPRサイクルで自動マージする。",
+      "autonomous_agents": ["senju", "X", "META"],
+      "autonomous_workflow": ".github/workflows/foundry-autonomous-dev.yml",
+      "evidence": ["automation/foundry_agents/agents.json", "automation/foundry_agents/dev_loop.py"],
+      "report_when": ["deploy", "agent_improvement_merged", "new_feature", "security_regression"]
+    },
     {
       "id": "mj-sales-automation",
       "name": "Music Japan Sales Automation",
       "state": "BUILDING",
       "category": "revenue",
       "paths": ["README.md", "src/", "config/", "templates/", "tests/"],
-      "purpose": "Google Sheets/Gmailを使った営業メール配信と送信ログ管理",
+      "purpose": "Google Sheets/Gmailを使った営楮メール配信と送信ログ管理",
       "evidence": ["README.md", "tests/"],
       "report_when": ["verified send", "test regression", "revenue workflow change", "blocker change"]
     },
@@ -20,7 +34,7 @@
       "state": "VERIFIED",
       "category": "sales_product",
       "paths": ["baton/"],
-      "purpose": "6つのBtoBサービス紹介、アンケート回収、WebGLデモを1つに束ねる営業ハブ",
+      "purpose": "6つのBtoBサービス紹介、アンケート回収、WebGLデモを1つに束ねる営楮ハブ",
       "evidence": ["baton/README.md", "PR #3", "PR #4", "PR #5", "Vercel/AppDeploy status when available"],
       "report_when": ["deploy", "form submission health", "conversion change", "security regression", "new service added"]
     },
@@ -36,11 +50,11 @@
     },
     {
       "id": "revenue-recovery",
-      "name": "Revenue Recovery AI / 営業司令室30",
+      "name": "Revenue Recovery AI / 営楮司令30",
       "state": "VERIFIED",
       "category": "revenue_product",
       "paths": ["sales-command-30/"],
-      "purpose": "追客漏れ・営業イベント・KPIをまとめて営業機会を前進させる月額商品",
+      "purpose": "追客漏れ・営楮イベント・KPIをまとめて営楮機会を前進させる月額商品",
       "evidence": ["sales-command-30/README.md", "sales-command-30/PRODUCT.md", "PR #30", "PR #40", "AppDeploy 30-nnktft"],
       "report_when": ["deploy", "verified user/revenue event", "security improvement", "FORGE change", "product milestone"]
     },
@@ -70,7 +84,7 @@
       "state": "BUILDING",
       "category": "engineering_ops",
       "paths": ["tomoki-agents/", ".github/agents/", ".github/workflows/tomoki-skeptic.yml", ".github/workflows/tomoki-hound.yml", ".github/workflows/tomoki-forge.yml"],
-      "purpose": "SKEPTICが疑い、HOUNDが再発を追い、FORGEが安全な小改善を実装する常時GitHub作業班",
+      "purpose": "SKEPTICが疑い、HOUNDが再発を追い、FORGEが安全な小改善を実装する常時GitHub作楮班",
       "evidence": ["PR #37", "TOMOKI workflow runs", "FORGE PR/merge results"],
       "report_when": ["material finding", "recurrence", "verified FORGE merge", "agent runtime failure"]
     },

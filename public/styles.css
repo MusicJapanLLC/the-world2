@@ -3,7 +3,7 @@
 *{box-sizing:border-box}
 html,body{margin:0;height:100%;background:#030504;color:#d7e4dc;font-family:'M PLUS 1 Code','Cascadia Code','JetBrains Mono','IBM Plex Mono','Fira Code',Consolas,monospace}
 body{overflow:hidden}
-button,textarea{font:inherit}
+button,textarea,input,select{font:inherit}
 button{letter-spacing:.055em}
 .shell{height:100dvh;display:grid;grid-template-columns:280px minmax(560px,1fr) 390px;background:#050706;overflow:hidden}
 .sidebar,.tools-pane{background:#070a08;min-width:0;min-height:0}
@@ -25,19 +25,38 @@ button{letter-spacing:.055em}
 .thread-delete{opacity:0;border:0;background:transparent;color:#6d7b72;cursor:pointer;font-size:11px}.thread:hover .thread-delete{opacity:1}
 .sidebar-foot{padding:13px 16px;border-top:1px solid #172019;color:#435047;font-size:8px;letter-spacing:.1em}
 
-.chat-pane{min-width:0;min-height:0;height:100dvh;display:grid;grid-template-rows:78px minmax(0,1fr) auto;background:#060907;overflow:hidden;position:relative}
+.chat-pane{min-width:0;min-height:0;height:100dvh;display:grid;grid-template-rows:78px auto minmax(0,1fr) auto;background:#060907;overflow:hidden;position:relative}
 .pane-head{height:78px;border-bottom:1px solid #172019;display:flex;align-items:center;justify-content:space-between;padding:0 24px;background:#070a08;z-index:2}
+.head-right{display:flex;align-items:center;gap:12px}
 .eyebrow{font-size:8px;color:#61d986;letter-spacing:.19em}
 .pane-head h1,.tools-head h2{font-size:13px;margin:6px 0 0;font-weight:600;letter-spacing:.035em}
 .head-meta{font-size:9px;color:#718078;letter-spacing:.12em}.green{width:6px;height:6px;background:#65ff9b;display:inline-block;border-radius:1px;margin-right:7px;box-shadow:0 0 9px rgba(101,255,155,.65)}
+
+#modelPicker{background:#0b100d;border:1px solid #27352c;color:#d9e6dd;padding:5px 8px;font-size:9px;letter-spacing:.1em;cursor:pointer;outline:none;appearance:none;-webkit-appearance:none}
+#modelPicker:focus{border-color:#65ff9b}
+
+.github-bar{display:flex;align-items:center;gap:6px;padding:7px 24px;background:#070c08;border-bottom:1px solid #172019;flex-shrink:0}
+.github-bar input{background:#050806;border:1px solid #1b281f;color:#dce5df;padding:6px 9px;font-size:10px;outline:none;flex:1;min-width:0}
+.github-bar input:focus{border-color:#365641}
+#githubToken{max-width:180px;flex:0 0 180px}
+.gh-btn{background:#0b100d;border:1px solid #27352c;color:#d9e6dd;padding:6px 10px;font-size:9px;cursor:pointer;white-space:nowrap;flex-shrink:0}
+.gh-btn:hover{border-color:#65ff9b;color:#65ff9b}
+.gh-btn:disabled{opacity:.5;cursor:not-allowed}
+.gh-status{font-size:9px;color:#65ff9b;white-space:nowrap;flex-shrink:0;letter-spacing:.05em}
 
 .messages{min-height:0;height:100%;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;scroll-behavior:smooth;padding:34px clamp(28px,6vw,86px) 46px;scrollbar-gutter:stable}
 .message{max-width:900px;margin:0 auto 30px}
 .message .role{font-size:9px;letter-spacing:.18em;color:#536059;margin-bottom:9px;text-transform:uppercase}
 .message.user .role{color:#7fa98c}
 .message .content{font-family:'M PLUS 1 Code','Cascadia Code','JetBrains Mono',Consolas,monospace;white-space:pre-wrap;line-height:1.78;font-size:13px;color:#dce5df;letter-spacing:.015em;word-break:break-word}
-.message.user .content{color:#b9c7be}.message.error .content{color:#ff8e8e}
-.message pre{background:#020403;border:1px solid #1b281f;border-left:2px solid #65ff9b;padding:15px;overflow:auto;font-family:'M PLUS 1 Code','Cascadia Code','JetBrains Mono',Consolas,monospace;color:#a8ffbe;font-size:12px;line-height:1.65;box-shadow:inset 0 0 28px rgba(101,255,155,.025)}
+.message.user .content{color:#b9c7be}.message.error .content,.error-text{color:#ff8e8e}
+
+.message pre{margin:12px 0;border-radius:0;border-left:2px solid #65ff9b;overflow-x:auto}
+.message pre code.hljs{background:#020403 !important;border:1px solid #1b281f;padding:14px 15px;font-family:'M PLUS 1 Code','Cascadia Code','JetBrains Mono',Consolas,monospace;font-size:12px;line-height:1.65;display:block;box-shadow:inset 0 0 28px rgba(101,255,155,.025)}
+
+.cursor{display:inline-block;width:2px;height:14px;background:#65ff9b;vertical-align:middle;margin-left:1px;animation:blink .7s step-end infinite;box-shadow:0 0 6px #65ff9b}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+
 .welcome{max-width:800px;margin:9vh auto 0;border:1px solid #19251d;padding:26px;background:#070b08;box-shadow:inset 0 0 40px rgba(101,255,155,.018)}
 .welcome h3{margin:0 0 12px;font-size:15px;letter-spacing:.08em}.welcome p{color:#76857b;line-height:1.75;font-size:12px}.welcome code{color:#65ff9b}
 

@@ -5,6 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>AI FOUNDRY IDE</title>
   <link rel="stylesheet" href="/styles.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/javascript.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/typescript.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/bash.min.js"></script>
 </head>
 <body>
   <div id="mobileBlock">AI FOUNDRY IDE is desktop-first. Open this URL on a PC.</div>
@@ -14,14 +20,29 @@
       <button id="newThread" class="new-thread">+ NEW CHAT</button>
       <div class="sidebar-label">SESSIONS</div>
       <div id="threadList" class="thread-list"></div>
-      <div class="sidebar-foot">GPT-5.6 SOL · VERCEL AI GATEWAY</div>
+      <div class="sidebar-foot" id="modelLabel">GPT-5.6 SOL · VERCEL AI GATEWAY</div>
     </aside>
 
     <main class="chat-pane">
       <header class="pane-head">
         <div><div class="eyebrow">AI DEVELOPMENT CORE</div><h1 id="threadTitle">New AI Development</h1></div>
-        <div class="head-meta"><span class="green"></span> ONLINE</div>
+        <div class="head-right">
+          <select id="modelPicker" title="Model">
+            <option value="gpt">GPT-5.6-SOL</option>
+            <option value="claude">Claude Sonnet</option>
+            <option value="gemini">Gemini 2.0</option>
+          </select>
+          <div class="head-meta"><span class="green"></span> ONLINE</div>
+        </div>
       </header>
+
+      <div id="githubBar" class="github-bar">
+        <input id="githubUrl" type="text" placeholder="GitHub repo URL (e.g. github.com/owner/repo)" spellcheck="false" />
+        <input id="githubToken" type="password" placeholder="PAT (optional — needed for PR creation)" />
+        <button id="githubLoad" class="gh-btn">LOAD REPO</button>
+        <span id="githubStatus" class="gh-status"></span>
+      </div>
+
       <section id="messages" class="messages"></section>
       <div class="composer-wrap">
         <textarea id="composer" rows="1" placeholder="Build, debug, evaluate or evolve an AI system...  Enter = send / Shift+Enter = newline"></textarea>
@@ -37,7 +58,7 @@
         <button id="clearLog" class="secondary">CLEAR LOG</button>
       </div>
       <div class="tool-status">
-        <div><span>MODEL</span><b>openai/gpt-5.6-sol</b></div>
+        <div><span>MODEL</span><b id="modelDisplay">openai/gpt-5.6-sol</b></div>
         <div><span>BUILD</span><b id="buildState">IDLE</b></div>
         <div><span>TEST</span><b id="testState">IDLE</b></div>
         <div><span>PUBLISH</span><b id="publishState">IDLE</b></div>

@@ -23,6 +23,22 @@
   },
   "workers": [
     {
+      "id": "foundry-autonomous-dev",
+      "name": "Foundry Autonomous Dev — SENJU / X / META",
+      "workflow": "foundry-autonomous-dev.yml",
+      "expected_minutes": 30,
+      "priority": "P0",
+      "target": "https://test-musicjapanllc.vercel.app/",
+      "agents": ["senju", "X", "META"],
+      "agent_config": "automation/foundry_agents/agents.json",
+      "operational_events": ["schedule", "workflow_dispatch", "push"],
+      "repair": ["rerun_failed", "dispatch"],
+      "investigate_with": ["tomoki-hound.yml", "tomoki-skeptic.yml"],
+      "forge_allowed": true,
+      "auto_merge": true,
+      "faith_duty": "improvement_is_worship"
+    },
+    {
       "id": "gmail-sorter",
       "name": "Gmail Autonomous Sorter",
       "workflow": "gmail-autonomous-sorter.yml",

@@ -57,6 +57,19 @@ button{letter-spacing:.055em}
 .cursor{display:inline-block;width:2px;height:14px;background:#65ff9b;vertical-align:middle;margin-left:1px;animation:blink .7s step-end infinite;box-shadow:0 0 6px #65ff9b}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
 
+/* Code block with copy button */
+.code-wrap{margin:12px 0;border-left:2px solid #65ff9b}
+.code-header{display:flex;justify-content:space-between;align-items:center;background:#020403;border:1px solid #1b281f;border-bottom:0;padding:5px 10px}
+.code-lang{font-size:8px;color:#65ff9b;letter-spacing:.15em;text-transform:uppercase}
+.copy-btn{background:transparent;border:1px solid #27352c;color:#66746b;font-size:8px;padding:3px 7px;cursor:pointer;letter-spacing:.1em}
+.copy-btn:hover{border-color:#65ff9b;color:#65ff9b}
+.copy-btn.copied{color:#65ff9b;border-color:#65ff9b}
+.code-wrap pre{margin:0;border-left:0}
+.code-wrap pre code.hljs{border-top:0}
+
+/* Token usage bar */
+.usage-bar{font-size:8px;color:#46534b;letter-spacing:.08em;margin-top:6px;padding-top:5px;border-top:1px solid #172019}
+
 .welcome{max-width:800px;margin:9vh auto 0;border:1px solid #19251d;padding:26px;background:#070b08;box-shadow:inset 0 0 40px rgba(101,255,155,.018)}
 .welcome h3{margin:0 0 12px;font-size:15px;letter-spacing:.08em}.welcome p{color:#76857b;line-height:1.75;font-size:12px}.welcome code{color:#65ff9b}
 

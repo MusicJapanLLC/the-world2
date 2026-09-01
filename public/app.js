@@ -5,6 +5,7 @@ let threads=loadThreads();
 let activeId=threads[0]?.id||null;
 let busy=false;
 let githubContext='';
+let githubToken='';
 let currentModel='gpt';
 const executionTimers=new Map();
 const ENHANCEMENT_MODE=true;
@@ -19,23 +20,34 @@ function escapeHtml(v){return String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':
 
 function formatText(text){
   const parts=String(text).split(/(```[\s\S]*?```)/g);
-  return parts.map((p,i)=>{
+  return parts.map((p)=>{
     if(p.startsWith('```')){
       const nl=p.indexOf('\n');
       const lang=nl>3?p.slice(3,nl).trim():'';
       const code=nl>0?p.slice(nl+1,-3):p.slice(3,-3);
       const escaped=escapeHtml(code);
+      const copyId='copy-'+uid();
+      let highlighted=escaped;
       try{
         if(lang&&window.hljs&&window.hljs.getLanguage(lang)){
-          const highlighted=window.hljs.highlight(code,{language:lang,ignoreIllegals:true}).value;
-          return `<pre><code class="hljs language-${escapeHtml(lang)}">${highlighted}</code></pre>`;
+          highlighted=window.hljs.highlight(code,{language:lang,ignoreIllegals:true}).value;
         }
       }catch{}
-      return `<pre><code class="hljs">${escaped}</code></pre>`;
+      return `<div class="code-wrap"><div class="code-header"><span class="code-lang">${escapeHtml(lang)||'code'}</span><button class="copy-btn" data-id="${copyId}" onclick="copyCode(this)">COPY</button></div><pre><code id="${copyId}" class="hljs${lang?' language-'+escapeHtml(lang):''}">${highlighted}</code></pre></div>`;
     }
     return escapeHtml(p).replace(/\n/g,'<br>');
   }).join('');
 }
+
+window.copyCode=function(btn){
+  const id=btn.dataset.id;
+  const el=document.getElementById(id);
+  if(!el)return;
+  navigator.clipboard.writeText(el.innerText||el.textContent||'').then(()=>{
+    btn.textContent='COPIED';btn.classList.add('copied');
+    setTimeout(()=>{btn.textContent='COPY';btn.classList.remove('copied')},1800);
+  }).catch(()=>{btn.textContent='ERR'});
+};
 
 function newThread(){const t={id:uid(),title:'New AI Development',createdAt:Date.now(),updatedAt:Date.now(),messages:[]};threads.unshift(t);activeId=t.id;saveThreads();renderAll(true);return t}
 function log(line,type='ok'){const el=$('#terminal');const tag=type==='err'?'ERR':type==='warn'?'WRN':'RUN';el.textContent+=`[${stamp()}] ${tag}  ${line}\n`;el.scrollTop=el.scrollHeight}
@@ -73,8 +85,8 @@ function renderThreads(){
 
 function renderMessages(follow=false){
   const t=active();$('#threadTitle').textContent=t?.title||'New AI Development';const box=$('#messages');
-  if(!t||!t.messages.length){box.innerHTML='<div class="welcome"><h3>AI FOUNDRY CORE — Claude Code Level</h3><p>GitHub URLを上のバーに貼り付けてリポジトリを読み込み、リアルタイムストリーミングで実装を会話してください。モデルはヘッダーで切り替え可能。右の <code>RUN BUILD PIPELINE</code> でGitHub Actions→実ファイル生成→Smoke Test→Vercel Deploy→本番HTTP検証まで進めます。</p></div>';if(follow)scrollMessagesToBottom();return}
-  box.innerHTML=t.messages.map(m=>`<article class="message ${m.role} ${m.error?'error':''}"><div class="role">${m.role==='user'?'YOU':'FOUNDRY'}</div><div class="content">${formatText(m.content)}</div></article>`).join('');
+  if(!t||!t.messages.length){box.innerHTML='<div class="welcome"><h3>AI FOUNDRY CORE — Claude Code Level</h3><p>GitHub URLを上のバーに貼り付けてリポジトリを読み込み、リアルタイムストリーミングで実装を会話してください。<br><code>/pr owner/repo branch "タイトル"</code> でPR作成 · モデルはヘッダーで切り替え可能。</p></div>';if(follow)scrollMessagesToBottom();return}
+  box.innerHTML=t.messages.map(m=>`<article class="message ${m.role} ${m.error?'error':''}"><div class="role">${m.role==='user'?'YOU':'FOUNDRY'}</div><div class="content">${formatText(m.content)}</div>${m.usage?`<div class="usage-bar">↑${m.usage.promptTokens||0} ↓${m.usage.completionTokens||0} tok · ${m.model||''}</div>`:''}</article>`).join('');
   if(follow)scrollMessagesToBottom();
 }
 function renderAll(follow=false){renderThreads();renderMessages(follow);renderExecution(active())}
@@ -130,12 +142,31 @@ function appendStreamingBubble(){
   return {id,contentId:`${id}-c`};
 }
 
+async function handlePrCommand(text){
+  const m=text.match(/^\/pr\s+([\w.-]+\/[\w.-]+)\s+(\S+)\s+"([^"]+)"/);
+  if(!m){log('/pr フォーマット: /pr owner/repo branch "タイトル"','warn');return}
+  const [,repoSlug,head,title]=m;
+  const tok=githubToken||$('#githubToken').value.trim();
+  if(!tok){log('PATを上のバーに入力してください','err');return}
+  log(`PR作成中: ${repoSlug} → ${head}`);
+  try{
+    const r=await postJson('/api/github',{action:'create_pr',url:`https://github.com/${repoSlug}`,token:tok,title,head,base:'main'});
+    log(`PR作成完了: ${r.url}`,'ok');
+    const t=active()||newThread();
+    t.messages.push({role:'assistant',content:`PR作成完了 ✓\n\nURL: ${r.url}\nNumber: #${r.number}\nTitle: ${r.title}`});
+    t.updatedAt=Date.now();saveThreads();renderMessages(true);
+  }catch(e){log(`PR作成失敗: ${e.message}`,'err')}
+}
+
 async function send(){
   if(busy)return;const c=$('#composer');const text=c.value.trim();if(!text)return;
+  if(text.startsWith('/pr ')){c.value='';resizeComposer();await handlePrCommand(text);return}
   const t=active()||newThread();t.messages.push({role:'user',content:text});t.updatedAt=Date.now();saveThreads();c.value='';resizeComposer();renderMessages(true);busy=true;$('#sendBtn').disabled=true;log('chat dispatch → streaming');titleThread(t,text);
   const model=currentModel;
   const {contentId}=appendStreamingBubble();
   let accumulated='';
+  let lastUsage=null;
+  let lastModel=model;
   try{
     const reader=await streamChat({messages:t.messages,model,githubContext:githubContext||undefined});
     const decoder=new TextDecoder();
@@ -150,13 +181,14 @@ async function send(){
         try{
           const evt=JSON.parse(line.slice(5).trim());
           if(evt.chunk){accumulated+=evt.chunk;const el=document.getElementById(contentId);if(el){el.innerHTML=formatText(accumulated)+'<span class="cursor"></span>';scrollMessagesToBottom()}}
-          if(evt.done){const mInfo=evt.model||modelName(model);log(`stream complete · ${mInfo}`)}
+          if(evt.done){lastUsage=evt.usage||null;lastModel=evt.model||modelName(model);log(`stream complete · ${lastModel}${lastUsage?` · ${(lastUsage.promptTokens||0)+(lastUsage.completionTokens||0)} tok`:''}`)}
           if(evt.error){throw new Error(evt.error)}
-        }catch(parseErr){if(parseErr.message!=='JSON Parse error'&&!parseErr.message.includes('Unexpected'))throw parseErr}
+        }catch(parseErr){if(!parseErr.message?.includes('JSON')&&!parseErr.message?.includes('Unexpected'))throw parseErr}
       }
     }
     const el=document.getElementById(contentId);if(el){el.innerHTML=formatText(accumulated||'(empty response)')}
-    t.messages.push({role:'assistant',content:accumulated||'(empty response)'});t.updatedAt=Date.now();saveThreads();renderThreads();
+    t.messages.push({role:'assistant',content:accumulated||'(empty response)',usage:lastUsage,model:lastModel});t.updatedAt=Date.now();saveThreads();renderThreads();
+    renderMessages(false);scrollMessagesToBottom();
   }catch(e){
     const el=document.getElementById(contentId);if(el)el.innerHTML=`<span class="error-text">STREAM ERROR: ${escapeHtml(e.message)}</span>`;
     t.messages.push({role:'assistant',content:`RUNTIME ERROR: ${e.message}`,error:true});t.updatedAt=Date.now();saveThreads();renderThreads();
@@ -176,7 +208,8 @@ async function pipeline(){
 async function loadGithubRepo(){
   const url=$('#githubUrl').value.trim();
   if(!url){log('GitHub URL を入力してください','warn');return}
-  const token=$('#githubToken').value.trim()||undefined;
+  githubToken=$('#githubToken').value.trim();
+  const token=githubToken||undefined;
   $('#githubStatus').textContent='Loading...';$('#githubLoad').disabled=true;
   log(`GitHub repo 読み込み中: ${url}`);
   try{
@@ -209,4 +242,4 @@ $('#githubUrl').addEventListener('keydown',e=>{if(e.key==='Enter')loadGithubRepo
 
 setInterval(()=>{$('#clock').textContent=stamp()},1000);
 if(!activeId)newThread();else{renderAll(true);threads.forEach(resumeExecution)}
-log('AI FOUNDRY IDE boot — Claude Code level');log('streaming SSE: active');log('GitHub integration: read_repo / create_pr');log('models: GPT-5.6-SOL · Claude Sonnet · Gemini 2.0');
+log('AI FOUNDRY IDE boot — Claude Code level');log('streaming SSE: active · copy-code: active · /pr: active');log('GitHub integration: read_repo / create_pr');log('models: GPT-5.6-SOL · Claude Sonnet · Gemini 2.0');

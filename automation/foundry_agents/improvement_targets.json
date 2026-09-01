@@ -1,7 +1,7 @@
 {
   "schema": "foundry-improvement-targets/v1",
   "app_url": "https://test-musicjapanllc.vercel.app/",
-  "loop_interval_minutes": 10,
+  "loop_interval_minutes": 5,
   "loop_until": "all_targets_verified",
   "targets": [
     {
@@ -10,10 +10,10 @@
       "priority": 100,
       "category": "performance",
       "agent": "senju",
-      "description": "api/foundry.js のストリーミングレスポンス対応。現状はgenerateText(非ストリーミング)のため体感遅延が大きい。streamText に切り替えてSSEで逐次返却する。",
+      "description": "api/foundry.js のストリーミングレスポンス対応。streamText に切り替えてSSEで逐次返却する。",
       "files": ["api/foundry.js"],
       "verification": "curl -N https://test-musicjapanllc.vercel.app/api/foundry で chunked response確認",
-      "status": "pending"
+      "status": "implemented"
     },
     {
       "id": "github-001",
@@ -24,7 +24,7 @@
       "description": "ユーザーがGitHubリポジトリURLを貼り付けると、READMEとコードを取得してコンテキストに追加する機能。api/github.js エンドポイントを新規作成し、公開リポジトリのファイル取得(GitHub API経由)をサポート。",
       "files": ["api/github.js", "public/app.js"],
       "verification": "チャットにGitHub URLを貼りつけてコード読込が動作すること",
-      "status": "pending"
+      "status": "implemented"
     },
     {
       "id": "github-002",
@@ -35,7 +35,7 @@
       "description": "AI FOUNDRYで生成したコードをGitHub PRとして直接作成する機能。PAT(ユーザー提供)を使用してgithub.com APIでPRを作成。api/github.js に create_pr アクションを追加。",
       "files": ["api/github.js", "public/app.js"],
       "verification": "UI から PR作成ボタンが機能すること",
-      "status": "pending"
+      "status": "implemented"
     },
     {
       "id": "meta-001",
@@ -43,10 +43,10 @@
       "priority": 85,
       "category": "multi_model",
       "agent": "META",
-      "description": "現状 GPT-5.6-sol 固定。Vercel AI Gateway 経由で anthropic/claude-sonnet-4-6 および google/gemini-2.0-flash も選択可能にする。UI にモデル選択UIを追加。",
+      "description": "Vercel AI Gateway 経由で anthropic/claude-sonnet-4-6 および google/gemini-2.0-flash も選択可能にする。UI にモデル選択UIを追加。",
       "files": ["api/foundry.js", "public/index.html", "public/app.js", "public/styles.css"],
       "verification": "モデル選択UIで Claude/Geminiが動作すること",
-      "status": "pending"
+      "status": "implemented"
     },
     {
       "id": "perf-002",
@@ -65,10 +65,10 @@
       "priority": 70,
       "category": "ux",
       "agent": "X",
-      "description": "現状コードブロックはプレーンテキスト。highlight.js (CDN) を追加してPython/JS/TypeScriptのハイライトを有効化。",
+      "description": "highlight.js (CDN) を追加してPython/JS/TypeScriptのハイライトを有効化。",
       "files": ["public/index.html", "public/styles.css", "public/app.js"],
       "verification": "チャット返答のコードブロックが色付きになること",
-      "status": "pending"
+      "status": "implemented"
     }
   ],
   "completion_criteria": {

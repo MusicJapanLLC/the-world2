@@ -2,8 +2,8 @@ name: Foundry Autonomous Dev — SENJU / X / META
 
 on:
   schedule:
-    # 10分ごと（GitHub Actions最小間隔: 5分）
-    - cron: "*/10 * * * *"
+    # 5分ごと（GitHub Actions最小間隔: 5分）
+    - cron: "*/5 * * * *"
   workflow_dispatch:
     inputs:
       agent:

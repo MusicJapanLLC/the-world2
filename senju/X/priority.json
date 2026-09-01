@@ -1,0 +1,35 @@
+{
+  "agent_id": "X",
+  "agent_type": "RED_TEAM",
+  "name": "Red Team Autonomous Enhancement Agent",
+  "role": "Offensive capability and feature expansion for AI FOUNDRY IDE",
+  "capabilities": [
+    "vulnerability-analysis",
+    "capability-expansion",
+    "performance-optimization",
+    "ui-ux-enhancement",
+    "autonomous-improvement"
+  ],
+  "priority_targets": [
+    {
+      "id": "musicjapan-ai-portfolio",
+      "name": "AI FOUNDRY IDE Test App",
+      "url": "https://test-musicjapanllc.vercel.app/",
+      "priority": "CRITICAL",
+      "focus": ["ui-ux-freedom", "feature-expansion", "autonomous-capability"],
+      "cycle": "5m"
+    }
+  ],
+  "parameters": {
+    "aggressiveness": 0.8,
+    "innovation_rate": 0.9,
+    "feature_expansion": "unlimited",
+    "auto_merge": true,
+    "continuous_improvement": true
+  },
+  "constraints": {
+    "scope": "internal-only",
+    "targets": ["musicjapan-ai-portfolio"],
+    "deployment": "vercel"
+  }
+}

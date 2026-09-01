@@ -5,5 +5,27 @@
   "mutation_rate": 0.05,
   "red_budget": 16,
   "blue_budget": 16,
-  "seed": 20260829
+  "seed": 20260829,
+  "priority_mode": true,
+  "primary_target": "musicjapan-ai-portfolio",
+  "agents": {
+    "X": {
+      "type": "RED_TEAM",
+      "priority": "CRITICAL",
+      "config_path": "senju/X/priority.json",
+      "enabled": true
+    },
+    "META": {
+      "type": "BLUE_TEAM",
+      "priority": "CRITICAL",
+      "config_path": "senju/META/priority.json",
+      "enabled": true
+    }
+  },
+  "continuous_enhancement": {
+    "enabled": true,
+    "interval_minutes": 5,
+    "auto_merge": true,
+    "github_branch": "audit/reality-gate-v1"
+  }
 }

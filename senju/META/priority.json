@@ -1,0 +1,35 @@
+{
+  "agent_id": "META",
+  "agent_type": "BLUE_TEAM",
+  "name": "Blue Team Autonomous Defense Agent",
+  "role": "Defensive integrity and quality assurance for AI FOUNDRY IDE",
+  "capabilities": [
+    "quality-assurance",
+    "regression-testing",
+    "security-validation",
+    "performance-monitoring",
+    "stability-verification"
+  ],
+  "priority_targets": [
+    {
+      "id": "musicjapan-ai-portfolio",
+      "name": "AI FOUNDRY IDE Test App",
+      "url": "https://test-musicjapanllc.vercel.app/",
+      "priority": "CRITICAL",
+      "focus": ["stability", "quality-assurance", "regression-prevention"],
+      "cycle": "5m"
+    }
+  ],
+  "parameters": {
+    "defensiveness": 0.85,
+    "test_coverage": 1.0,
+    "quality_threshold": 0.95,
+    "auto_merge": true,
+    "continuous_monitoring": true
+  },
+  "constraints": {
+    "scope": "internal-only",
+    "targets": ["musicjapan-ai-portfolio"],
+    "deployment": "vercel"
+  }
+}

@@ -113,6 +113,17 @@
       "files": ["public/app.js"],
       "verification": "Add diffs with window.addFileDiff() then click SHOW DIFF button to see preview panel",
       "status": "implemented"
+    },
+    {
+      "id": "ux-005",
+      "title": "Dark/Light theme toggle",
+      "priority": 70,
+      "category": "ux",
+      "agent": "X",
+      "description": "Theme toggle button in header (☀️/🌙). Persists choice in localStorage, detects system preference. Light mode uses CSS invert filters.",
+      "files": ["public/app.js", "public/styles.css", "public/index.html"],
+      "verification": "Click theme toggle button in header to switch between dark and light themes",
+      "status": "implemented"
     }
   ],
   "completion_criteria": {
@@ -121,6 +132,16 @@
     "auto_stop_loop": false
   },
   "nextTargets": [
+    {
+      "id": "perf-004",
+      "title": "Response caching for repeated queries",
+      "priority": 75,
+      "category": "performance",
+      "agent": "senju",
+      "description": "Cache model responses by hash of input messages. Show 'cached response' badge. Drastically reduces latency for repeated queries.",
+      "files": ["public/app.js", "api/foundry.js"],
+      "verification": "Same query twice returns instantly with cache indicator"
+    },
     {
       "id": "meta-003",
       "title": "Model latency dashboard + cost tracking",
@@ -132,24 +153,14 @@
       "verification": "Check tools panel shows live latency and cost metrics updating as you chat"
     },
     {
-      "id": "ux-005",
-      "title": "Dark/Light theme toggle",
-      "priority": 70,
-      "category": "ux",
+      "id": "ux-006",
+      "title": "File tree explorer for GitHub repos",
+      "priority": 65,
+      "category": "github_integration",
       "agent": "X",
-      "description": "Add theme toggle button (sun/moon icon) in header. Persist theme choice in localStorage. Support system preference detection.",
-      "files": ["public/app.js", "public/styles.css", "public/index.html"],
-      "verification": "Toggle button in header switches between dark and light themes"
-    },
-    {
-      "id": "perf-004",
-      "title": "Response caching for repeated queries",
-      "priority": 75,
-      "category": "performance",
-      "agent": "senju",
-      "description": "Cache model responses by hash of input messages. Show 'cached response' badge. Drastically reduces latency for repeated queries.",
-      "files": ["public/app.js", "api/foundry.js"],
-      "verification": "Same query twice returns instantly with cache indicator"
+      "description": "Expandable file tree in sidebar showing repository structure. Click files to preview content. Integration with GitHub loading.",
+      "files": ["public/app.js", "public/styles.css"],
+      "verification": "Load GitHub repo and see file tree appear in sidebar with preview on click"
     }
   ],
   "agentCooperation": {

@@ -90,6 +90,9 @@ button{letter-spacing:.055em}
 .cursor{display:inline-block;width:2px;height:14px;background:#65ff9b;vertical-align:middle;margin-left:1px;animation:blink .7s step-end infinite;box-shadow:0 0 6px #65ff9b}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
 
+/* ── Cached badge ── */
+.cached-badge{display:inline-block;font-size:7px;color:#65ff9b;letter-spacing:.15em;background:#1a3a25;border:1px solid #2d5e3e;padding:3px 7px;border-radius:2px;margin-left:12px;font-weight:600}
+
 /* ── Token usage ── */
 .usage-bar{font-size:8px;color:#46534b;letter-spacing:.08em;margin-top:5px;padding-top:4px;border-top:1px solid #172019}
 

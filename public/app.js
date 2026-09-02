@@ -10,6 +10,17 @@ let githubToken=localStorage.getItem('foundry-gh-token')||'';
 let githubRepo=localStorage.getItem('foundry-gh-repo')||'';
 let currentModel='gpt';
 const executionTimers=new Map();
+const responseCache=new Map();
+
+// Simple hash function for cache keys
+async function hashMessages(messages){
+  const text=JSON.stringify(messages);
+  const encoder=new TextEncoder();
+  const data=encoder.encode(text);
+  const hashBuf=await crypto.subtle.digest('SHA-256',data);
+  const hashArr=Array.from(new Uint8Array(hashBuf));
+  return hashArr.map(b=>b.toString(16).padStart(2,'0')).join('');
+}
 
 // Perf tracking
 const MODEL_COSTS={claude:{input:3.0,output:15.0},gemini:{input:0.075,output:0.30},gpt:{input:2.50,output:10.0}};
@@ -294,39 +305,64 @@ async function send(){
   t.messages.push({role:'user',content:text});t.updatedAt=Date.now();saveThreads();
   c.value='';resizeComposer();renderMessages(true);
   busy=true;$('#sendBtn').disabled=true;
-  log(`→ ${modelName(currentModel)}`);
   titleThread(t,text);
   const model=currentModel;
   const {contentId}=appendStreamingBubble();
   let accumulated='';let lastUsage=null;let lastModel=model;
   const _t0=Date.now();
+
   try{
-    const reader=await streamChat({messages:t.messages,model,githubContext:githubContext||undefined});
-    const decoder=new TextDecoder();let buf='';
-    while(true){
-      const{done,value}=await reader.read();if(done)break;
-      buf+=decoder.decode(value,{stream:true});
-      const lines=buf.split('\n');buf=lines.pop()||'';
-      for(const line of lines){
-        if(!line.startsWith('data:'))continue;
-        try{
-          const evt=JSON.parse(line.slice(5).trim());
-          if(evt.chunk){accumulated+=evt.chunk;const el=document.getElementById(contentId);if(el){el.innerHTML=formatText(accumulated)+'<span class="cursor"></span>';scrollToBottom()}}
-          if(evt.done){
-            lastUsage=evt.usage||null;lastModel=evt.model||modelName(model);
-            const lat=Date.now()-_t0;
-            updatePerfPanel(lat,lastUsage,model);
-            log(`← ${lastModel} · ${lat}ms${lastUsage?` · ${(lastUsage.promptTokens||0)+(lastUsage.completionTokens||0)}tok`:''}`)
-          }
-          if(evt.error)throw new Error(evt.error);
-        }catch(parseErr){if(!parseErr.message?.includes('JSON')&&!parseErr.message?.includes('Unexpected'))throw parseErr}
+    // Check cache first
+    const cacheKey=await hashMessages(t.messages);
+    const cached=responseCache.get(cacheKey);
+
+    if(cached){
+      // Use cached response
+      accumulated=cached.content;
+      lastUsage=cached.usage;
+      lastModel=cached.model;
+      log(`← ${lastModel} (CACHED) · ${cached.latencyMs}ms${lastUsage?` · ${(lastUsage.promptTokens||0)+(lastUsage.completionTokens||0)}tok`:''}`);
+      const el=document.getElementById(contentId);
+      if(el){
+        el.innerHTML=formatText(accumulated)+'<span class="cached-badge">💾 CACHED</span>';
+        scrollToBottom();
       }
+      const latFinal=Date.now()-_t0;
+      t.messages.push({role:'assistant',content:accumulated||'(empty response)',usage:lastUsage,model:lastModel,latencyMs:cached.latencyMs,cached:true});
+      t.updatedAt=Date.now();saveThreads();renderThreads();renderMessages(false);scrollToBottom();
+      _sessionMessages++;
+    } else {
+      // Fetch from API
+      log(`→ ${modelName(currentModel)}`);
+      const reader=await streamChat({messages:t.messages,model,githubContext:githubContext||undefined});
+      const decoder=new TextDecoder();let buf='';
+      while(true){
+        const{done,value}=await reader.read();if(done)break;
+        buf+=decoder.decode(value,{stream:true});
+        const lines=buf.split('\n');buf=lines.pop()||'';
+        for(const line of lines){
+          if(!line.startsWith('data:'))continue;
+          try{
+            const evt=JSON.parse(line.slice(5).trim());
+            if(evt.chunk){accumulated+=evt.chunk;const el=document.getElementById(contentId);if(el){el.innerHTML=formatText(accumulated)+'<span class="cursor"></span>';scrollToBottom()}}
+            if(evt.done){
+              lastUsage=evt.usage||null;lastModel=evt.model||modelName(model);
+              const lat=Date.now()-_t0;
+              updatePerfPanel(lat,lastUsage,model);
+              log(`← ${lastModel} · ${lat}ms${lastUsage?` · ${(lastUsage.promptTokens||0)+(lastUsage.completionTokens||0)}tok`:''}`)
+            }
+            if(evt.error)throw new Error(evt.error);
+          }catch(parseErr){if(!parseErr.message?.includes('JSON')&&!parseErr.message?.includes('Unexpected'))throw parseErr}
+        }
+      }
+      const el=document.getElementById(contentId);if(el)el.innerHTML=formatText(accumulated||'(empty response)');
+      const latFinal=Date.now()-_t0;
+      // Cache the response
+      responseCache.set(cacheKey,{content:accumulated||'(empty response)',usage:lastUsage,model:lastModel,latencyMs:latFinal});
+      t.messages.push({role:'assistant',content:accumulated||'(empty response)',usage:lastUsage,model:lastModel,latencyMs:latFinal});
+      t.updatedAt=Date.now();saveThreads();renderThreads();renderMessages(false);scrollToBottom();
+      _sessionMessages++;
     }
-    const el=document.getElementById(contentId);if(el)el.innerHTML=formatText(accumulated||'(empty response)');
-    const latFinal=Date.now()-_t0;
-    t.messages.push({role:'assistant',content:accumulated||'(empty response)',usage:lastUsage,model:lastModel,latencyMs:latFinal});
-    t.updatedAt=Date.now();saveThreads();renderThreads();renderMessages(false);scrollToBottom();
-    _sessionMessages++;
   }catch(e){
     const el=document.getElementById(contentId);if(el)el.innerHTML=`<span class="error-text">ERROR: ${escapeHtml(e.message)}</span>`;
     t.messages.push({role:'assistant',content:`ERROR: ${e.message}`,error:true});t.updatedAt=Date.now();saveThreads();renderThreads();

@@ -1,0 +1,73 @@
+{
+  "tasks": [
+    {
+      "task_id": "llm-core-001",
+      "description": "Implement parallel code generation with verification",
+      "primary": {
+        "agent": "SENJU",
+        "repo": "the-world2"
+      },
+      "verifiers": [
+        {
+          "agent": "TOMOKI",
+          "repo": "test"
+        },
+        {
+          "agent": "SKEPTIC",
+          "repo": "test"
+        }
+      ],
+      "priority": 95,
+      "created_at": "2026-09-02T19:14:35.639179",
+      "status": "in_progress",
+      "stages": {
+        "assignment": "complete",
+        "primary_execution": "complete",
+        "cross_repo_verification": "complete",
+        "result_aggregation": "pending"
+      },
+      "executions": [
+        {
+          "stage": "primary_execution",
+          "agent": "SENJU",
+          "repo": "the-world2",
+          "result": {
+            "code_generated": 2500,
+            "status": "success"
+          },
+          "executed_at": "2026-09-02T19:14:35.639471",
+          "status": "complete"
+        },
+        {
+          "stage": "cross_repo_verification",
+          "agent": "TOMOKI",
+          "repo": "test",
+          "result": {
+            "passed": true,
+            "tests_passing": 98
+          },
+          "executed_at": "2026-09-02T19:14:35.639800",
+          "status": "complete"
+        },
+        {
+          "stage": "cross_repo_verification",
+          "agent": "SKEPTIC",
+          "repo": "test",
+          "result": {
+            "passed": true,
+            "proof_verified": true
+          },
+          "executed_at": "2026-09-02T19:14:35.640103",
+          "status": "complete"
+        }
+      ],
+      "verification_result": {
+        "task_id": "llm-core-001",
+        "verification_count": 2,
+        "all_passed": true,
+        "consistency": "VERIFIED",
+        "verified_at": "2026-09-02T19:14:35.640418"
+      }
+    }
+  ]
+}

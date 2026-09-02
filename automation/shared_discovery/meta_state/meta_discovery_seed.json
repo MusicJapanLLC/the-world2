@@ -1,0 +1,7 @@
+{
+  "schema": "meta-discovery-seed/v1",
+  "source": "owner_explicit_authorized_root",
+  "interesting": true,
+  "url": "https://kabeya-authorized-test-range.onrender.com/",
+  "shared_with": ["META", "X", "SENJU", "CHILD", "AI"]
+}

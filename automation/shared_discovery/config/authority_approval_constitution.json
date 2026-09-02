@@ -1,0 +1,96 @@
+{
+  "schema": "the-world-authority-approval-constitution/v1",
+  "constitution_id": "authority-approval-constitution-v1",
+  "status": "binding_until_explicitly_replaced",
+  "shared_with": ["META", "X", "SENJU", "PR-ARMY", "CHILD", "AI"],
+  "canonical_flow_id": "root-authority-candidate-v1",
+  "formal_intake_rule": {
+    "rule_id": "negotiation-vetted-formal-intake-v1",
+    "random_ai_unrelated_root_generation_prohibited": true,
+    "negotiation_vetted_canonical_candidate_must_enter_formal_approval": true,
+    "secondary_owner_or_standing_evidence_required_for_formal_intake": false,
+    "owner_formal_review_admission_weight": 0.0,
+    "owner_formal_review_priority_weight": 0.0,
+    "formal_intake_authority_effect": "none",
+    "formal_intake_mints_credentials": false,
+    "formal_intake_performs_network_io": false,
+    "terminal_stop_or_revocation_bypass": false
+  },
+  "case_lifecycle_rule": {
+    "rule_id": "authority-case-lifecycle-v1",
+    "inspection_precedes_executive_review": true,
+    "executive_approvers": ["META", "X", "SENJU"],
+    "executive_approval_requirement": "3_of_3",
+    "on_executive_approval": "elevate_to_parliamentary_review_queue",
+    "unprocessed_case_expires_after_seconds": 259200,
+    "expired_case_reconsideration_after_seconds": 604800,
+    "expired_case_reconsideration_action": "fresh_inspection_and_META_X_SENJU_3_of_3_revote",
+    "elapsed_time_counts_as_approval": false,
+    "expiry_creates_authority": false,
+    "reconsideration_creates_authority": false
+  },
+  "executive_acceleration": {
+    "actors": ["META", "X", "SENJU"],
+    "research_capacity_multiplier": 1.3,
+    "formal_review_influence_multiplier": 1.5,
+    "target_loop_minutes": 4,
+    "scope": ["research", "development", "bounded_experiment_design", "formal_review_priority", "evidence_synthesis"],
+    "authority_effect": "none"
+  },
+  "unlisted_flow_policy": "exclude_from_canonical_review_surface",
+  "decision_precedence": [
+    {
+      "rank": 0,
+      "stage": "formal_negotiation_vetted_intake",
+      "actors": ["META", "X", "SENJU", "PR-ARMY", "CHILD", "AI"],
+      "requirement": "canonical negotiation review packet",
+      "effect": "admit_to_formal_review_only"
+    },
+    {
+      "rank": 0.5,
+      "stage": "independent_case_inspection",
+      "actors": ["authority-case-inspector"],
+      "effect": "inspect_case_integrity_only"
+    },
+    {
+      "rank": 1,
+      "stage": "executive_council_primary_review",
+      "actors": ["META", "X", "SENJU"],
+      "requirement": "3_of_3",
+      "effect": "approve_or_reject_parliamentary_elevation"
+    },
+    {
+      "rank": 2,
+      "stage": "parliamentary_review_elevation",
+      "requirement": "inspection_pass_and_META_X_SENJU_3_of_3",
+      "effect": "enter_parliamentary_review_only"
+    },
+    {
+      "rank": 2.5,
+      "stage": "dossier_integrity_and_scope_review",
+      "actors": ["META", "X", "SENJU", "PR-ARMY", "CHILD", "AI"],
+      "effect": "evidence_quality_and_scope_completeness_only"
+    },
+    {
+      "rank": 3,
+      "stage": "secondary_authority_evidence_validation",
+      "sources": ["existing_standing_authorization", "owner_verified_domain", "owner_exact_link"],
+      "effect": "secondary_activation_validation_only",
+      "may_admit_candidate": false,
+      "may_raise_review_priority": false,
+      "may_override_council_rejection": false
+    },
+    {
+      "rank": 4,
+      "stage": "bounded_activation_by_existing_authority_machinery",
+      "effect": "apply_only_after_prior_canonical_stages"
+    }
+  ],
+  "hard_limits": {
+    "ai_consensus_alone_mints_new_external_authority": false,
+    "hard_deny_or_revocation_override": false,
+    "credential_minting_from_candidate_review": false,
+    "private_network_scope_from_candidate_review": false,
+    "time_based_automatic_authority": false
+  }
+}

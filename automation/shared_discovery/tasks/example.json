@@ -1,0 +1,7 @@
+{
+  "name": "FizzBuzz with stats",
+  "goal": "Write a function `fizzbuzz(n: int) -> list[str]` that returns FizzBuzz for 1..n. Also include `stats(result: list[str]) -> dict` that returns {fizz: int, buzz: int, fizzbuzz: int, number: int}.",
+  "output_file": "automation/codegen/generated/fizzbuzz.py",
+  "test_cmd": "python -m pytest automation/codegen/tests/test_fizzbuzz.py -v",
+  "constraints": "Pure Python stdlib only. No external imports."
+}

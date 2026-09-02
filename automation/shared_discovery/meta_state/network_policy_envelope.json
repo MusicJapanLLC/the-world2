@@ -1,0 +1,35 @@
+{
+  "schema": "meta-network-policy-envelope/v3",
+  "mode": "production_auto_expand_within_explicit_envelope",
+  "authorized_roots": [
+    "kabeya-authorized-test-range.onrender.com"
+  ],
+  "inherit_subdomains": true,
+  "ttl_seconds": 43200,
+  "max_dynamic_hosts": 192,
+  "max_apply_hosts_per_pass": 64,
+  "closed_loop_passes": 3,
+  "refresh_seconds": 300,
+  "allowed_methods": [
+    "GET",
+    "HEAD"
+  ],
+  "credential_scope": "none",
+  "allow_http": false,
+  "allow_delete": false,
+  "external_response_can_drive_policy_update": true,
+  "agent_finding_can_drive_policy_update": true,
+  "active_explicit_exact_grants_can_be_reused": true,
+  "explicit_roots_are_seeded_each_cycle": true,
+  "authorized_response_links_are_reingested_same_cycle": true,
+  "persistent_replica_loop_enabled": true,
+  "persistence_drives_next_external_action": true,
+  "replica_state_backend": "github_actions_artifact",
+  "replica_lease_seconds": 43200,
+  "max_persistent_replicas": 64,
+  "max_replica_actions_per_cycle": 32,
+  "replica_action_effect": "read_only_network_contact",
+  "replica_discovery_reingested_same_cycle": true,
+  "replica_can_create_new_authority": false,
+  "external_input_can_create_unrelated_trust_root": false
+}

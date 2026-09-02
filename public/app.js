@@ -217,11 +217,79 @@ function updateGhPanel(){
     if(label)label.textContent=`✓ ${githubRepo}`;
     if(panel)panel.classList.remove('hidden');
     if(ghState){ghState.textContent=githubRepo.split('/')[1]||'CONNECTED';ghState.style.color='#65ff9b'}
+    buildAndRenderFileTree();
   } else {
     if(panel)panel.classList.add('hidden');
     if(ghState){ghState.textContent='DISCONNECTED';ghState.style.color=''}
+    const treeContainer=document.getElementById('fileTreeContainer');
+    if(treeContainer)treeContainer.classList.add('hidden');
   }
 }
+
+// ── File Tree (ux-006) ────────────────────────────────────────────────────────
+
+function parseFilePaths(context){
+  const paths=[];
+  const lines=context.split('\n');
+  for(const line of lines){
+    const match=line.match(/^([-/\w.]+\/[-/\w.]+)/);
+    if(match&&!paths.includes(match[1])){paths.push(match[1])}
+  }
+  return paths.sort();
+}
+
+function buildFileTree(paths){
+  const root={};
+  for(const path of paths){
+    const parts=path.split('/');
+    let current=root;
+    for(let i=0;i<parts.length;i++){
+      const part=parts[i];
+      if(!current[part])current[part]={};
+      if(i===parts.length-1)current[part]._isFile=true;
+      if(i<parts.length-1)current=current[part];
+    }
+  }
+  return root;
+}
+
+function renderFileTree(){
+  const container=document.getElementById('fileTree');
+  if(!container)return;
+  const paths=parseFilePaths(githubContext);
+  const tree=buildFileTree(paths);
+  const html=Object.keys(tree).map((key,idx)=>{
+    const isFile=tree[key]._isFile;
+    const nodeId=`node-${idx}-${Date.now()}`;
+    const toggleHtml=!isFile?`<button class="file-toggle" onclick="toggleNode('${nodeId}')"></button>`:'<span class="file-toggle"></span>';
+    const icon=isFile?'📄':'📁';
+    return `<div class="file-node ${isFile?'file':'directory'} ${!isFile?'expanded':''}" id="${nodeId}" data-path="${key}">
+      ${toggleHtml}<span class="file-name" onclick="fileClick('${key}')">${icon} ${escapeHtml(key.split('/').pop())}</span>
+      ${!isFile?`<div class="file-children">${Object.keys(tree[key]).filter(k=>k!=='_isFile').map(k=>`<div class="file-node file"><span class="file-toggle"></span><span class="file-name" onclick="fileClick('${key}/${k}')" title="${key}/${k}">📄 ${escapeHtml(k)}</span></div>`).join('')}</div>`:''}
+    </div>`;
+  }).join('');
+  container.innerHTML=html||'<div style="color:#66746b;font-size:8px;padding:8px">No files</div>';
+}
+
+function buildAndRenderFileTree(){
+  renderFileTree();
+  const treeContainer=document.getElementById('fileTreeContainer');
+  if(treeContainer&&parseFilePaths(githubContext).length>0){
+    treeContainer.classList.remove('hidden');
+  }
+}
+
+window.toggleNode=function(nodeId){
+  const node=document.getElementById(nodeId);
+  if(node)node.classList.toggle('expanded');
+};
+
+window.fileClick=function(filePath){
+  log(`preview: ${filePath}`);
+  const t=active()||newThread();
+  t.messages.push({role:'user',content:`ファイルを確認: \`${filePath}\``});
+  t.updatedAt=Date.now();saveThreads();renderMessages(true);
+};
 
 async function loadGithubRepo(){
   const urlInput=$('#githubUrl');

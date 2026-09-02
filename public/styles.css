@@ -51,6 +51,22 @@ button{letter-spacing:.055em}
 .gh-connect-btn:disabled{opacity:.5;cursor:not-allowed}
 .gh-status-small{display:block;padding:2px 12px;font-size:8px;color:#65ff9b;letter-spacing:.05em;min-height:14px}
 
+/* ── File Tree (ux-006) ── */
+.file-tree-container{border-top:1px solid #172019;margin-top:8px;padding-bottom:8px;max-height:200px;overflow-y:auto}
+.file-tree-container.hidden{display:none}
+.file-tree{font-size:8px;padding:0 6px;letter-spacing:.05em}
+.file-node{padding:3px 0;user-select:none}
+.file-toggle{background:none;border:none;color:#66746b;cursor:pointer;padding:0 4px 0 0;font-size:8px;width:12px}
+.file-toggle:hover{color:#65ff9b}
+.file-name{display:inline-block;color:#9db0a3;padding:2px 4px;cursor:pointer;border-radius:1px}
+.file-name:hover{background:#1a2820;color:#65ff9b}
+.file-node.directory .file-name{color:#65ff9b;font-weight:500}
+.file-children{display:none;padding-left:14px}
+.file-node.expanded .file-children{display:block}
+.file-node.expanded .file-toggle::before{content:'▼'}
+.file-node.directory .file-toggle::before{content:'▶'}
+.file-node.file .file-toggle{visibility:hidden;width:0;padding:0}
+
 .sidebar-foot{padding:10px 14px;border-top:1px solid #172019;color:#435047;font-size:8px;letter-spacing:.1em}
 
 /* ── Chat pane ── */

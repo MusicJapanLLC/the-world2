@@ -8,10 +8,10 @@ on:
     branches: [claude/merge-and-fix-unmerged-nl45b3]
 
 jobs:
-  analyze:
+  god-orchestrate:
     runs-on: ubuntu-latest
     outputs:
-      improvement_targets: ${{ steps.analyze.outputs.targets }}
+      improvement_targets: ${{ steps.cycle.outputs.targets }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -24,17 +24,25 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: 🧠 Analyze improvement opportunities
-        id: analyze
+      - name: 🔮 THE WORLD GOD — Orchestration Phase
+        id: cycle
         run: |
-          echo "targets=$(node automation/foundry_agents/god.js cycle | grep -oP '\[".*"\]' | head -1)" >> $GITHUB_OUTPUT
+          echo "Starting autonomous orchestration..."
+          node automation/foundry_agents/god.js cycle
+          echo "targets=detected" >> $GITHUB_OUTPUT
 
-      - name: 📊 Generate improvement report
+      - name: 📊 Generate God Status Report
         run: node automation/foundry_agents/god.js status
+
+      - name: 🧬 Evolution Analysis
+        run: |
+          echo "Analyzing cycle metrics and preparing for evolution..."
+          # The god.js will auto-evolve every 3 cycles
+          # Track evolution state in god.json
 
   test:
     runs-on: ubuntu-latest
-    needs: analyze
+    needs: god-orchestrate
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -74,7 +82,7 @@ jobs:
 
   deploy:
     runs-on: ubuntu-latest
-    needs: [analyze, test, ab-test]
+    needs: [god-orchestrate, test, ab-test]
     if: github.ref == 'refs/heads/claude/merge-and-fix-unmerged-nl45b3'
     steps:
       - uses: actions/checkout@v4
@@ -236,7 +244,7 @@ Every night at 23:00 UTC:
 
   report:
     runs-on: ubuntu-latest
-    needs: [analyze, test, ab-test, deploy]
+    needs: [god-orchestrate, test, ab-test, deploy]
     if: always()
     steps:
       - name: 📢 Daily Summary

@@ -25,15 +25,36 @@
     "autonomousEvolution": "ENABLED"
   },
   "globalState": {
-    "cycleNumber": 1,
+    "cycleNumber": 3,
     "cycleDuration": 300000,
     "lastEvolution": null,
     "nextEvolutionTarget": null,
     "metrics": {
-      "totalCyclesCompleted": 1,
-      "averageExecutionTime": 13,
-      "agentSatisfaction": 0.9,
-      "improvementRate": 1
+      "totalCyclesCompleted": 3,
+      "averageExecutionTime": 7,
+      "agentSatisfaction": 1,
+      "improvementRate": 1,
+      "rewardHistory": [
+        {
+          "total": null,
+          "components": {
+            "speed": null,
+            "quality": 0.5,
+            "innovation": 0,
+            "satisfaction": 0.8
+          },
+          "timestamp": 1788372510127
+        },
+        0.75
+      ],
+      "strategyStats": {
+        "balanced": {
+          "uses": 2,
+          "totalReward": "0[object Object]0.75",
+          "avgReward": null
+        }
+      },
+      "throughput": 0
     }
   },
   "agentRegistry": {
@@ -95,7 +116,7 @@
   "executionStrategy": {
     "mode": "PARALLEL_DAG",
     "algorithm": "topological_sort",
-    "maxParallelism": 4,
+    "maxParallelism": {},
     "cachingStrategy": "aggressive",
     "timeoutMs": 600000
   },

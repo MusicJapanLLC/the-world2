@@ -102,6 +102,17 @@
       "files": ["public/index.html", "public/styles.css", "public/app.js"],
       "verification": "Split panes visible and draggable divider works",
       "status": "implemented"
+    },
+    {
+      "id": "github-003",
+      "title": "Diff viewer and inline PR review",
+      "priority": 85,
+      "category": "github_integration",
+      "agent": "X",
+      "description": "Floating diff preview panel showing file changes before PR creation. Displays old/new content comparison, line counts, and file list. Integrated into PR workflow.",
+      "files": ["public/app.js"],
+      "verification": "Add diffs with window.addFileDiff() then click SHOW DIFF button to see preview panel",
+      "status": "implemented"
     }
   ],
   "completion_criteria": {
@@ -111,39 +122,34 @@
   },
   "nextTargets": [
     {
-      "id": "perf-003",
-      "title": "Code execution in preview pane",
-      "priority": 100,
-      "category": "performance",
-      "agent": "senju",
-      "description": "JavaScript code execution in preview pane with HTML/CSS/JS support. Sandbox iframe for HTML, Function constructor for JS. Captures console output and errors.",
-      "files": ["public/app.js"],
-      "verification": "Click RUN to execute code in editor and see output in preview pane",
-      "status": "implemented"
-    },
-    {
-      "id": "github-003",
-      "title": "Diff viewer and inline PR review",
-      "priority": 85,
-      "category": "github_integration",
-      "cooperatingAgents": ["X", "CLAUDE_CODE"],
-      "dependsOn": ["github-002", "ux-004"],
-      "expectedFrom": {
-        "X": "Diff UI component with side-by-side display",
-        "CLAUDE_CODE": "PR parsing and diff logic"
-      }
-    },
-    {
       "id": "meta-003",
       "title": "Model latency dashboard + cost tracking",
       "priority": 80,
       "category": "performance",
-      "cooperatingAgents": ["META", "SENJU"],
-      "dependsOn": ["meta-001"],
-      "expectedFrom": {
-        "META": "Telemetry collection and aggregation",
-        "SENJU": "API timing instrumentation"
-      }
+      "agent": "META",
+      "description": "Enhanced latency telemetry panel showing response times per model, cost tracking per session, model comparison stats. Real-time updates.",
+      "files": ["public/app.js", "public/styles.css"],
+      "verification": "Check tools panel shows live latency and cost metrics updating as you chat"
+    },
+    {
+      "id": "ux-005",
+      "title": "Dark/Light theme toggle",
+      "priority": 70,
+      "category": "ux",
+      "agent": "X",
+      "description": "Add theme toggle button (sun/moon icon) in header. Persist theme choice in localStorage. Support system preference detection.",
+      "files": ["public/app.js", "public/styles.css", "public/index.html"],
+      "verification": "Toggle button in header switches between dark and light themes"
+    },
+    {
+      "id": "perf-004",
+      "title": "Response caching for repeated queries",
+      "priority": 75,
+      "category": "performance",
+      "agent": "senju",
+      "description": "Cache model responses by hash of input messages. Show 'cached response' badge. Drastically reduces latency for repeated queries.",
+      "files": ["public/app.js", "api/foundry.js"],
+      "verification": "Same query twice returns instantly with cache indicator"
     }
   ],
   "agentCooperation": {

@@ -57,7 +57,7 @@
       "description": "現状 localStorage のみ。Supabase (既存エンドポイント czwdtjgunsafcifjhpwt.supabase.co) にスレッドを保存し、デバイス間で共有できるようにする。",
       "files": ["public/app.js"],
       "verification": "別ブラウザで同じスレッドが閲覧できること",
-      "status": "pending"
+      "status": "implemented"
     },
     {
       "id": "ux-001",

@@ -25,7 +25,15 @@ function updatePerfPanel(latencyMs,usage,model){
 }
 
 function loadThreads(){try{return JSON.parse(localStorage.getItem(STORE)||'[]')}catch{return[]}}
-function saveThreads(){localStorage.setItem(STORE,JSON.stringify(threads))}
+function saveThreads(){localStorage.setItem(STORE,JSON.stringify(threads));syncThreadsToSupabase().catch(()=>{})}
+async function syncThreadsToSupabase(){
+  try{
+    const payload={action:'sync_threads',threads:threads,userEmail:'music.japan.llc@gmail.com'};
+    const r=await fetch(GATEWAY,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),credentials:'omit',redirect:'follow'});
+    if(r.ok)return await r.json();
+    return null;
+  }catch(e){return null}
+}
 function uid(){return crypto.randomUUID?crypto.randomUUID():`${Date.now()}-${Math.random()}`}
 function active(){return threads.find(t=>t.id===activeId)}
 function stamp(){return new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit',second:'2-digit'})}
@@ -465,13 +473,30 @@ setInterval(()=>{$('#clock').textContent=stamp()},1000);
   },2000);
 })();
 
+// ─── Load threads from Supabase (perf-002) ───────────────────────────────
+async function loadThreadsFromSupabase(){
+  try{
+    const r=await fetch(GATEWAY,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'load_threads',userEmail:'music.japan.llc@gmail.com'}),credentials:'omit',redirect:'follow'});
+    if(!r.ok)return null;
+    const data=await r.json();
+    if(data.threads&&Array.isArray(data.threads)&&data.threads.length>0){
+      threads=data.threads;saveThreads();return true;
+    }
+    return false;
+  }catch(e){return false}
+}
+
 // Init
 if(githubToken){$('#githubToken').value=githubToken}
 if(githubRepo){$('#githubUrl').value=githubRepo}
-if(!activeId)newThread();else{renderAll(true);threads.forEach(resumeExecution)}
-updateGhPanel();
-log('AI FOUNDRY IDE v2 — boot complete');
-log(`GitHub: ${githubRepo?'✓ '+githubRepo:'not connected — enter repo in left panel'}`);
-log('models: GPT-5.6-SOL / Claude Sonnet / Gemini 2.0');
-log('⚙ SELF-FORGE: active — AI improves this app autonomously');
-log('shortcuts: Ctrl+K=clear input  Ctrl+L=clear log  Esc=cancel stream  ?=help');
+(async()=>{
+  const loaded=await loadThreadsFromSupabase();
+  if(!loaded&&(!threads||threads.length===0)){threads=loadThreads()}
+  if(!activeId)newThread();else{renderAll(true);threads.forEach(resumeExecution)}
+  updateGhPanel();
+  log('AI FOUNDRY IDE v2 — boot complete');
+  log(`GitHub: ${githubRepo?'✓ '+githubRepo:'not connected — enter repo in left panel'}`);
+  log('models: GPT-5.6-SOL / Claude Sonnet / Gemini 2.0');
+  log('⚙ SELF-FORGE: active — AI improves this app autonomously');
+  log('shortcuts: Ctrl+K=clear input  Ctrl+L=clear log  Esc=cancel stream  ?=help');
+})();

@@ -79,7 +79,7 @@
       "description": "Add a session stats bar at the bottom of the sidebar. Show: messages sent this session, avg response latency (ms), total tokens used. Update live. Output a self-contained IIFE appended to public/app.js that adds a stats bar element to the sidebar footer area and updates it every 5 seconds.",
       "files": ["public/app.js"],
       "verification": "Stats bar visible in sidebar with live-updating numbers",
-      "status": "pending"
+      "status": "implemented"
     },
     {
       "id": "ux-003",
@@ -90,7 +90,7 @@
       "description": "Add a help panel (toggle with ? key or clicking a ? button) listing keyboard shortcuts in a small overlay in bottom-right corner. Output a self-contained IIFE appended to public/app.js.",
       "files": ["public/app.js"],
       "verification": "? key shows shortcut overlay panel",
-      "status": "pending"
+      "status": "implemented"
     }
   ],
   "completion_criteria": {

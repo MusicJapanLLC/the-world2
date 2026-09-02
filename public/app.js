@@ -406,15 +406,64 @@ $('#autoImproveBtn').addEventListener('click',()=>{
   runSelfForge();
 });
 
+// ─── Keyboard shortcuts help overlay (ux-003) ────────────────────────────
+(function initShortcutsOverlay(){
+  const helpHTML=`<div id="helpOverlay" style="display:none;position:fixed;bottom:20px;right:20px;width:280px;background:#1a1a1a;border:1px solid #444;border-radius:8px;padding:16px;font-size:12px;color:#aaa;z-index:10000;box-shadow:0 4px 16px rgba(0,0,0,0.5)">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <b style="color:#fff">KEYBOARD SHORTCUTS</b>
+      <button id="closeHelp" style="background:none;border:none;color:#aaa;cursor:pointer;font-size:16px;padding:0;width:20px;height:20px">×</button>
+    </div>
+    <div style="line-height:1.8">
+      <div><kbd style="background:#333;padding:2px 6px;border-radius:3px;font-family:monospace">Ctrl+K</kbd> Clear input</div>
+      <div><kbd style="background:#333;padding:2px 6px;border-radius:3px;font-family:monospace">Ctrl+L</kbd> Clear log</div>
+      <div><kbd style="background:#333;padding:2px 6px;border-radius:3px;font-family:monospace">Escape</kbd> Cancel stream</div>
+      <div><kbd style="background:#333;padding:2px 6px;border-radius:3px;font-family:monospace">?</kbd> Toggle help</div>
+      <div style="margin-top:8px;border-top:1px solid #333;padding-top:8px;color:#666">
+        <div><span style="color:#888">/pr owner/repo branch "title"</span></div>
+        <div style="font-size:11px">Create GitHub PR</div>
+      </div>
+    </div>
+  </div>`;
+
+  const body=document.body;if(body){body.insertAdjacentHTML('beforeend',helpHTML)}
+
+  const helpOv=document.getElementById('helpOverlay');
+  const closeBtn=document.getElementById('closeHelp');
+  if(closeBtn)closeBtn.addEventListener('click',()=>{if(helpOv)helpOv.style.display='none'});
+})();
+
 // Keyboard shortcuts
 document.addEventListener('keydown',e=>{
   if(e.key==='Escape'&&busy){busy=false;$('#sendBtn').disabled=false;log('stream cancelled','warn')}
   if((e.ctrlKey||e.metaKey)&&e.key==='k'){e.preventDefault();const c=$('#composer');c.value='';resizeComposer();c.focus()}
   if((e.ctrlKey||e.metaKey)&&e.key==='l'){e.preventDefault();$('#terminal').textContent=''}
+  if(e.key==='?'||e.key==='/'){if(e.key==='/')e.preventDefault();const h=document.getElementById('helpOverlay');if(h)h.style.display=h.style.display==='none'?'block':'none'}
 });
 
 // Clock
 setInterval(()=>{$('#clock').textContent=stamp()},1000);
+
+// ─── Session stats bar (ux-002) ───────────────────────────────────
+(function initStatsBar(){
+  const statsBarHTML=`<div id="statsBar" style="padding:8px;font-size:11px;text-align:center;border-top:1px solid #333;color:#888;line-height:1.4">
+    <div>MESSAGES: <b id="msgCount">0</b></div>
+    <div>LATENCY: <b id="avgLatency">—</b> ms</div>
+    <div>TOKENS: <b id="tokenCount">0</b></div>
+  </div>`;
+  const modelLabel=document.getElementById('modelLabel');
+  if(modelLabel&&modelLabel.parentNode){
+    modelLabel.insertAdjacentHTML('afterend',statsBarHTML);
+  }
+
+  setInterval(()=>{
+    const t=active();if(!t)return;
+    document.getElementById('msgCount').textContent=(t.messages||[]).length;
+    const latencies=(t.messages||[]).filter(m=>m.latencyMs).map(m=>m.latencyMs);
+    const avgLat=latencies.length>0?Math.round(latencies.reduce((a,b)=>a+b,0)/latencies.length):0;
+    document.getElementById('avgLatency').textContent=avgLat||'—';
+    document.getElementById('tokenCount').textContent=(_sessionInputTokens+_sessionOutputTokens).toLocaleString();
+  },2000);
+})();
 
 // Init
 if(githubToken){$('#githubToken').value=githubToken}
@@ -425,4 +474,4 @@ log('AI FOUNDRY IDE v2 — boot complete');
 log(`GitHub: ${githubRepo?'✓ '+githubRepo:'not connected — enter repo in left panel'}`);
 log('models: GPT-5.6-SOL / Claude Sonnet / Gemini 2.0');
 log('⚙ SELF-FORGE: active — AI improves this app autonomously');
-log('shortcuts: Ctrl+K=clear input  Ctrl+L=clear log  Esc=cancel stream');
+log('shortcuts: Ctrl+K=clear input  Ctrl+L=clear log  Esc=cancel stream  ?=help');

@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 ALLOWED_PREFIXES = (
+    "automation/ai_foundry/",
     "automation/world/",
     "automation/security/",
     "standment-security/",
@@ -24,8 +25,10 @@ BLOCKED_PREFIXES = (
     "tomoki-agents/",
     "ops/",
 )
-MAX_FILES = 8
-MAX_CHANGED_LINES = 1500
+from automation.world.adaptive_budget import compute_adaptive_budget, BASE_MAX_FILES, BASE_MAX_CHANGED_LINES
+
+MAX_FILES = BASE_MAX_FILES
+MAX_CHANGED_LINES = BASE_MAX_CHANGED_LINES
 
 
 def _git(*args: str) -> str:
@@ -35,6 +38,12 @@ def _git(*args: str) -> str:
 def inspect_diff(base: str) -> dict[str, Any]:
     names = [x.strip() for x in _git("diff", "--name-only", base, "--").splitlines() if x.strip()]
     numstat = _git("diff", "--numstat", base, "--")
+
+    first_file = names[0] if names else "automation/world/"
+    adaptive = compute_adaptive_budget(first_file, base_files=MAX_FILES, base_lines=MAX_CHANGED_LINES)
+    effective_max_files = adaptive.max_files
+    effective_max_lines = adaptive.max_changed_lines
+
     changed_lines = 0
     stat_rows = []
     for line in numstat.splitlines():
@@ -46,17 +55,17 @@ def inspect_diff(base: str) -> dict[str, Any]:
             a = int(add)
             d = int(delete)
         except ValueError:
-            a = d = MAX_CHANGED_LINES + 1
+            a = d = effective_max_lines + 1
         changed_lines += a + d
         stat_rows.append({"path": path, "added": a, "deleted": d})
 
     violations: list[str] = []
     if not names:
         violations.append("no_change")
-    if len(names) > MAX_FILES:
-        violations.append(f"too_many_files:{len(names)}>{MAX_FILES}")
-    if changed_lines > MAX_CHANGED_LINES:
-        violations.append(f"too_many_changed_lines:{changed_lines}>{MAX_CHANGED_LINES}")
+    if len(names) > effective_max_files:
+        violations.append(f"too_many_files:{len(names)}>{effective_max_files}")
+    if changed_lines > effective_max_lines:
+        violations.append(f"too_many_changed_lines:{changed_lines}>{effective_max_lines}")
 
     for raw in names:
         path = raw.replace("\\", "/")
@@ -76,8 +85,9 @@ def inspect_diff(base: str) -> dict[str, Any]:
         "file_count": len(names),
         "changed_lines": changed_lines,
         "numstat": stat_rows,
-        "max_files": MAX_FILES,
-        "max_changed_lines": MAX_CHANGED_LINES,
+        "max_files": effective_max_files,
+        "max_changed_lines": effective_max_lines,
+        "adaptive_budget_reason": adaptive.reason,
         "violations": violations,
         "allowed": bool(names) and not violations,
     }

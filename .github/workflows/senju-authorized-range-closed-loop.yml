@@ -1,0 +1,115 @@
+name: Senju Authorized Range Closed Loop
+
+on:
+  pull_request:
+    paths:
+      - "senju/senju/authorized_range_closed_loop.py"
+      - "senju/scripts/authorized_range_to_agency.py"
+      - "senju/tests/test_authorized_range_closed_loop.py"
+      - "senju/tests/test_authorized_range_to_agency.py"
+      - ".github/workflows/senju-authorized-range-closed-loop.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: senju-authorized-range-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  unit-and-live-authorized:
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    defaults:
+      run:
+        working-directory: senju
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install test dependency
+        run: python -m pip install pytest==9.1.1
+      - name: Run closed-loop and agency-bridge unit tests
+        run: python -m pytest -q tests/test_authorized_range_closed_loop.py tests/test_authorized_range_to_agency.py
+      - name: Execute bounded authorized live loop
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from senju.authorized_range_closed_loop import (
+              AuthorizedRangeClosedLoop,
+              AuthorizedRangePolicy,
+              LoopLimits,
+          )
+
+          policy = AuthorizedRangePolicy.load("config/authorized-test-range.json")
+          if policy.host != "kabeya-authorized-test-range.onrender.com":
+              raise SystemExit(f"refusing unexpected target: {policy.host}")
+
+          loop = AuthorizedRangeClosedLoop(
+              policy,
+              limits=LoopLimits(
+                  max_cycles=4,
+                  max_pages=24,
+                  max_depth=3,
+                  max_requests=80,
+                  families_per_page=4,
+                  stagnant_cycles_to_stop=3,
+              ),
+          )
+          report = loop.run()
+          out = Path("authorized-range-report.json")
+          out.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+          print(json.dumps({
+              "exact_host": report["exact_host"],
+              "request_count": report["request_count"],
+              "pages_observed": report["pages_observed"],
+              "blocked_out_of_scope": report["blocked_out_of_scope"],
+              "finding_count": len(report["findings"]),
+              "cycles": report["cycles"],
+          }, ensure_ascii=False, indent=2))
+          PY
+      - name: Convert live evidence into agency-bus memory
+        run: |
+          python scripts/authorized_range_to_agency.py \
+            --report authorized-range-report.json \
+            --out authorized-range-owned.json
+      - name: Verify agency bus consumes the generated owned-range memory
+        run: |
+          python - <<'PY'
+          import json
+          import sys
+          from pathlib import Path
+
+          sys.path.insert(0, str(Path("scripts").resolve()))
+          from agency_bus import build_bus
+
+          owned = json.loads(Path("authorized-range-owned.json").read_text(encoding="utf-8"))
+          packet = build_bus({}, {}, [], owned_range=owned)
+          if packet["owned_range_active"]["authorized_host"] != "kabeya-authorized-test-range.onrender.com":
+              raise SystemExit("agency bus did not retain the authorized host")
+          if packet["owned_range_active"]["request_count"] <= 0:
+              raise SystemExit("agency bus did not retain live request evidence")
+          print(json.dumps({
+              "agency_digest": packet["digest"],
+              "next_focus": packet["next_focus"],
+              "owned_range_active": packet["owned_range_active"],
+              "counterexample_count": len(packet["adversary_counterexamples"]),
+          }, ensure_ascii=False, indent=2))
+          PY
+      - name: Upload assessment and shared-memory evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: senju-authorized-range-report
+          path: |
+            senju/authorized-range-report.json
+            senju/authorized-range-owned.json
+          if-no-files-found: warn
+          retention-days: 14

@@ -1,0 +1,151 @@
+name: Senju RED Autonomous External Contact
+
+on:
+  schedule:
+    - cron: "41 */2 * * *"
+  workflow_dispatch:
+  push:
+    branches:
+      - "claude/employee-onboarding-setup-udm86"
+      - "senju/autonomous-contact-loop-20260830"
+    paths:
+      - "senju/senju/autonomous_contact.py"
+      - "senju/tests/test_autonomous_contact.py"
+      - ".github/workflows/senju-autonomous-external-contact.yml"
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: senju-red-autonomous-contact-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  self-initiated-external-observation:
+    name: RED chooses -> Senju contacts -> evidence -> RED learns
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: "3.12"
+
+      - name: Verify autonomous contact director
+        working-directory: senju
+        env:
+          PIP_DISABLE_PIP_VERSION_CHECK: "1"
+          PIP_NO_INPUT: "1"
+        run: |
+          set -euo pipefail
+          python -m pip install pytest==9.1.1
+          python -m pytest tests/test_autonomous_contact.py -q
+
+      - name: Restore previous contact memory and latest RED priorities
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/senju-autocontact /tmp/senju-autocontact-prev /tmp/senju-red-prev
+
+          PREV_CONTACT_RUN="$(gh run list \
+            --repo "$GITHUB_REPOSITORY" \
+            --workflow "Senju RED Autonomous External Contact" \
+            --status success \
+            --limit 10 \
+            --json databaseId \
+            --jq '.[0].databaseId // empty' || true)"
+          if [[ -n "$PREV_CONTACT_RUN" ]]; then
+            gh run download "$PREV_CONTACT_RUN" \
+              --repo "$GITHUB_REPOSITORY" \
+              --name senju-autonomous-contact-evidence \
+              --dir /tmp/senju-autocontact-prev || true
+          fi
+          if [[ -f /tmp/senju-autocontact-prev/autonomous-contact-memory.json ]]; then
+            cp /tmp/senju-autocontact-prev/autonomous-contact-memory.json /tmp/senju-autocontact/memory.json
+            echo "Restored autonomous contact memory from run $PREV_CONTACT_RUN"
+          fi
+
+          PREV_RED_RUN="$(gh run list \
+            --repo "$GITHUB_REPOSITORY" \
+            --workflow "Senju Authorized Pentest Fabric" \
+            --status success \
+            --limit 10 \
+            --json databaseId \
+            --jq '.[0].databaseId // empty' || true)"
+          if [[ -n "$PREV_RED_RUN" ]]; then
+            gh run download "$PREV_RED_RUN" \
+              --repo "$GITHUB_REPOSITORY" \
+              --name senju-authorized-pentest-evidence \
+              --dir /tmp/senju-red-prev || true
+          fi
+          if [[ -f /tmp/senju-red-prev/red-research.json ]]; then
+            cp /tmp/senju-red-prev/red-research.json /tmp/senju-autocontact/red-research.json
+            echo "Loaded RED research priorities from pentest run $PREV_RED_RUN"
+          else
+            echo "No previous RED research artifact found; RED will bootstrap from public research missions"
+          fi
+
+      - name: Load optional owned-target autonomous registry
+        env:
+          SENJU_AUTONOMOUS_CONTACT_REGISTRY_JSON: ${{ secrets.SENJU_AUTONOMOUS_CONTACT_REGISTRY_JSON }}
+        run: |
+          set -euo pipefail
+          if [[ -n "${SENJU_AUTONOMOUS_CONTACT_REGISTRY_JSON:-}" ]]; then
+            printf '%s' "$SENJU_AUTONOMOUS_CONTACT_REGISTRY_JSON" > /tmp/senju-autocontact/registry.json
+            echo "Owned/authorized autonomous contact registry loaded"
+          else
+            echo "No custom registry configured; built-in public research missions remain active"
+          fi
+
+      - name: RED self-selects and Senju performs real external contacts
+        working-directory: senju
+        run: |
+          set -euo pipefail
+          ARGS=(
+            --out /tmp/senju-autocontact/autonomous-contact-report.json
+            --memory-out /tmp/senju-autocontact/autonomous-contact-memory.json
+            --max-missions 3
+          )
+          [[ -f /tmp/senju-autocontact/memory.json ]] && ARGS+=(--memory /tmp/senju-autocontact/memory.json)
+          [[ -f /tmp/senju-autocontact/red-research.json ]] && ARGS+=(--red-research /tmp/senju-autocontact/red-research.json)
+          [[ -f /tmp/senju-autocontact/registry.json ]] && ARGS+=(--registry /tmp/senju-autocontact/registry.json)
+          python -m senju.autonomous_contact "${ARGS[@]}" | tee /tmp/senju-autocontact/stdout.txt
+
+      - name: Verify self-initiated live evidence and RED handoff
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          report = json.loads(Path('/tmp/senju-autocontact/autonomous-contact-report.json').read_text())
+          assert report['schema'] == 'senju-autonomous-contact-report/v1'
+          assert report['self_initiated'] is True
+          assert report['network_io'] is True
+          assert report['per_cycle_human_instruction_required'] is False
+          assert report['authority_is_registry_or_builtin'] is True
+          assert report['arbitrary_target_discovery'] is False
+          assert report['autonomous_effect'] == 'read-only'
+          assert report['attempted'] >= 1
+          assert report['provider_acknowledged'] >= 1
+          assert report['red_handoff']['schema'] == 'senju-autonomous-contact-red-handoff/v1'
+          receipts = [x.get('receipt') for x in report['observations'] if x.get('receipt')]
+          assert receipts
+          assert all(r['contacted_hosts'] for r in receipts)
+          assert all(r['response_sha256'] for r in receipts)
+          print('SENJU_RED_AUTONOMOUS_EXTERNAL_CONTACT_VERIFIED')
+          PY
+
+      - name: Publish autonomous external-contact evidence
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        with:
+          name: senju-autonomous-contact-evidence
+          retention-days: 30
+          if-no-files-found: error
+          path: /tmp/senju-autocontact/

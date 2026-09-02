@@ -1,0 +1,82 @@
+@import url('https://fonts.googleapis.com/css2?family=M+PLUS+1+Code:wght@300;400;500;600;700&display=swap');
+
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:#030504;color:#d7e4dc;font-family:'M PLUS 1 Code','Cascadia Code','JetBrains Mono','IBM Plex Mono','Fira Code',Consolas,monospace}
+body{overflow:hidden}
+button,textarea{font:inherit}
+button{letter-spacing:.055em}
+.shell{height:100dvh;display:grid;grid-template-columns:280px minmax(560px,1fr) 390px;background:#050706;overflow:hidden}
+.sidebar,.tools-pane{background:#070a08;min-width:0;min-height:0}
+.sidebar{border-right:1px solid #1a241e;display:flex;flex-direction:column}
+.tools-pane{border-left:1px solid #1a241e;display:flex;flex-direction:column;overflow:hidden}
+.brand{height:78px;padding:18px;border-bottom:1px solid #172019;display:grid;grid-template-columns:12px 1fr;grid-template-rows:auto auto;column-gap:10px;align-content:center}
+.brand .dot{width:8px;height:8px;border-radius:1px;background:#65ff9b;box-shadow:0 0 16px #65ff9b;grid-row:1/3}
+.brand strong{font-size:13px;letter-spacing:.15em;text-shadow:0 0 10px rgba(101,255,155,.15)}
+.brand small{font-size:9px;color:#66746b;letter-spacing:.18em;margin-top:4px}
+.new-thread,.primary,.secondary,#sendBtn{border:1px solid #27352c;background:#0b100d;color:#d9e6dd;cursor:pointer;border-radius:0}
+.new-thread{margin:14px;padding:12px;text-align:left}
+.new-thread:hover,.secondary:hover{border-color:#65ff9b;color:#65ff9b}
+.sidebar-label{padding:8px 16px;color:#4d5b52;font-size:9px;letter-spacing:.18em}
+.thread-list{overflow:auto;padding:0 8px 16px;flex:1;min-height:0;overscroll-behavior:contain}
+.thread{border:1px solid transparent;padding:10px 11px;margin:3px 0;cursor:pointer;display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center}
+.thread:hover{background:#0c110e}.thread.active{border-color:#24442f;background:#0d1510}
+.thread-title{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;letter-spacing:.015em}
+.thread-time{color:#46534b;font-size:9px}
+.thread-delete{opacity:0;border:0;background:transparent;color:#6d7b72;cursor:pointer;font-size:11px}.thread:hover .thread-delete{opacity:1}
+.sidebar-foot{padding:13px 16px;border-top:1px solid #172019;color:#435047;font-size:8px;letter-spacing:.1em}
+
+.chat-pane{min-width:0;min-height:0;height:100dvh;display:grid;grid-template-rows:78px minmax(0,1fr) auto;background:#060907;overflow:hidden;position:relative}
+.pane-head{height:78px;border-bottom:1px solid #172019;display:flex;align-items:center;justify-content:space-between;padding:0 24px;background:#070a08;z-index:2}
+.eyebrow{font-size:8px;color:#61d986;letter-spacing:.19em}
+.pane-head h1,.tools-head h2{font-size:13px;margin:6px 0 0;font-weight:600;letter-spacing:.035em}
+.head-meta{font-size:9px;color:#718078;letter-spacing:.12em}.green{width:6px;height:6px;background:#65ff9b;display:inline-block;border-radius:1px;margin-right:7px;box-shadow:0 0 9px rgba(101,255,155,.65)}
+
+.messages{min-height:0;height:100%;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;scroll-behavior:smooth;padding:34px clamp(28px,6vw,86px) 46px;scrollbar-gutter:stable}
+.message{max-width:900px;margin:0 auto 30px}
+.message .role{font-size:9px;letter-spacing:.18em;color:#536059;margin-bottom:9px;text-transform:uppercase}
+.message.user .role{color:#7fa98c}
+.message .content{font-family:'M PLUS 1 Code','Cascadia Code','JetBrains Mono',Consolas,monospace;white-space:pre-wrap;line-height:1.78;font-size:13px;color:#dce5df;letter-spacing:.015em;word-break:break-word}
+.message.user .content{color:#b9c7be}.message.error .content{color:#ff8e8e}
+.message pre{background:#020403;border:1px solid #1b281f;border-left:2px solid #65ff9b;padding:15px;overflow:auto;font-family:'M PLUS 1 Code','Cascadia Code','JetBrains Mono',Consolas,monospace;color:#a8ffbe;font-size:12px;line-height:1.65;box-shadow:inset 0 0 28px rgba(101,255,155,.025)}
+.welcome{max-width:800px;margin:9vh auto 0;border:1px solid #19251d;padding:26px;background:#070b08;box-shadow:inset 0 0 40px rgba(101,255,155,.018)}
+.welcome h3{margin:0 0 12px;font-size:15px;letter-spacing:.08em}.welcome p{color:#76857b;line-height:1.75;font-size:12px}.welcome code{color:#65ff9b}
+
+.composer-wrap{position:relative;left:auto;right:auto;bottom:auto;z-index:3;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;background:#080d0a;border-top:1px solid #1f2c24;padding:12px clamp(18px,4vw,52px) 16px;box-shadow:0 -18px 38px rgba(0,0,0,.38);flex-shrink:0}
+#composer{resize:none;max-height:210px;min-height:48px;background:#050806;border:1px solid #1b281f;outline:0;color:#dce5df;padding:13px 14px;line-height:1.55;caret-color:#65ff9b}
+#composer:focus{border-color:#365641;box-shadow:0 0 0 1px rgba(101,255,155,.08),inset 0 0 22px rgba(101,255,155,.02)}
+#composer::placeholder{color:#3f4c44}
+#sendBtn{width:82px;color:#061008;background:#65ff9b;border-color:#65ff9b;font-weight:800;text-shadow:none}
+
+.tools-head{height:78px;padding:19px;border-bottom:1px solid #172019;flex:0 0 auto}.pipeline{display:grid;grid-template-columns:1fr auto;gap:8px;padding:14px;flex:0 0 auto}.primary,.secondary{padding:11px 12px;font-size:10px}.primary{background:#65ff9b;color:#061008;border-color:#65ff9b;font-weight:800}.primary:disabled,#sendBtn:disabled{opacity:.5;cursor:not-allowed}
+.tool-status{border-top:1px solid #172019;border-bottom:1px solid #172019;display:grid;grid-template-columns:1fr 1fr;flex:0 0 auto}.tool-status div{padding:11px 13px;border-right:1px solid #172019;border-bottom:1px solid #172019}.tool-status span{display:block;color:#46534b;font-size:8px;margin-bottom:5px;letter-spacing:.11em}.tool-status b{font-size:9px;font-weight:500;color:#9db0a3;word-break:break-all}
+.terminal-head{height:34px;padding:11px 14px 0;display:flex;justify-content:space-between;color:#4d5b52;font-size:8px;letter-spacing:.14em;flex:0 0 auto}.terminal{margin:0 14px;height:290px;overflow:auto;background:#020403;border:1px solid #172019;color:#7ee99a;padding:13px;font-size:10px;line-height:1.65;white-space:pre-wrap;box-shadow:inset 0 0 34px rgba(101,255,155,.025)}
+.artifact{margin:14px;border:1px solid #294334;background:#0b130e;padding:15px;overflow:auto}.artifact.hidden{display:none}.artifact-title{color:#65ff9b;font-size:8px;letter-spacing:.17em}.artifact h3{font-size:13px;margin:9px 0}.artifact p{font-family:'M PLUS 1 Code','Cascadia Code',Consolas,monospace;color:#829087;font-size:11px;line-height:1.6}.caps{display:flex;flex-wrap:wrap;gap:5px;margin:10px 0}.cap{border:1px solid #26372c;padding:4px 6px;font-size:8px;color:#91a299}.artifact a{display:block;border:1px solid #65ff9b;background:#65ff9b;color:#071008;padding:10px;text-align:center;text-decoration:none;font-size:10px;font-weight:800;margin:10px 0}.artifact .secondary{width:100%}
+
+.messages::-webkit-scrollbar,.thread-list::-webkit-scrollbar,.terminal::-webkit-scrollbar{width:9px;height:9px}.messages::-webkit-scrollbar-track,.thread-list::-webkit-scrollbar-track,.terminal::-webkit-scrollbar-track{background:#050806}.messages::-webkit-scrollbar-thumb,.thread-list::-webkit-scrollbar-thumb,.terminal::-webkit-scrollbar-thumb{background:#1c2a21;border:2px solid #050806}.messages::-webkit-scrollbar-thumb:hover,.thread-list::-webkit-scrollbar-thumb:hover,.terminal::-webkit-scrollbar-thumb:hover{background:#34513d}
+
+#mobileBlock{display:none}@media(max-width:1050px){#app{display:none}#mobileBlock{display:grid;place-items:center;height:100vh;padding:30px;color:#92a198;font-size:13px;text-align:center}}
+
+/* Mobile golden path: keep chat usable instead of blocking the entire product. */
+@media(max-width:1050px){
+  body{overflow:hidden}
+  #mobileBlock{display:none}
+  #app{display:grid;grid-template-columns:1fr;height:100dvh;overflow:hidden}
+  .sidebar,.tools-pane{display:none}
+  .chat-pane{height:100dvh;width:100%;grid-template-rows:64px minmax(0,1fr) auto}
+  .pane-head{height:64px;padding:0 14px}
+  .pane-head h1{max-width:62vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px}
+  .head-meta{font-size:8px}
+  .messages{padding:18px 14px 26px;scrollbar-gutter:auto}
+  .message{margin-bottom:22px}
+  .message .content{font-size:12px;line-height:1.7}
+  .welcome{margin:4vh auto 0;padding:18px}
+  .composer-wrap{grid-template-columns:minmax(0,1fr) 64px;padding:9px 10px max(10px,env(safe-area-inset-bottom));gap:6px}
+  #composer{min-height:46px;padding:11px 10px;font-size:12px}
+  #sendBtn{width:64px;font-size:10px}
+}
+
+@media(min-width:700px) and (max-width:1050px){
+  #app{grid-template-columns:220px minmax(0,1fr)}
+  .sidebar{display:flex}
+  .sidebar-foot{font-size:7px}
+}

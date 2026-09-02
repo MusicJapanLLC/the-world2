@@ -1,0 +1,12 @@
+{
+  "findings": [
+    {"severity":"medium","title":"GraphQL endpoint exposed","path":"/graphql","evidence":"HTTP 401"},
+    {"severity":"low","title":"Permissions-Policy未設定"},
+    {"severity":"info","title":"Serverヘッダー公開","evidence":"nginx"},
+    {"severity":"medium","title":"Cookie HttpOnly属性不足の可能性"},
+    {"severity":"info","title":"管理/認証/デバッグ面を検出","evidence":"/graphql(401)"},
+    {"severity":"low","title":"security.txt未設置"},
+    {"severity":"medium","title":"SPF未設定"},
+    {"severity":"medium","title":"DMARC未設定"}
+  ]
+}

@@ -1,0 +1,30 @@
+{
+  "archetype": "cloud",
+  "coverage_gaps": [
+    "nosqli",
+    "path_trav",
+    "priv_esc"
+  ],
+  "description": "Auto-generated local lab from bounded coverage/ELO evidence",
+  "fingerprint": "fe25832bb73d829f53877851c7c14c9fd631d1e51c45ced9595872f99cb01c92",
+  "host": null,
+  "name": "auto-lab-cloud-e1b6e320a12d",
+  "schema": "senju-auto-lab/v3",
+  "surfaces": [
+    {
+      "difficulty": 0.463,
+      "name": "auto-lab-cloud-e1b6e320a12d:nosqli",
+      "vuln_class": "nosqli"
+    },
+    {
+      "difficulty": 0.593,
+      "name": "auto-lab-cloud-e1b6e320a12d:path-trav",
+      "vuln_class": "path_trav"
+    },
+    {
+      "difficulty": 0.349,
+      "name": "auto-lab-cloud-e1b6e320a12d:priv-esc",
+      "vuln_class": "priv_esc"
+    }
+  ]
+}

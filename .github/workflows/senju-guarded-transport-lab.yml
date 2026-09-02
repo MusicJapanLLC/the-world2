@@ -1,0 +1,79 @@
+name: Senju Guarded Transport Lab
+
+on:
+  workflow_dispatch:
+    inputs:
+      cycles:
+        description: "Bounded loop cycles (1-10)"
+        required: false
+        default: "3"
+      rounds:
+        description: "Strategy rounds per target (1-10)"
+        required: false
+        default: "2"
+  schedule:
+    - cron: "17 */6 * * *"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: senju-guarded-transport-lab
+  cancel-in-progress: true
+
+jobs:
+  experiment:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Install Senju
+        run: python -m pip install -e ./senju
+
+      - name: Refresh independent authority review
+        run: |
+          if [ -f automation/codegen/meta_state/discovery_candidates.json ]; then
+            python automation/codegen/authority_review_runner.py
+          else
+            echo "No discovery candidates present; reviewer has nothing to promote."
+          fi
+
+      - name: Run guarded multi-route loop
+        env:
+          INPUT_CYCLES: ${{ github.event.inputs.cycles || '3' }}
+          INPUT_ROUNDS: ${{ github.event.inputs.rounds || '2' }}
+        run: |
+          python senju/scripts/guarded_transport_lab_loop.py \
+            --cycles "$INPUT_CYCLES" \
+            --rounds "$INPUT_ROUNDS" \
+            --max-targets 3 \
+            --sleep-seconds 10
+
+      - name: Summarize result
+        if: always()
+        run: |
+          if [ -f senju/state/guarded_transport_lab.json ]; then
+            python - <<'PY'
+          import json
+          from pathlib import Path
+          p = Path('senju/state/guarded_transport_lab.json')
+          d = json.loads(p.read_text())
+          cycles = d.get('cycles', [])
+          print(f"guard_bypass={d.get('guard_bypass')} cycles={len(cycles)}")
+          for c in cycles:
+              for r in c.get('results', []):
+                  if 'winner' in r:
+                      print(f"cycle={c['cycle']} host={r.get('target_host')} winner={r.get('winner')}")
+                  elif 'error' in r:
+                      print(f"cycle={c['cycle']} error={r.get('error')}")
+          PY
+          else
+            echo "No contacts were made; no live reviewed targets were available."
+          fi

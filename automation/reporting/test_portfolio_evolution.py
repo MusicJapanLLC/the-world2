@@ -1,6 +1,11 @@
 from datetime import datetime, timezone
 
-from automation.reporting.portfolio_evolution import build_plan, choose_primary, parse_portfolio
+from automation.reporting.portfolio_evolution import (
+    build_plan,
+    choose_primary,
+    parse_live_evidence,
+    parse_portfolio,
+)
 
 
 SAMPLE = """
@@ -84,6 +89,7 @@ def test_build_plan_is_p0_and_bounded_for_senju():
     assert plan["gates"]["human_inspectable_artifact_required"] is True
     assert plan["gates"]["senju_technical_score_is_not_market_evidence"] is True
     assert plan["gates"]["standment_security_priority_is_research_priority_not_fake_proof"] is True
+    assert plan["gates"]["live_regression_preempts_cosmetic_work"] is True
 
 
 def test_verified_item_loses_to_material_building_gap():
@@ -97,3 +103,45 @@ def test_standment_security_gets_explicit_world_wide_p0_bias():
     primary = choose_primary(items)
     assert primary.title == "Standment Security Evidence Pack"
     assert "standment_security_priority+60" in primary.reasons
+
+
+def test_live_production_regression_preempts_normal_portfolio_work():
+    live = parse_live_evidence({
+        "targets": [
+            {
+                "id": "madlab",
+                "name": "MADLAB DeepGuard",
+                "url": "https://example.invalid/",
+                "reachable": False,
+                "status_code": 0,
+                "expected_status": [200],
+                "latency_ms": 0,
+                "latency_budget_ms": 3000,
+                "priority": "P0",
+            }
+        ]
+    })
+    primary = choose_primary(parse_portfolio(SAMPLE) + live)
+    assert primary.title == "Live Site — MADLAB DeepGuard"
+    assert primary.status == "BLOCKED"
+    assert "production_regression+80" in primary.reasons
+
+
+def test_healthy_live_target_stays_low_priority():
+    live = parse_live_evidence({
+        "targets": [
+            {
+                "id": "healthy",
+                "name": "Healthy Site",
+                "url": "https://example.com/",
+                "reachable": True,
+                "status_code": 200,
+                "expected_status": [200],
+                "latency_ms": 250,
+                "latency_budget_ms": 3000,
+                "priority": "P1",
+            }
+        ]
+    })
+    primary = choose_primary(parse_portfolio(SAMPLE) + live)
+    assert primary.title == "Customer Demo"

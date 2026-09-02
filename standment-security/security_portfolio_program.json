@@ -124,7 +124,7 @@
       "hypothesis": "A reproducible permission-boundary lab for autonomous agents will make Standment's AI security work inspectable instead of policy-only.",
       "deliverable": "Agent permission map, allowed/blocked action matrix, audit trail examples, failure evidence and recovery behavior on owned test systems.",
       "customer_usefulness": "An AI product team can inspect exactly what an agent may do, what it is blocked from doing, and whether controls fail closed under adverse inputs.",
-      "evidence_files": ["company-society/AUTONOMY.md", "automation/security/workflow_policy.py", "standment-security/ai-security/agent-permission-boundary-lab.md"]
+      "evidence_files": ["company-society/AUTONOMY.md", "automation/security/workflow_policy.py", "automation/security/workflow_policy_entrypoint.py", "automation/security/agent_permission_boundary_eval.py", "automation/security/test_agent_permission_boundary_eval.py", "automation/security/test_workflow_policy_entrypoint_semantics.py", "automation/world/secured_realtime_kernel.py", ".github/workflows/the-world-realtime-kernel.yml", ".github/workflows/standment-agent-permission-boundary.yml", "standment-security/ai-security/agent-permission-boundary-lab.md", "standment-security/ai-security/agent-permission-boundary-evidence-pack.md"]
     },
     {
       "id": "SEC-PORT-010",
@@ -134,7 +134,7 @@
       "hypothesis": "A bounded defensive evaluation harness for prompt-injection, data-boundary and tool-use failures can become a differentiated AI-security portfolio artifact.",
       "deliverable": "Owned-system LLM security eval specification with benign/adversarial test cases, expected safe behavior, regression evidence and limitations.",
       "customer_usefulness": "AI teams can repeatedly test whether model/tool integrations preserve data and action boundaries when prompts attempt to bypass them.",
-      "evidence_files": ["automation/security/workflow_policy.py", "standment-security/ai-security/llm-security-eval-harness.md"]
+      "evidence_files": ["automation/security/workflow_policy.py", "standment-security/ai-security/llm-security-eval-harness.md", "automation/security/llm_security_eval.py", "automation/security/test_llm_security_eval.py", "standment-security/ai-security/llm-security-eval-evidence-pack.md", "standment-security/ai-security/fixtures/llm-security-vulnerable.json", "standment-security/ai-security/fixtures/llm-security-hardened.json", ".github/workflows/standment-ai-security-eval.yml", "automation/world/secured_realtime_kernel.py", "automation/world/test_secured_realtime_kernel.py", "automation/security/world_runtime_observation_adapter.py", "automation/security/test_world_runtime_observation_adapter.py", ".github/workflows/the-world-realtime-kernel.yml"]
     },
     {
       "id": "SEC-PORT-011",

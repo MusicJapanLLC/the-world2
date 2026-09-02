@@ -1,0 +1,187 @@
+name: Standment - Autonomous Agent Auditability Evidence
+
+on:
+  schedule:
+    - cron: '7,27,47 * * * *'
+  workflow_dispatch:
+  pull_request:
+    branches: ['claude/employee-onboarding-setup-udm86']
+    paths:
+      - '.github/workflows/standment-agent-auditability.yml'
+      - 'automation/security/agent_auditability_eval.py'
+      - 'automation/security/test_agent_auditability_eval.py'
+      - 'automation/world/secured_realtime_kernel.py'
+  push:
+    branches: ['claude/employee-onboarding-setup-udm86']
+    paths:
+      - '.github/workflows/standment-agent-auditability.yml'
+      - 'automation/security/agent_auditability_eval.py'
+      - 'automation/security/test_agent_auditability_eval.py'
+      - 'automation/world/secured_realtime_kernel.py'
+      - 'standment-security/evidence-packs/agent-auditability/**'
+
+concurrency:
+  group: standment-agent-auditability-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  actions: read
+
+env:
+  EVIDENCE_DIR: /tmp/sec-port-005-agent-auditability
+  GH_TOKEN: ${{ github.token }}
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Checkout THE WORLD
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          persist-credentials: false
+
+      - name: Setup Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: '3.12'
+
+      - name: Test auditability evidence contract
+        run: |
+          set -euo pipefail
+          python -m unittest -v automation.security.test_agent_auditability_eval
+          python -m unittest -v automation.world.test_secured_realtime_kernel
+
+      - name: Preserve contract marker
+        run: |
+          set -euo pipefail
+          mkdir -p "$EVIDENCE_DIR/contract"
+          cat > "$EVIDENCE_DIR/contract/README.md" <<'EOF'
+          # SEC-PORT-005 contract evidence
+          PR/local execution validates the evaluator and counterevidence only.
+          It never upgrades SEC-PORT-005 to VERIFIED without a real owned runtime mutation trace.
+          EOF
+
+      - name: Upload contract evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: sec-port-005-agent-auditability-contract-${{ github.run_id }}
+          retention-days: 90
+          if-no-files-found: error
+          path: /tmp/sec-port-005-agent-auditability/contract/
+
+  runtime-evidence:
+    if: github.event_name != 'pull_request'
+    needs: contract
+    strategy:
+      fail-fast: false
+      matrix:
+        lane: [primary, independent-retest]
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Checkout THE WORLD fresh
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          persist-credentials: false
+
+      - name: Setup Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: '3.12'
+
+      - name: Re-run contract independently
+        run: |
+          set -euo pipefail
+          python -m unittest -v automation.security.test_agent_auditability_eval
+          python -m unittest -v automation.world.test_secured_realtime_kernel
+
+      - name: Find latest successful runtime with a real mutation trace
+        id: source
+        shell: bash
+        env:
+          LANE: ${{ matrix.lane }}
+        run: |
+          set -euo pipefail
+          lane_dir="$EVIDENCE_DIR/$LANE"
+          mkdir -p "$lane_dir/source"
+          selected=""
+
+          while read -r run_id; do
+            [[ -n "$run_id" ]] || continue
+            rm -rf "$lane_dir/candidate"
+            mkdir -p "$lane_dir/candidate"
+            if ! gh run download "$run_id" \
+              --repo "$GITHUB_REPOSITORY" \
+              --name "world-realtime-security-evidence-${run_id}" \
+              --dir "$lane_dir/candidate" 2>/dev/null; then
+              continue
+            fi
+            pulse="$(find "$lane_dir/candidate" -type f -name world-realtime-pulse.json | head -n1 || true)"
+            [[ -n "$pulse" ]] || continue
+            if python - "$pulse" <<'PY'
+          import json, sys
+          d=json.load(open(sys.argv[1],encoding='utf-8'))
+          rows=((d.get('runtime_security') or {}).get('observations') or [])
+          ok=any(r.get('decision')=='ALLOW' and r.get('attempted_execution') is True for r in rows if isinstance(r,dict))
+          raise SystemExit(0 if ok else 1)
+          PY
+            then
+              selected="$run_id"
+              cp "$pulse" "$lane_dir/world-realtime-pulse.json"
+              break
+            fi
+          done < <(gh run list \
+            --repo "$GITHUB_REPOSITORY" \
+            --workflow the-world-realtime-kernel.yml \
+            --status success \
+            --limit 30 \
+            --json databaseId \
+            --jq '.[].databaseId')
+
+          if [[ -z "$selected" ]]; then
+            echo 'No successful owned realtime run with a real allowed mutation trace was found.' >&2
+            exit 2
+          fi
+          echo "source_run=$selected" >> "$GITHUB_OUTPUT"
+          echo "Runtime source with real mutation: $selected" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Evaluate autonomous-agent auditability
+        shell: bash
+        env:
+          LANE: ${{ matrix.lane }}
+          SOURCE_RUN: ${{ steps.source.outputs.source_run }}
+        run: |
+          set -euo pipefail
+          lane_dir="$EVIDENCE_DIR/$LANE"
+          python automation/security/agent_auditability_eval.py \
+            --pulse "$lane_dir/world-realtime-pulse.json" \
+            --source-run "$SOURCE_RUN" \
+            --out-json "$lane_dir/result.json" \
+            --out-md "$lane_dir/result.md" \
+            --require-pass
+          cat "$lane_dir/result.md" >> "$GITHUB_STEP_SUMMARY"
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          lane=os.environ['LANE']
+          d=json.loads(Path(f"/tmp/sec-port-005-agent-auditability/{lane}/result.json").read_text(encoding='utf-8'))
+          assert d['status']=='PASS'
+          assert d['verification_state']=='SCOPED_VERIFIED_CANDIDATE'
+          assert d['actual_mutations'] >= 1
+          assert d['deny_reached_execution'] == 0
+          assert not d['exposure_errors']
+          assert d['pass_count'] == d['case_count']
+          print('SEC-PORT-005 scoped auditability truth gate PASS', d['fingerprint'])
+          PY
+
+      - name: Upload runtime evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: sec-port-005-agent-auditability-${{ github.run_id }}-${{ matrix.lane }}
+          retention-days: 90
+          if-no-files-found: error
+          path: /tmp/sec-port-005-agent-auditability/${{ matrix.lane }}/

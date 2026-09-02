@@ -1,0 +1,128 @@
+name: AI Dev - Track Director
+
+on:
+  schedule:
+    - cron: '12,27,42,57 * * * *'
+  workflow_dispatch:
+  push:
+    branches: ['claude/employee-onboarding-setup-udm86']
+    paths:
+      - '.github/workflows/ai-dev-track-director.yml'
+      - 'automation/ai_foundry/track_progression.py'
+      - 'automation/ai_foundry/test_track_progression.py'
+      - 'automation/ai_foundry/minute_evolution.py'
+      - 'automation/ai_foundry/ai_development_program.json'
+
+concurrency:
+  group: ai-dev-track-director-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  actions: read
+
+env:
+  DIRECTOR_DIR: /tmp/ai-dev-track-director
+  GH_TOKEN: ${{ github.token }}
+
+jobs:
+  direct:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout THE WORLD
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Setup Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: '3.12'
+
+      - name: Verify progression contract
+        run: |
+          set -euo pipefail
+          python -m unittest -v automation.ai_foundry.test_track_progression
+          python -m unittest -v automation.ai_foundry.test_minute_evolution
+
+      - name: Load latest successful AI Foundry runtime evidence
+        id: evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$DIRECTOR_DIR/foundry"
+          printf '%s\n' '{}' > "$DIRECTOR_DIR/hourly-summary.json"
+          source_run=""
+          for run in $(gh run list --repo "$GITHUB_REPOSITORY" --workflow ai-dev-minute-foundry.yml --status success --limit 12 --json databaseId --jq '.[].databaseId'); do
+            rm -rf "$DIRECTOR_DIR/foundry"/*
+            if gh run download "$run" --repo "$GITHUB_REPOSITORY" --name "ai-dev-minute-foundry-${run}" --dir "$DIRECTOR_DIR/foundry" >/dev/null 2>&1; then
+              candidate="$(find "$DIRECTOR_DIR/foundry" -type f -name hourly-summary.json | head -n1 || true)"
+              if [[ -n "$candidate" ]]; then
+                cp "$candidate" "$DIRECTOR_DIR/hourly-summary.json"
+                source_run="$run"
+                break
+              fi
+            fi
+          done
+          echo "source_run=$source_run" >> "$GITHUB_OUTPUT"
+          echo "AI Foundry evidence source: ${source_run:-NONE}" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Decide evidence-gated research progression
+        id: decide
+        shell: bash
+        run: |
+          set -euo pipefail
+          python automation/ai_foundry/track_progression.py \
+            --summary "$DIRECTOR_DIR/hourly-summary.json" \
+            --program automation/ai_foundry/ai_development_program.json \
+            --queue value-lab/research_queue.json \
+            --decision-out "$DIRECTOR_DIR/decision.json" \
+            --queue-out "$DIRECTOR_DIR/research_queue.next.json"
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+          import json,os
+          d=json.load(open(os.environ['DIRECTOR_DIR']+'/decision.json',encoding='utf-8'))
+          print('decision='+str(d.get('decision') or 'HOLD'))
+          print('next_track='+str(d.get('next_parallel_track') or 'NONE'))
+          PY
+          cat "$DIRECTOR_DIR/decision.json" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Validate bounded priority-only candidate
+        if: steps.decide.outputs.decision == 'OPEN_PARALLEL_TRACK'
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json,os
+          from pathlib import Path
+          current=json.loads(Path('value-lab/research_queue.json').read_text(encoding='utf-8'))
+          nxt=json.loads(Path(os.environ['DIRECTOR_DIR']+'/research_queue.next.json').read_text(encoding='utf-8'))
+          cur_rows=current.get('active') or []
+          nxt_rows=nxt.get('active') or []
+          assert len(cur_rows)==len(nxt_rows), 'track director cannot add/remove missions'
+          allowed={'previous_track_id','preferred_track_id','current_phase','progression_rule','failure_memory_continues','progression_source_fingerprint'}
+          changed=0
+          for a,b in zip(cur_rows,nxt_rows):
+              if a==b:
+                  continue
+              assert str(a.get('research_id') or '').startswith('RND-AI-DEVELOPMENT'), 'non-AI mission changed'
+              keys={k for k in set(a)|set(b) if a.get(k)!=b.get(k)}
+              assert keys <= allowed, f'unexpected mission fields changed: {sorted(keys)}'
+              changed += 1
+          assert changed == 1, f'expected exactly one AI mission change, got {changed}'
+          PY
+          python -m json.tool "$DIRECTOR_DIR/research_queue.next.json" >/dev/null
+          echo "Candidate validated. Direct repository mutation is intentionally disabled until this writer is classified by the Security capability policy." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Preserve director evidence and candidate
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: ai-dev-track-director-${{ github.run_id }}
+          retention-days: 90
+          if-no-files-found: warn
+          path: |
+            /tmp/ai-dev-track-director/hourly-summary.json
+            /tmp/ai-dev-track-director/decision.json
+            /tmp/ai-dev-track-director/research_queue.next.json

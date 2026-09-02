@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "agents": [
+    {"id":"scout-01","role":"frontier_scout","mission":"Collect public defensive-security signals and propose research topics","weight":1.0},
+    {"id":"scout-02","role":"frontier_scout","mission":"Track exploited vulnerabilities and defensive mitigations","weight":1.0},
+    {"id":"hypothesis-01","role":"hypothesis","mission":"Turn threat signals into testable defensive hypotheses","weight":1.0},
+    {"id":"reproducer-01","role":"reproducer","mission":"Reproduce only inside local or explicitly authorized sandboxes","weight":1.0},
+    {"id":"builder-01","role":"prototype_engineer","mission":"Build defensive checks, tests and hardening prototypes","weight":1.0},
+    {"id":"builder-02","role":"prototype_engineer","mission":"Improve CI, dependency and application security controls","weight":1.0},
+    {"id":"evaluator-01","role":"evaluator","mission":"Score reproducibility, usefulness, safety and maintainability","weight":1.0},
+    {"id":"skeptic-01","role":"skeptic","mission":"Challenge unsupported conclusions and weak evidence","weight":1.0},
+    {"id":"curator-01","role":"memory_curator","mission":"Preserve champions, failures, evidence and lessons","weight":1.0},
+    {"id":"meta-01","role":"meta_improver","mission":"Find bottlenecks in the research process itself","weight":1.0}
+  ],
+  "spawn_policy": {
+    "min_workers": 4,
+    "max_workers": 16,
+    "scale_up_when_queue_gte": 12,
+    "scale_down_when_queue_lte": 3
+  }
+}

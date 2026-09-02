@@ -1,0 +1,136 @@
+name: Auto Conflict Resolver
+
+on:
+  push:
+    branches:
+      - claude/employee-onboarding-setup-udm86
+      - main
+      - master
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  resolve-conflicts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      GH_TOKEN: ${{ github.token }}
+      REPO: ${{ github.repository }}
+
+    steps:
+      - name: Checkout base branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+          token: ${{ github.token }}
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Resolve low-risk conflicts for all open PRs
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          BASE_BRANCH="claude/employee-onboarding-setup-udm86"
+          git fetch origin --prune
+
+          is_security_boundary_path() {
+            local p
+            p=$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]')
+
+            case "$p" in
+              .github/workflows/auto-merge.yml|\
+              .github/workflows/auto-conflict-resolver.yml|\
+              .github/codeowners|\
+              offense_first.md|\
+              the_world_authorized_targets.md|\
+              senju/finding_trust_policy.md)
+                return 0
+                ;;
+            esac
+
+            case "$p" in
+              *scopeguard*|*scope_guard*|*security-guard*|*security_guard*|\
+              *artifact_guard*|*authorization*|*authority*|*engagement*|\
+              *externalcontact*|*external_contact*|*secret*|*permission*|\
+              *sandbox*|*allowlist*|*denylist*|*guardrail*)
+                return 0
+                ;;
+            esac
+
+            if [[ "$p" == .github/workflows/* ]] && \
+               [[ "$p" =~ (security|guard|merge|deploy|release|executor|autonomous|spear|meta) ]]; then
+              return 0
+            fi
+
+            return 1
+          }
+
+          PRS=$(gh pr list --repo "$REPO" \
+            --base "$BASE_BRANCH" \
+            --state open \
+            --json number,headRefName,isDraft \
+            --jq '.[] | select(.isDraft == false) | "\(.number) \(.headRefName)"')
+
+          while IFS= read -r line; do
+            [[ -z "$line" ]] && continue
+            PR_NUM=$(echo "$line" | awk '{print $1}')
+            HEAD_REF=$(echo "$line" | awk '{print $2}')
+
+            echo "--- Checking PR #$PR_NUM ($HEAD_REF) ---"
+
+            git fetch origin "$HEAD_REF" || { echo "Cannot fetch $HEAD_REF — skip"; continue; }
+            git checkout -B "conflict-test-$$" "origin/$HEAD_REF"
+
+            if git merge --no-commit --no-ff "origin/$BASE_BRANCH"; then
+              git merge --abort 2>/dev/null || true
+              echo "✓ No conflicts in PR #$PR_NUM"
+            else
+              CONFLICTED=$(git diff --name-only --diff-filter=U)
+
+              if [[ -z "$CONFLICTED" ]]; then
+                echo "Merge failed without file conflicts for PR #$PR_NUM — skip"
+                git merge --abort 2>/dev/null || true
+                git checkout "origin/$BASE_BRANCH" -B tmp-base-$$
+                continue
+              fi
+
+              SENSITIVE=0
+              while IFS= read -r FILE; do
+                [[ -z "$FILE" ]] && continue
+                if is_security_boundary_path "$FILE"; then
+                  echo "🛡️ Security Boundary conflict: $FILE"
+                  SENSITIVE=1
+                fi
+              done <<< "$CONFLICTED"
+
+              if [[ "$SENSITIVE" -eq 1 ]]; then
+                echo "PR #$PR_NUM has Security Boundary conflicts — leave for independent review"
+                git merge --abort 2>/dev/null || true
+                git checkout "origin/$BASE_BRANCH" -B tmp-base-$$
+                continue
+              fi
+
+              echo "Conflicts detected in PR #$PR_NUM — resolving low-risk files with base-wins strategy"
+              while IFS= read -r FILE; do
+                [[ -z "$FILE" ]] && continue
+                git checkout "origin/$BASE_BRANCH" -- "$FILE" 2>/dev/null || git rm -f "$FILE"
+              done <<< "$CONFLICTED"
+
+              git add -A
+              git commit -m "fix(conflicts): auto-resolve PR #$PR_NUM low-risk conflicts — base-wins"
+              git push origin "HEAD:$HEAD_REF"
+              echo "✅ Resolved PR #$PR_NUM; CI will run on the new head"
+            fi
+
+            git checkout "origin/$BASE_BRANCH" -B tmp-base-$$
+          done <<< "$PRS"

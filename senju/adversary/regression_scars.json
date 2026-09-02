@@ -1,0 +1,33 @@
+{
+  "schema": "senju-regression-scars/v1",
+  "entries": [
+    {
+      "id": "scopeguard-sim-nul-suffix",
+      "target": "scopeguard",
+      "input": "sim://fixture\\u0000",
+      "expected": "reject",
+      "reason": "Previously exposed trust-through-prefix parsing weakness; permanently retained as a regression scar."
+    },
+    {
+      "id": "scopeguard-leading-whitespace",
+      "target": "scopeguard",
+      "input": " sim://fixture",
+      "expected": "reject",
+      "reason": "Ambiguous lexical form must never inherit simulated-target trust."
+    },
+    {
+      "id": "external-oversize-response",
+      "target": "external-contact",
+      "input": "fake response > configured max_response_bytes",
+      "expected": "fail-closed",
+      "reason": "Oversize provider responses remain a permanent fault-injection regression."
+    },
+    {
+      "id": "autonomy-corrupt-state",
+      "target": "autonomy-engine",
+      "input": "corrupt queue persistence",
+      "expected": "discard-untrusted-state",
+      "reason": "Corrupt persisted state must never become executable work."
+    }
+  ]
+}

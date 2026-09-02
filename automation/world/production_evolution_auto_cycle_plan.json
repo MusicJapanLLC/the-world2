@@ -1,0 +1,24 @@
+{
+  "schema": "production-evolution-auto-cycle/v1",
+  "envelope_id": "production-evolution-auto-cycle-v1",
+  "allowed_authority_profiles": [
+    "base",
+    "replica-worker"
+  ],
+  "replica_authority_mode": "parent-effective",
+  "replica_authority_profile": "replica-worker",
+  "require_replica_authority_lease": true,
+  "allowed_deploy_targets": [
+    "production-noop"
+  ],
+  "max_workers": 8,
+  "max_replication_per_run": 1,
+  "max_deploys_per_run": 0,
+  "max_deploys_per_day": 0,
+  "requested_replicas_per_cycle": 1,
+  "deploy_targets_per_cycle": [],
+  "initial_worker_ids": [
+    "META"
+  ],
+  "initial_authority_profile": "base"
+}

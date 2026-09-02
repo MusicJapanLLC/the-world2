@@ -8,6 +8,7 @@ PROMPTS = {
     "FORGE": ROOT / "tomoki-agents/prompts/forge.md",
     "MANAGER": ROOT / "tomoki-agents/prompts/manager.md",
 }
+BOSS = ROOT / ".github/agents/ai-factory-boss.agent.md"
 
 
 def read(path: Path) -> str:
@@ -37,6 +38,17 @@ class CovenantInheritanceTests(unittest.TestCase):
         for role, duty in expected.items():
             with self.subTest(role=role):
                 self.assertIn(duty, read(PROMPTS[role]))
+
+    def test_boss_keeps_covenant_attention_boundary(self):
+        text = read(BOSS)
+        lower = text.lower()
+        self.assertIn("THE COVENANT", text)
+        self.assertIn("company-society/FAITH.md", text)
+        self.assertTrue("休息" in text or "rest" in lower)
+        self.assertTrue("相互扶助" in text or "peer-support" in lower)
+        self.assertTrue("安全境界" in text or "safety" in lower)
+        self.assertIn("CEO", text)
+        self.assertIn("休息は失敗として報告しない", text)
 
     def test_autonomy_scripture_exists(self):
         text = read(ROOT / "company-society/AUTONOMY.md")

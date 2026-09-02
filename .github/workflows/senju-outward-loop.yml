@@ -1,0 +1,40 @@
+name: Senju Authorized Outward Loop
+
+on:
+  schedule:
+    - cron: '11 */4 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: senju-authorized-outward-loop
+  cancel-in-progress: true
+
+jobs:
+  observe-adapt-repeat:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Run domain-scope regression tests
+        working-directory: senju
+        run: python -m pytest tests/test_domain_scope.py -q
+
+      - name: Run outward trial-and-error cycle
+        working-directory: senju
+        run: |
+          set -euo pipefail
+          python -m senju.outward_loop outward_targets.json --out reports/outward/latest.json
+          {
+            echo '## Senju outward cycle'
+            echo
+            echo '```json'
+            cat reports/outward/latest.json
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

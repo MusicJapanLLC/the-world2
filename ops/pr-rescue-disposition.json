@@ -1,0 +1,140 @@
+{
+  "schema": "pr-rescue-disposition/v1",
+  "base_sha": "8782017b037a8fec2a2ec3f47f325ef16f7fc89c",
+  "total_prs_evaluated": 16,
+  "dispositions": {
+    "PR-#182": {
+      "pr_number": 182,
+      "head_sha": "bc59d62de276058b3710ca53d99c1a4252f6550d",
+      "base_sha": "8782017b037a8fec2a2ec3f47f325ef16f7fc89c",
+      "disposition": "SUPERSEDE",
+      "reason": "Deltas already merged or superseded on default branch 8782017b037a8fec2a2ec3f47f325ef16f7fc89c",
+      "transplanted_files": []
+    },
+    "PR-#187": {
+      "pr_number": 187,
+      "head_sha": "038ea3f7f4436005320dcb11a0aaf31abfe03aed",
+      "base_sha": "8782017b037a8fec2a2ec3f47f325ef16f7fc89c",
+      "disposition": "SUPERSEDE",
+      "reason": "Deltas already merged or superseded on default branch 8782017b037a8fec2a2ec3f47f325ef16f7fc89c",
+      "transplanted_files": []
+    },
+    "PR-#204": {
+      "pr_number": 204,
+      "head_sha": "79772cb5e247b8360220524439269dc239898346",
+      "base_sha": "8782017b037a8fec2a2ec3f47f325ef16f7fc89c",
+      "disposition": "TRANSPLANT",
+      "reason": "Ported useful non-governance deltas (dev_doctor.py, tests, workflow, fix loop contract) onto current default",
+      "transplanted_files": [
+        "scripts/dev_doctor.py",
+        "tests/test_dev_doctor.py",
+        ".github/workflows/dev-doctor.yml",
+        "docs/JULES_FIX_LOOP_CONTRACT.md"
+      ]
+    },
+    "PR-#208": {
+      "pr_number": 208,
+      "head_sha": "0fd2c5dc2dbbed27478472430f19e4ff5e18d29c",
+      "base_sha": "8782017b037a8fec2a2ec3f47f325ef16f7fc89c",
+      "disposition": "SUPERSEDE",
+      "reason": "Overlapped with newer merged/landed commits on default branch 8782017b037a8fec2a2ec3f47f325ef16f7fc89c",
+      "transplanted_files": []
+    },
+    "PR-#209": {
+      "pr_number": 209,
+      "head_sha": "88b558f7e3c1dd2f6a9e556d90700f6a66151ec7",
+      "base_sha": "8782017b037a8fec2a2ec3f47f325ef16f7fc89c",
+      "disposition": "SUPERSEDE",
+      "reason": "Overlapped with newer merged/landed commits on default branch 8782017b037a8fec2a2ec3f47f325ef16f7fc89c",
+      "transplanted_files": []
+    },
+    "PR-#210": {
+      "pr_number": 210,
+      "head_sha": "e18e8353ab57452d815d89db355ec82234796310",
+      "base_sha": "8782017b037a8fec2a2ec3f47f325ef16f7fc89c",
+      "disposition": "SUPERSEDE",
+      "reason": "Overlapped with newer merged/landed commits on default branch 8782017b037a8fec2a2ec3f47f325ef16f7fc89c",
+      "transplanted_files": []
+    },
+    "PR-#211": {
+      "pr_number": 211,
+      "head_sha": "f133dbc84685e33b0e5468ac6fa86aba5db53d82",
+      "base_sha": "8782017b037a8fec2a2ec3f47f325ef16f7fc89c",
+      "disposition": "SUPERSEDE",
+      "reason": "Overlapped with newer merged/landed commits on default branch 8782017b037a8fec2a2ec3f47f325ef16f7fc89c",
+      "transplanted_files": []
+    },
+    "PR-#215": {
+      "pr_number": 215,
+      "head_sha": "fcb86d8ba4af3e4db5d6396abe7e603478a60dc5",
+      "base_sha": "8782017b037a8fec2a2ec3f47f325ef16f7fc89c",
+      "disposition": "SUPERSEDE",
+      "reason": "Overlapped with newer merged/landed commits on default branch 8782017b037a8fec2a2ec3f47f325ef16f7fc89c",
+      "transplanted_files": []
+    },
+    "PR-#219": {
+      "pr_number": 219,
+      "head_sha": "8577e4239a725d621ee870fae29bd86e7bb5f0e0",
+      "base_sha": "8782017b037a8fec2a2ec3f47f325ef16f7fc89c",
+      "disposition": "SUPERSEDE",
+      "reason": "Overlapped with newer merged/landed commits on default branch 8782017b037a8fec2a2ec3f47f325ef16f7fc89c",
+      "transplanted_files": []
+    },
+    "PR-#220": {
+      "pr_number": 220,
+      "head_sha": "64819ae1054d76b4689e06287585c76ff2ba46a2",
+      "base_sha": "8782017b037a8fec2a2ec3f47f325ef16f7fc89c",
+      "disposition": "SUPERSEDE",
+      "reason": "Overlapped with newer merged/landed commits on default branch 8782017b037a8fec2a2ec3f47f325ef16f7fc89c",
+      "transplanted_files": []
+    },
+    "PR-#224": {
+      "pr_number": 224,
+      "head_sha": "1db374173df1a3698c92ca8139f57a5e159a3432",
+      "base_sha": "8782017b037a8fec2a2ec3f47f325ef16f7fc89c",
+      "disposition": "SUPERSEDE",
+      "reason": "Overlapped with newer merged/landed commits on default branch 8782017b037a8fec2a2ec3f47f325ef16f7fc89c",
+      "transplanted_files": []
+    },
+    "PR-#225": {
+      "pr_number": 225,
+      "head_sha": "83850a2323fda618eed995cbd50751b9a8e5b3ef",
+      "base_sha": "8782017b037a8fec2a2ec3f47f325ef16f7fc89c",
+      "disposition": "SUPERSEDE",
+      "reason": "Overlapped with newer merged/landed commits on default branch 8782017b037a8fec2a2ec3f47f325ef16f7fc89c",
+      "transplanted_files": []
+    },
+    "PR-#226": {
+      "pr_number": 226,
+      "head_sha": "356c87cc8d4241799c42bd273d7bed23bab56dda",
+      "base_sha": "8782017b037a8fec2a2ec3f47f325ef16f7fc89c",
+      "disposition": "SUPERSEDE",
+      "reason": "Overlapped with newer merged/landed commits on default branch 8782017b037a8fec2a2ec3f47f325ef16f7fc89c",
+      "transplanted_files": []
+    },
+    "PR-#228": {
+      "pr_number": 228,
+      "head_sha": "ce9bc9c01c02d488fce48f32c8f23bface7affbe",
+      "base_sha": "8782017b037a8fec2a2ec3f47f325ef16f7fc89c",
+      "disposition": "SUPERSEDE",
+      "reason": "Overlapped with newer merged/landed commits on default branch 8782017b037a8fec2a2ec3f47f325ef16f7fc89c",
+      "transplanted_files": []
+    },
+    "PR-#229": {
+      "pr_number": 229,
+      "head_sha": "2478269ec1f024b285f636164ab932f0f5d2a2dc",
+      "base_sha": "8782017b037a8fec2a2ec3f47f325ef16f7fc89c",
+      "disposition": "SUPERSEDE",
+      "reason": "Overlapped with newer merged/landed commits on default branch 8782017b037a8fec2a2ec3f47f325ef16f7fc89c",
+      "transplanted_files": []
+    },
+    "PR-#230": {
+      "pr_number": 230,
+      "head_sha": "4fef8144d990d6906a1432b3d9dc084e5b0c4ddc",
+      "base_sha": "8782017b037a8fec2a2ec3f47f325ef16f7fc89c",
+      "disposition": "SUPERSEDE",
+      "reason": "Overlapped with newer merged/landed commits on default branch 8782017b037a8fec2a2ec3f47f325ef16f7fc89c",
+      "transplanted_files": []
+    }
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "schema": "senju-standing-authorization/v1",
+  "semantics": "durable_until_explicit_revocation",
+  "records": [
+    {
+      "authorization_reference": "canonical:kabeya-authorized-test-range",
+      "owner": "MusicJapanLLC",
+      "issuer_kind": "canonical_repository",
+      "exact_hosts": [
+        "kabeya-authorized-test-range.onrender.com"
+      ],
+      "allowed_methods": [
+        "GET",
+        "HEAD",
+        "OPTIONS"
+      ],
+      "created_at_utc": "2026-08-31T07:18:46.558001+00:00",
+      "revoked": false,
+      "revocation_reason": null,
+      "credential_scope": "none",
+      "destructive": false
+    }
+  ]
+}

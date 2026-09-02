@@ -1,0 +1,26 @@
+name: Real World Value Lab Gate
+
+on:
+  pull_request:
+    paths:
+      - 'value-lab/**'
+      - 'ops/system-registry.json'
+      - '.github/workflows/real-world-value-lab.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  policy-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate registry JSON
+        run: python -m json.tool ops/system-registry.json >/dev/null
+      - name: Validate Value Lab policy JSON
+        run: python -m json.tool value-lab/policy.json >/dev/null
+      - name: Run deterministic Value Lab gates
+        working-directory: value-lab
+        run: python -m unittest -v

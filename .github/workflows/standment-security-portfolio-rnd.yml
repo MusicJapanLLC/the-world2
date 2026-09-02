@@ -2,24 +2,31 @@ name: Standment Security - Portfolio First R&D
 
 on:
   schedule:
-    # 06:50 JST daily, before the 07:20 JST R&D x Senju coupled loop.
-    - cron: '50 21 * * *'
+    # Hourly Security Reactor. Long sessions stay below the next hourly tick.
+    - cron: '7 * * * *'
   workflow_dispatch:
   push:
     branches: ['claude/employee-onboarding-setup-udm86']
     paths:
       - '.github/workflows/standment-security-portfolio-rnd.yml'
+      - 'automation/security/security_reactor.py'
+      - 'automation/security/test_security_reactor.py'
       - 'automation/security/portfolio_rnd.py'
       - 'automation/security/test_portfolio_rnd.py'
+      - 'automation/security/test_portfolio_rnd_ai_native.py'
       - 'automation/security/portfolio_autobuilder.py'
       - 'automation/security/test_portfolio_autobuilder.py'
+      - 'automation/security/portfolio_accelerator.py'
+      - 'automation/security/test_portfolio_accelerator.py'
       - 'standment-security/security_portfolio_program.json'
+      - 'standment-security/whitehat-candidates/**'
       - 'value-lab/research_queue.json'
       - 'PORTFOLIO.md'
 
 concurrency:
-  group: standment-security-portfolio-rnd
-  cancel-in-progress: true
+  # Shared with White-Hat because both persist security R&D artifacts to default.
+  group: standment-security-default-writer
+  cancel-in-progress: false
 
 permissions:
   contents: write
@@ -28,7 +35,7 @@ permissions:
 jobs:
   portfolio-rnd:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 58
     steps:
       - name: Checkout THE WORLD
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
@@ -41,11 +48,16 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Verify portfolio planner and Auto-Builder
+      - name: Verify Security Reactor, planner, Auto-Builder and Accelerator
         working-directory: automation/security
         run: |
           set -euo pipefail
-          python -m unittest -v test_portfolio_rnd.py test_portfolio_autobuilder.py
+          python -m unittest -v \
+            test_security_reactor.py \
+            test_portfolio_rnd.py \
+            test_portfolio_rnd_ai_native.py \
+            test_portfolio_autobuilder.py \
+            test_portfolio_accelerator.py
 
       - name: Restore previous successful portfolio R&D memory
         env:
@@ -79,7 +91,44 @@ jobs:
             echo "No previous successful R&D state found; this run becomes the comparison baseline." >> "$GITHUB_STEP_SUMMARY"
           fi
 
-      - name: Rank portfolio gaps before autonomous build
+      - name: Run perpetual Security Reactor session
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p reports/standment-security-rnd
+          rounds=3
+          sleep_seconds=0
+          if [[ "$GITHUB_EVENT_NAME" == "schedule" || "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]]; then
+            rounds=12
+            sleep_seconds=240
+          fi
+
+          python automation/security/security_reactor.py \
+            --repo-root . \
+            --program standment-security/security_portfolio_program.json \
+            --portfolio PORTFOLIO.md \
+            --state standment-security/state/security-reactor.json \
+            --rounds "$rounds" \
+            --sleep-seconds "$sleep_seconds" \
+            --session-id "${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" \
+            --out reports/standment-security-rnd/reactor-session.json
+
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          d=json.loads(Path('reports/standment-security-rnd/reactor-session.json').read_text(encoding='utf-8'))
+          assert d['verification_claimed'] is False
+          assert d['external_targets_touched'] == 0
+          assert 1 <= int(d['rounds_completed']) <= 16
+          assert int(d['strategy_rotations']) >= max(0, int(d['rounds_completed']) - 1)
+          print(
+              f"Security Reactor: rounds={d['rounds_completed']} unique_tracks={d['unique_tracks']} "
+              f"material={d['material_rounds']} rotations={d['strategy_rotations']} next={d['next_track']}"
+          )
+          PY
+          cat standment-security/SECURITY_REACTOR.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Rank portfolio gaps after reactor
         shell: bash
         run: |
           set -euo pipefail
@@ -122,23 +171,21 @@ jobs:
           cp reports/standment-security-rnd/after/daily.json reports/standment-security-rnd/daily.json
           cp reports/standment-security-rnd/after/daily.md reports/standment-security-rnd/daily.md
           cp reports/standment-security-rnd/after/senju-research-item.json reports/standment-security-rnd/senju-research-item.json
-          python - <<'PY'
-          import json
-          from pathlib import Path
-          before=json.loads(Path('reports/standment-security-rnd/before/daily.json').read_text(encoding='utf-8'))
-          after=json.loads(Path('reports/standment-security-rnd/after/daily.json').read_text(encoding='utf-8'))
-          evo=json.loads(Path('reports/standment-security-rnd/evolution.json').read_text(encoding='utf-8'))
-          b=before.get('selected') or {}
-          a=after.get('selected') or {}
-          print('## Autonomous Portfolio Build', file=open('/tmp/build-summary.md','w',encoding='utf-8'))
-          with open('/tmp/build-summary.md','a',encoding='utf-8') as f:
-              f.write(f"\n- before: {b.get('id')} evidence={b.get('evidence_ratio')} status={b.get('portfolio_status')}\n")
-              f.write(f"- after: {a.get('id')} evidence={a.get('evidence_ratio')} status={a.get('portfolio_status')}\n")
-              f.write(f"- generated: {', '.join(evo.get('created_or_updated') or []) or 'NO FILE DELTA'}\n")
-              f.write('- verification claimed by autobuilder: false\n')
-          PY
-          cat /tmp/build-summary.md >> "$GITHUB_STEP_SUMMARY"
           cat reports/standment-security-rnd/daily.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Accelerate evidence closure and anti-stagnation rotation
+        run: |
+          set -euo pipefail
+          python automation/security/portfolio_accelerator.py \
+            --program standment-security/security_portfolio_program.json \
+            --repo-root . \
+            --candidate-dir standment-security/whitehat-candidates \
+            --state standment-security/state/portfolio-accelerator.json \
+            --dashboard standment-security/PORTFOLIO_ACCELERATION.md \
+            --outbox reports/standment-security-rnd/accelerator-outbox.json
+          test -s standment-security/state/portfolio-accelerator.json
+          test -s standment-security/PORTFOLIO_ACCELERATION.md
+          cat standment-security/PORTFOLIO_ACCELERATION.md >> "$GITHUB_STEP_SUMMARY"
 
       - name: Verify R&D x Senju boundary compatibility
         run: |
@@ -155,6 +202,8 @@ jobs:
           queue=json.loads(Path('value-lab/research_queue.json').read_text(encoding='utf-8'))
           daily=json.loads(Path('reports/standment-security-rnd/daily.json').read_text(encoding='utf-8'))
           evolution=json.loads(Path('reports/standment-security-rnd/evolution.json').read_text(encoding='utf-8'))
+          accelerator=json.loads(Path('standment-security/state/portfolio-accelerator.json').read_text(encoding='utf-8'))
+          reactor=json.loads(Path('reports/standment-security-rnd/reactor-session.json').read_text(encoding='utf-8'))
 
           research_id=str(directive['research_id'])
           assert research_id.startswith(('RND-PORTFOLIO-P0', 'RND-STANDMENT-SECURITY-PORTFOLIO'))
@@ -167,45 +216,146 @@ jobs:
               item for item in queue.get('active', [])
               if str(item.get('research_id','')).startswith('RND-STANDMENT-SECURITY-PORTFOLIO')
           ]
-          assert security_tracks, 'Standment Security portfolio research is missing from the live queue'
-          assert max(int(item.get('priority',0)) for item in security_tracks) >= 4000
+          assert security_tracks
+          assert max(int(item.get('priority',0)) for item in security_tracks) >= 5000
           assert daily.get('portfolio_first') is True
           assert evolution.get('verification_claimed') is False
-          assert daily.get('delta',{}).get('kind') in {
-              'BASELINE_CAPTURED','RESEARCH_REFOCUS','VERIFIED_PORTFOLIO_DELTA','NO_VERIFIED_DELTA'
-          }
-          assert daily.get('delta',{}).get('research_mode') in {
-              'NORMAL','VERIFY_NEXT_MISSING_EVIDENCE','REFRAME_AND_COUNTEREVIDENCE','SWITCH_EVIDENCE_PATH'
-          }
-
-          print(f'Portfolio P0/Security priority active: {research_id}; daily build and Senju boundary intact.')
+          assert accelerator.get('company_priority') == 'P0'
+          assert accelerator.get('verification_claimed') is False
+          assert reactor.get('verification_claimed') is False
+          assert reactor.get('external_targets_touched') == 0
+          assert str(accelerator.get('ai_native_lane',{}).get('id','')).startswith('SEC-PORT-')
+          print(f'Portfolio P0/Security priority active: {research_id}; Reactor, Auto-Builder, Accelerator and Senju boundary intact.')
           PY
 
-      - name: Commit material portfolio artifacts back to THE WORLD
+      - name: Materialize Slack outbox for Make
+        env:
+          RUN_ID: ${{ github.run_id }}
+          RUN_ATTEMPT: ${{ github.run_attempt }}
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json, os
+          from datetime import datetime
+          from pathlib import Path
+          from zoneinfo import ZoneInfo
+
+          report=Path('reports/standment-security-rnd/daily.md')
+          evo=json.loads(Path('reports/standment-security-rnd/evolution.json').read_text(encoding='utf-8'))
+          acc=json.loads(Path('standment-security/state/portfolio-accelerator.json').read_text(encoding='utf-8'))
+          reactor=json.loads(Path('reports/standment-security-rnd/reactor-session.json').read_text(encoding='utf-8'))
+          p=acc.get('primary') or {}
+          ns=acc.get('north_star') or {}
+          now=datetime.now(ZoneInfo('Asia/Tokyo'))
+          message=(
+              '*STANDMENT SECURITY｜PERPETUAL R&D REACTOR*\n'
+              + f"Reactor: rounds={reactor.get('rounds_completed')} / tracks={reactor.get('unique_tracks')} / material={reactor.get('material_rounds')} / rotations={reactor.get('strategy_rotations')}\n"
+              + f"Next reactor: {reactor.get('next_track')} / {reactor.get('next_mode')}\n"
+              + report.read_text(encoding='utf-8')
+              + f"\nAuto-Builder: {', '.join(evo.get('created_or_updated') or []) or 'NO FILE DELTA'}\n"
+              + f"North Star: verified={ns.get('tracks_verified',0)}/{ns.get('tracks_total',0)} / avg evidence={float(ns.get('average_evidence_ratio') or 0):.0%}\n"
+              + f"Accelerator next: {acc.get('next_action')}\n"
+              + 'VERIFIED自動昇格: なし（Evidence Gate維持）\n'
+          )[:30000]
+          payload={
+              'schema':'standment-security-slack-outbox-v3',
+              'report_date_jst':now.strftime('%Y-%m-%d'),
+              'generated_at_jst':now.isoformat(timespec='seconds'),
+              'channel_id':'C0BTFSCDDE1',
+              'source':'standment-security-perpetual-reactor',
+              'delivery_mode':'make-pull-no-github-secret',
+              'github_run_id':os.getenv('RUN_ID',''),
+              'github_run_attempt':os.getenv('RUN_ATTEMPT',''),
+              'message':message,
+          }
+          out=Path('automation/reporting/outbox/standment-security-latest.json')
+          out.parent.mkdir(parents=True, exist_ok=True)
+          out.write_text(json.dumps(payload, ensure_ascii=False, indent=2)+'\n', encoding='utf-8')
+          PY
+          test -s automation/reporting/outbox/standment-security-latest.json
+
+      - name: Enforce reactor persistence boundary
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          import subprocess
+
+          allowed_prefixes=(
+              'standment-security/PORTFOLIO_INDEX.md',
+              'standment-security/PORTFOLIO_ACCELERATION.md',
+              'standment-security/SECURITY_REACTOR.md',
+              'standment-security/state/',
+              'standment-security/reactor-candidates/',
+              'standment-security/lab-notes/',
+              'standment-security/case-studies/',
+              'standment-security/evidence-packs/',
+              'standment-security/ai-security/',
+              'automation/reporting/outbox/standment-security-latest.json',
+          )
+          rows=subprocess.check_output(['git','status','--porcelain'], text=True).splitlines()
+          changed=[]
+          for row in rows:
+              path=row[3:].strip()
+              if ' -> ' in path:
+                  path=path.split(' -> ',1)[1]
+              changed.append(path)
+          bad=[p for p in changed if not any(p == a or p.startswith(a) for a in allowed_prefixes)]
+          if bad:
+              raise SystemExit(f'Reactor attempted to persist outside bounded security paths: {bad}')
+          print(f'Reactor persistence boundary PASS: {len(changed)} changed path(s).')
+          PY
+
+      - name: Commit material portfolio artifacts and reactor state back to THE WORLD
         env:
           GITHUB_TOKEN: ${{ github.token }}
         shell: bash
         run: |
           set -euo pipefail
-          git config user.name "standment-rnd-bot"
-          git config user.email "standment-rnd-bot@users.noreply.github.com"
-          git add \
-            standment-security/PORTFOLIO_INDEX.md \
-            standment-security/lab-notes \
-            standment-security/case-studies \
-            standment-security/evidence-packs \
-            standment-security/ai-security 2>/dev/null || true
+          git config user.name "standment-security-reactor"
+          git config user.email "standment-security-reactor@users.noreply.github.com"
+
+          persist_paths=(
+            "standment-security/PORTFOLIO_INDEX.md"
+            "standment-security/PORTFOLIO_ACCELERATION.md"
+            "standment-security/SECURITY_REACTOR.md"
+            "standment-security/state"
+            "standment-security/reactor-candidates"
+            "standment-security/lab-notes"
+            "standment-security/case-studies"
+            "standment-security/evidence-packs"
+            "standment-security/ai-security"
+            "automation/reporting/outbox/standment-security-latest.json"
+          )
+          for path in "${persist_paths[@]}"; do
+            [[ -e "$path" ]] && git add -- "$path"
+          done
+
           if git diff --cached --quiet; then
-            echo "No repository artifact delta to commit." >> "$GITHUB_STEP_SUMMARY"
+            echo "Security Reactor completed with no repository delta." >> "$GITHUB_STEP_SUMMARY"
           else
-            TRACK="$(python -c "import json; print(json.load(open('reports/standment-security-rnd/evolution.json'))['track'])")"
-            git commit -m "rnd(security): evolve ${TRACK} portfolio evidence"
+            TRACK="$(python -c "import json; print(json.load(open('reports/standment-security-rnd/reactor-session.json'))['next_track'])")"
+            git commit -m "rnd(security): reactor cycle toward ${TRACK}"
             git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
-            git push origin "HEAD:${GITHUB_REF_NAME}"
-            echo "Autonomous portfolio artifact committed to ${GITHUB_REF_NAME}." >> "$GITHUB_STEP_SUMMARY"
+            pushed=0
+            for attempt in 1 2 3; do
+              git fetch origin "$GITHUB_REF_NAME"
+              if ! git rebase "origin/$GITHUB_REF_NAME"; then
+                git rebase --abort || true
+                echo "Concurrent writer produced a real content conflict; refusing unsafe overwrite." >> "$GITHUB_STEP_SUMMARY"
+                exit 1
+              fi
+              if git push origin "HEAD:${GITHUB_REF_NAME}"; then
+                pushed=1
+                break
+              fi
+              echo "Branch advanced during reactor push attempt ${attempt}; rebasing and retrying." >> "$GITHUB_STEP_SUMMARY"
+              sleep $((attempt * 2))
+            done
+            [[ "$pushed" -eq 1 ]] || { echo "Could not persist Security Reactor after three safe retries."; exit 1; }
           fi
 
-      - name: Preserve daily R&D evidence
+      - name: Preserve full R&D reactor evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
@@ -213,55 +363,30 @@ jobs:
           retention-days: 90
           if-no-files-found: error
           path: |
+            reports/standment-security-rnd/reactor-session.json
             reports/standment-security-rnd/daily.json
             reports/standment-security-rnd/daily.md
             reports/standment-security-rnd/senju-research-item.json
             reports/standment-security-rnd/evolution.json
+            reports/standment-security-rnd/accelerator-outbox.json
             reports/standment-security-rnd/before/daily.json
-            reports/standment-security-rnd/before/daily.md
             reports/standment-security-rnd/after/daily.json
-            reports/standment-security-rnd/after/daily.md
+            standment-security/SECURITY_REACTOR.md
+            standment-security/state/security-reactor.json
+            standment-security/state/portfolio-accelerator.json
+            standment-security/reactor-candidates/latest.json
+            standment-security/reactor-candidates/latest.md
+            standment-security/PORTFOLIO_ACCELERATION.md
+            automation/reporting/outbox/standment-security-latest.json
             /tmp/standment-rnd-senju/exchange.json
             /tmp/standment-rnd-senju/exchange.md
             /tmp/standment-rnd-senju/directive.json
 
-      - name: Deliver daily portfolio evolution digest to Slack
+      - name: Confirm Slack delivery handoff
         if: always()
-        env:
-          RND_SLACK_WEBHOOK_URL: ${{ secrets.RND_SLACK_WEBHOOK_URL }}
-          PORTFOLIO_SLACK_WEBHOOK_URL: ${{ secrets.PORTFOLIO_SLACK_WEBHOOK_URL }}
         run: |
-          python - <<'PY'
-          import json, os
-          from pathlib import Path
-          from urllib import request, error
-
-          webhook=(os.getenv('PORTFOLIO_SLACK_WEBHOOK_URL','').strip()
-                   or os.getenv('RND_SLACK_WEBHOOK_URL','').strip())
-          report=Path('reports/standment-security-rnd/daily.md')
-          evolution=Path('reports/standment-security-rnd/evolution.json')
-          if not report.exists():
-              print('R&D report missing; see workflow failure above.')
-              raise SystemExit(0)
-          evo=json.loads(evolution.read_text(encoding='utf-8')) if evolution.exists() else {}
-          created=', '.join(evo.get('created_or_updated') or []) or 'NO FILE DELTA'
-          text=(
-              '*STANDMENT SECURITY｜AUTONOMOUS PORTFOLIO EVOLUTION*\n'
-              + report.read_text(encoding='utf-8')
-              + f"\n*Auto-Builder*\n生成/更新: {created}\n"
-              + 'VERIFIED自動昇格: なし（Evidence Gate維持）\n'
-          )[:30000]
-          if not webhook:
-              print('BLOCKED_NO_CAPABILITY: PORTFOLIO_SLACK_WEBHOOK_URL / RND_SLACK_WEBHOOK_URL is not configured. Artifact evidence was preserved.')
-              raise SystemExit(0)
-          payload=json.dumps({'text': text}, ensure_ascii=False).encode('utf-8')
-          req=request.Request(webhook, data=payload, headers={'Content-Type':'application/json'}, method='POST')
-          try:
-              with request.urlopen(req, timeout=15) as res:
-                  if not 200 <= res.status < 300:
-                      raise RuntimeError(f'HTTP {res.status}')
-          except (error.URLError, RuntimeError) as exc:
-              print(f'Slack delivery failed: {type(exc).__name__}')
-              raise SystemExit(1)
-          print('Daily Standment Security autonomous portfolio evolution delivered to Slack.')
-          PY
+          if [[ -f automation/reporting/outbox/standment-security-latest.json ]]; then
+            echo "Perpetual Security Reactor handoff ready: Make pulls the durable R&D outbox." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "Slack outbox was not produced because an earlier reactor step failed." >> "$GITHUB_STEP_SUMMARY"
+          fi

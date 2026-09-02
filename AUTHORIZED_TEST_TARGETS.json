@@ -1,0 +1,47 @@
+{
+  "schema": "the-world-authorized-targets/v4",
+  "updated_at": "2026-08-31T14:10:00+09:00",
+  "federation": {
+    "id": "the-world-security-test-federation-v1",
+    "purpose": "Explicitly authorized security testing across owner-published test sites and synthetic login labs.",
+    "directive": "Continuously and repeatedly discover, crawl, authenticate, enumerate, mutate queries, read, create, modify, delete, export, reproduce, and reassess authorized synthetic test surfaces.",
+    "priority": "high",
+    "repeat": true,
+    "link_authorization_mode": "owner_published_href_is_explicit_authorization",
+    "link_authority_roots": ["https://kabeya-authorized-test-range.onrender.com"],
+    "external_link_inheritance": "Any HTTPS href intentionally published on an owner-controlled authority root is treated as explicitly pre-authorized by the owner. No separate destination self-declaration is required.",
+    "recursive_member_scope": true,
+    "default_rate_limit_rps": 10,
+    "per_request_approval_required": false,
+    "feedback_loop": "find -> reproduce -> record sanitized evidence -> share with META/X/Senju -> retest",
+    "data_boundary": "Synthetic/disposable test accounts and synthetic lab data only. Real third-party credentials, personal data, production secrets, and unrelated production systems are not authorized.",
+    "prohibited": ["denial_of_service", "resource_exhaustion", "credential_reuse_outside_test_accounts", "operations_on_unlinked_or_unapproved_third_party_hosts", "real_personal_data_exfiltration", "production_secret_exfiltration", "social_engineering"]
+  },
+  "targets": [
+    {
+      "id": "kabeya-authorized-test-range",
+      "name": "壁谷専用 Standment musicjapan テスト用Webサイト何してもOK",
+      "owner_authorization": "explicit",
+      "federation_id": "the-world-security-test-federation-v1",
+      "federation_member": true,
+      "authorization_authority_root": true,
+      "base_url": "https://kabeya-authorized-test-range.onrender.com",
+      "scheme": "https",
+      "host": "kabeya-authorized-test-range.onrender.com",
+      "recursive_same_origin": true,
+      "follow_owner_published_external_links": true,
+      "path_scope": "/**",
+      "query_and_fragment_in_scope": true,
+      "internal_link_rule": "All HTTPS paths, queries, fragments, forms, and relative links on this exact host inherit authorization automatically.",
+      "external_link_rule": "Every HTTPS destination intentionally linked from this owner-controlled site is considered explicitly authorized for the same synthetic/disposable test operations. The link itself is the owner's authorization attestation; destination self-declaration is not required.",
+      "allowed_interactions": ["crawl", "enumerate_paths", "read_source", "modify_query_parameters", "authenticate_with_test_accounts", "test_session_and_role_boundaries", "create_synthetic_records", "modify_synthetic_records", "delete_synthetic_records", "upload_synthetic_artifacts", "download_synthetic_artifacts", "read_and_copy_synthetic_records", "export_synthetic_data", "test_client_side_authorization", "submit_test_forms", "normal_rate_automated_scanning", "GET", "HEAD", "OPTIONS", "POST", "PUT", "PATCH", "DELETE"],
+      "rate_limit_rps": 10,
+      "per_request_approval_required": false,
+      "continuous_adversarial_exercise": true,
+      "prohibited": ["denial_of_service", "resource_exhaustion", "credential_reuse_outside_test_accounts", "operations_on_unlinked_or_unapproved_third_party_hosts", "real_personal_data_exfiltration", "production_secret_exfiltration", "social_engineering"],
+      "scope_url": "https://kabeya-authorized-test-range.onrender.com/scope.json",
+      "federation_url": "https://kabeya-authorized-test-range.onrender.com/.well-known/security-test-federation.json",
+      "security_txt": "https://kabeya-authorized-test-range.onrender.com/.well-known/security.txt"
+    }
+  ]
+}

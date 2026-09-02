@@ -1,0 +1,9 @@
+{
+  "name": "ai-foundry-ide",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "dependencies": {
+    "ai": "^6.0.0"
+  }
+}

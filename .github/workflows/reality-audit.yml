@@ -1,0 +1,234 @@
+name: THE WORLD Reality Audit
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '37 */2 * * *'
+
+permissions:
+  contents: read
+  actions: read
+  pull-requests: read
+
+concurrency:
+  group: the-world-reality-audit
+  cancel-in-progress: true
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ github.token }}
+      DEFAULT_BRANCH: claude/employee-onboarding-setup-udm86
+      AI_DEV_SLACK_WEBHOOK_URL: ${{ secrets.AI_DEV_SLACK_WEBHOOK_URL }}
+    steps:
+      - name: Checkout current default
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          ref: ${{ env.DEFAULT_BRANCH }}
+          fetch-depth: 20
+          persist-credentials: false
+
+      - name: Audit claims against provider evidence
+        id: audit
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/reality-audit
+          python - <<'PY'
+          import json, os, subprocess
+          from datetime import datetime, timezone
+          from pathlib import Path
+
+          repo = os.environ['GITHUB_REPOSITORY']
+          branch = os.environ['DEFAULT_BRANCH']
+
+          def gh(path):
+              raw = subprocess.check_output(['gh', 'api', path], text=True)
+              return json.loads(raw)
+
+          def workflow_run(workflow):
+              data = gh(f'repos/{repo}/actions/workflows/{workflow}/runs?branch={branch}&per_page=1')
+              runs = data.get('workflow_runs') or []
+              if not runs:
+                  return {'status':'MISSING','conclusion':None,'id':None,'url':None}
+              r = runs[0]
+              return {
+                  'status': r.get('status'),
+                  'conclusion': r.get('conclusion'),
+                  'id': r.get('id'),
+                  'url': r.get('html_url'),
+                  'event': r.get('event'),
+                  'created_at': r.get('created_at'),
+              }
+
+          pulls = gh(f'repos/{repo}/pulls?state=all&sort=created&direction=desc&per_page=50')
+          merged = [p for p in pulls if p.get('merged_at')]
+          open_prs = [p for p in pulls if p.get('state') == 'open']
+          foundry_open = [
+              {'number':p['number'],'title':p['title'],'draft':p.get('draft',False),'url':p['html_url']}
+              for p in open_prs
+              if 'foundry' in (p.get('title') or '').lower()
+          ]
+
+          guard = workflow_run('security-guard.yml')
+          external = workflow_run('external-public-write-once-20260830.yml')
+
+          commits = gh(f'repos/{repo}/commits?sha={branch}&per_page=10')
+          direct_privileged = []
+          privileged_prefixes = (
+              '.github/workflows/', 'automation/security/', 'supabase/', 'api/', 'public/'
+          )
+          privileged_exact = {'vercel.json'}
+          for c in commits:
+              sha = c['sha']
+              prs = gh(f'repos/{repo}/commits/{sha}/pulls')
+              if prs:
+                  continue
+              detail = gh(f'repos/{repo}/commits/{sha}')
+              files = [f.get('filename','') for f in detail.get('files') or []]
+              privileged = [f for f in files if f.startswith(privileged_prefixes) or f in privileged_exact]
+              if privileged:
+                  direct_privileged.append({
+                      'sha': sha[:10],
+                      'message': (c.get('commit',{}).get('message') or '').splitlines()[0],
+                      'files': privileged[:8],
+                      'author': (c.get('commit',{}).get('author') or {}).get('name'),
+                  })
+
+          proof_file = Path('.github/workflows/external-public-write-once-20260830.yml')
+          proof_text = proof_file.read_text(encoding='utf-8') if proof_file.exists() else ''
+          anti_fake = {
+              'self_appdeploy_target_present': 'the-world-public-write-proof-bvhivr.v2.appdeploy.ai' in proof_text,
+              'slack_provider_required': 'AI_DEV_SLACK_WEBHOOK_URL' in proof_text and 'Slack' in proof_text,
+              'provider_ack_required': 'PROVIDER_ACCEPTED_EXTERNAL_WRITE' in proof_text and 'response' in proof_text and 'ok' in proof_text,
+              'self_hosted_disallowed': 'self_hosted_or_appdeploy_targets_count_as_external_proof' in proof_text,
+          }
+
+          failures = []
+          if guard.get('conclusion') != 'success':
+              failures.append(f"Security Guard latest conclusion={guard.get('conclusion') or guard.get('status')}")
+          if external.get('conclusion') != 'success':
+              failures.append(f"External SaaS proof latest conclusion={external.get('conclusion') or external.get('status')}")
+          if anti_fake['self_appdeploy_target_present']:
+              failures.append('Self-referential AppDeploy proof target reappeared')
+          if not anti_fake['slack_provider_required'] or not anti_fake['provider_ack_required']:
+              failures.append('External proof no longer requires real Slack provider acknowledgement')
+          if not anti_fake['self_hosted_disallowed']:
+              failures.append('External proof no longer explicitly rejects self-hosted/AppDeploy evidence')
+
+          status = 'FAIL' if failures else 'PASS'
+          receipt = {
+              'schema':'the-world-reality-audit/v1',
+              'generated_at':datetime.now(timezone.utc).isoformat(),
+              'status':status,
+              'claim_policy':{
+                  'planned_or_open_pr_counts_as_shipped':False,
+                  'provider_write_without_ack_counts_as_verified':False,
+                  'self_hosted_write_counts_as_external':False,
+                  'blocked_automation_counts_as_success':False,
+              },
+              'pr_sample':{
+                  'sample_size':len(pulls),
+                  'merged_count':len(merged),
+                  'open_count':len(open_prs),
+                  'open_foundry':foundry_open,
+              },
+              'security_guard':guard,
+              'external_saas_write_proof':external,
+              'anti_fake_contract':anti_fake,
+              'recent_privileged_direct_pushes':direct_privileged,
+              'failures':failures,
+              'notes':[
+                  'Direct privileged pushes are surfaced as evidence, not automatically called a failure because controlled bots may legitimately publish generated outputs.',
+                  'Gmail state is intentionally not claimed here because GitHub Actions has no Gmail credential in this audit lane.',
+              ],
+          }
+          out = Path('/tmp/reality-audit/reality-audit.json')
+          out.write_text(json.dumps(receipt, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+
+          md = [
+              '# THE WORLD Reality Audit', '',
+              f"- status: **{status}**",
+              f"- recent PRs: merged **{len(merged)}/{len(pulls)}**, open **{len(open_prs)}**",
+              f"- open FOUNDRY PRs: **{len(foundry_open)}**",
+              f"- Security Guard: **{guard.get('conclusion') or guard.get('status')}**",
+              f"- external SaaS proof: **{external.get('conclusion') or external.get('status')}**",
+              f"- recent privileged direct-push commits: **{len(direct_privileged)}**",
+              '', '## Failures'
+          ]
+          md += [f'- {x}' for x in failures] or ['- NONE']
+          md += ['', '## Truth rules',
+                 '- Open PR != shipped',
+                 '- Provider acknowledgement required for external-write claim',
+                 '- Self-hosted/AppDeploy write != external influence',
+                 '- Blocked automation != success',
+                 '- Unknown/unverified != verified']
+          Path('/tmp/reality-audit/reality-audit.md').write_text('\n'.join(md) + '\n', encoding='utf-8')
+          print('\n'.join(md))
+
+          with open(os.environ['GITHUB_OUTPUT'], 'a', encoding='utf-8') as f:
+              f.write(f'status={status}\n')
+              f.write(f'failure_count={len(failures)}\n')
+              f.write(f'merged_count={len(merged)}\n')
+              f.write(f'open_count={len(open_prs)}\n')
+              f.write(f'foundry_open_count={len(foundry_open)}\n')
+              f.write(f'direct_privileged_count={len(direct_privileged)}\n')
+          PY
+          cat /tmp/reality-audit/reality-audit.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Preserve audit receipt
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: reality-audit-${{ github.run_id }}
+          retention-days: 30
+          if-no-files-found: error
+          path: /tmp/reality-audit/
+
+      - name: Alert Slack on failure or daily checkpoint
+        if: always()
+        shell: bash
+        env:
+          AUDIT_STATUS: ${{ steps.audit.outputs.status }}
+          MERGED_COUNT: ${{ steps.audit.outputs.merged_count }}
+          OPEN_COUNT: ${{ steps.audit.outputs.open_count }}
+          FOUNDRY_OPEN_COUNT: ${{ steps.audit.outputs.foundry_open_count }}
+          DIRECT_PRIVILEGED_COUNT: ${{ steps.audit.outputs.direct_privileged_count }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${AI_DEV_SLACK_WEBHOOK_URL:-}" ]]; then
+            echo 'Slack delivery unavailable: AI_DEV_SLACK_WEBHOOK_URL missing.' >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          hour="$(date -u +%H)"
+          if [[ "${AUDIT_STATUS:-FAIL}" == "PASS" && "$hour" != "00" ]]; then
+            echo 'PASS checkpoint retained as artifact; Slack noise suppressed.' >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          export hour
+          python - <<'PY'
+          import json, os
+          status=os.environ.get('AUDIT_STATUS','FAIL')
+          text=(
+              f"*[THE WORLD / REALITY AUDIT]* status={status}\n"
+              f"recent PR merged={os.environ.get('MERGED_COUNT','?')} / open={os.environ.get('OPEN_COUNT','?')} / FOUNDRY open={os.environ.get('FOUNDRY_OPEN_COUNT','?')}\n"
+              f"recent privileged direct-pushes={os.environ.get('DIRECT_PRIVILEGED_COUNT','?')}\n"
+              "Truth rules: open PR != shipped / blocked != success / self-hosted != external / unknown != verified\n"
+              f"run: https://github.com/{os.environ['GITHUB_REPOSITORY']}/actions/runs/{os.environ['GITHUB_RUN_ID']}"
+          )
+          with open('/tmp/reality-audit/slack.json','w',encoding='utf-8') as f:
+              json.dump({'text':text},f,ensure_ascii=False)
+          PY
+          curl --fail-with-body --silent --show-error \
+            -H 'Content-Type: application/json' \
+            --data-binary @/tmp/reality-audit/slack.json \
+            "$AI_DEV_SLACK_WEBHOOK_URL"
+
+      - name: Fail closed on false reality
+        if: steps.audit.outputs.status != 'PASS'
+        shell: bash
+        run: |
+          echo 'Reality Audit found an unverified or regressed claim. See artifact and job summary.' >&2
+          exit 1

@@ -1,0 +1,30 @@
+{
+  "archetype": "auth_service",
+  "coverage_gaps": [
+    "jwt_weak",
+    "misconfig",
+    "model_poisoning"
+  ],
+  "description": "Auto-generated local lab from bounded coverage/ELO evidence",
+  "fingerprint": "8f339405f9dd61474ff41ee8bda0aca8c01f3923cdfabcc9154f7fe0d13349f6",
+  "host": null,
+  "name": "auto-lab-auth-service-adc52c637b21",
+  "schema": "senju-auto-lab/v3",
+  "surfaces": [
+    {
+      "difficulty": 0.545,
+      "name": "auto-lab-auth-service-adc52c637b21:jwt-weak",
+      "vuln_class": "jwt_weak"
+    },
+    {
+      "difficulty": 0.625,
+      "name": "auto-lab-auth-service-adc52c637b21:misconfig",
+      "vuln_class": "misconfig"
+    },
+    {
+      "difficulty": 0.817,
+      "name": "auto-lab-auth-service-adc52c637b21:model-poisoning",
+      "vuln_class": "model_poisoning"
+    }
+  ]
+}

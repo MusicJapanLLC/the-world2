@@ -1,5 +1,5 @@
 {
-  "schema": "the-world-child-guild/v4",
+  "schema": "the-world-child-guild/v5",
   "guild_id": "CHILD_GUILD",
   "name": "The World Child Guild",
   "count": 50,
@@ -7,6 +7,20 @@
   "priority": ["fun", "curiosity", "learning", "useful_surprise"],
   "motto": "PLAY FAST. BREAK BOREDOM. LEAVE NO DAMAGE.",
   "external_contact_policy": "company-society/EXTERNAL_CONTACT.md",
+  "memory": {
+    "enabled": true,
+    "engine": "company-society/child_memory.py",
+    "schema": "child-guild-memory/v1",
+    "retained_episodes": 240,
+    "shared_across_children": true,
+    "prefer_underexplored_children": true,
+    "prefer_underexplored_actions": true,
+    "prefer_underexplored_adventures": true,
+    "ingest_outside_world_abstracts": true,
+    "ingest_research_sparks": true,
+    "secret_fields_excluded": true,
+    "learning_return": ["what_was_observed", "what_changed_my_mind", "what_to_try_next"]
+  },
   "workstations": {
     "enabled": true,
     "registry": "company-society/child_workstations.json",

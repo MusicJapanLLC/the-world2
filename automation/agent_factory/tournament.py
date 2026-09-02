@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Any
 
 ALLOWED_PREFIXES = (
+    "automation/ai_foundry/",
     "automation/world/",
     "automation/security/",
     "standment-security/",
@@ -300,11 +301,11 @@ rollback: {change.get('rollback')}
 limitations: {json.dumps(proposal.get('limitations') or [], ensure_ascii=False)}
 
 HARD CHANGE BOUNDARY
-- Modify only files under: automation/world/, automation/security/, standment-security/, value-lab/, docs/.
+- Modify only files under: automation/ai_foundry/, automation/world/, automation/security/, standment-security/, value-lab/, docs/.
 - Do NOT modify .github/, automation/agent_factory/, senju/, outside-world/, tomoki-agents/, ops/, PORTFOLIO.md, secrets, credentials, deployment settings, authorization scope, or external-write systems.
 - Do not target third-party systems or add offensive/exploit behavior.
 - Do not push, merge, publish, post externally, or create credentials.
-- Do not mark anything VERIFIED or commercially validated.
+- Do not mark anything VERIFIED, commercially validated, model-trained, or capability-improved from strategy proxy alone.
 - Keep the change <= 8 files and <= 1500 changed lines total.
 - Preserve backward compatibility unless the champion explicitly proves a bounded contract change is necessary.
 - Add/update the smallest relevant tests or reproducibility evidence.

@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Generated AI</title>
+  <link rel="stylesheet" href="/styles.css" />
+  <style>
+    body{overflow:auto}.agent-shell{min-height:100vh;display:grid;grid-template-columns:280px minmax(600px,1fr);background:#050706}.agent-meta{border-right:1px solid #1a241e;background:#080b09;padding:22px}.agent-meta h1{font-size:18px;margin:16px 0 10px}.agent-meta p{font-family:Inter,system-ui,sans-serif;color:#829087;font-size:12px;line-height:1.7}.agent-meta .back{display:inline-block;margin-bottom:18px;color:#65ff9b;text-decoration:none;font-size:10px}.agent-chat{display:flex;flex-direction:column;min-height:100vh}.agent-head{height:78px;border-bottom:1px solid #172019;display:flex;align-items:center;padding:0 26px}.agent-messages{flex:1;overflow:auto;padding:32px 8vw 130px}.agent-composer{position:fixed;bottom:24px;left:calc(280px + 8vw);right:8vw;display:grid;grid-template-columns:1fr auto;gap:8px;background:#0b100d;border:1px solid #26352b;padding:8px}.agent-composer textarea{resize:none;min-height:48px;max-height:180px;background:#080b09;color:#dce5df;border:0;outline:0;padding:13px}.agent-composer button{width:82px;background:#65ff9b;color:#061008;border:0;font-weight:800}@media(max-width:1050px){.agent-shell{display:none}#mobileBlock{display:grid}}
+  </style>
+</head>
+<body>
+  <div id="mobileBlock">Generated AI is desktop-first. Open this URL on a PC.</div>
+  <div class="agent-shell" id="agentApp">
+    <aside class="agent-meta">
+      <a class="back" href="/">← AI FOUNDRY</a>
+      <div class="eyebrow">PUBLISHED AI</div>
+      <h1 id="agentName">Loading...</h1>
+      <p id="agentDescription"></p>
+      <div id="agentCaps" class="caps"></div>
+      <div class="sidebar-foot" style="margin-top:20px">RUNTIME · openai/gpt-5.6-sol</div>
+    </aside>
+    <main class="agent-chat">
+      <header class="agent-head"><div><div class="eyebrow">LIVE RUNTIME</div><div id="runtimeState" style="margin-top:6px;font-size:11px">READY</div></div></header>
+      <section id="agentMessages" class="agent-messages"></section>
+      <div class="agent-composer"><textarea id="agentComposer" placeholder="Message this AI..."></textarea><button id="agentSend">SEND</button></div>
+    </main>
+  </div>
+  <script type="module" src="/agent.js"></script>
+</body>
+</html>

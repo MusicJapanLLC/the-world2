@@ -1,0 +1,351 @@
+name: Senju External Agency Orchestrator
+
+on:
+  schedule:
+    - cron: "7,22,37,52 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+  issues: read
+  pull-requests: read
+
+concurrency:
+  group: senju-external-agency-orchestrator
+  cancel-in-progress: true
+
+env:
+  GH_TOKEN: ${{ github.token }}
+  JULES_API_KEY: ${{ secrets.JULES_API_KEY }}
+  PYTHONPATH: ${{ github.workspace }}/senju
+
+jobs:
+  agency:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: "3.12"
+
+      - name: Install test dependency
+        env:
+          PIP_DISABLE_PIP_VERSION_CHECK: "1"
+          PIP_NO_INPUT: "1"
+        run: python -m pip install pytest==9.1.1
+
+      - name: Verify agency contracts
+        run: |
+          set -euo pipefail
+          (cd senju && python -m pytest \
+            tests/test_external_frontier.py \
+            tests/test_autonomy_delegate.py \
+            tests/test_agency_bus.py \
+            tests/test_owned_range_active.py -q)
+
+      - name: Restore previous agency memory
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/senju-agency /tmp/senju-agency-prev
+          PREV_RUN="$(gh run list --repo "$GITHUB_REPOSITORY" \
+            --workflow "Senju External Agency Orchestrator" --status success --limit 20 \
+            --json databaseId --jq '.[0].databaseId // empty' || true)"
+          if [[ -n "$PREV_RUN" ]]; then
+            gh run download "$PREV_RUN" --repo "$GITHUB_REPOSITORY" \
+              --pattern 'senju-agency-*' --dir /tmp/senju-agency-prev || true
+          fi
+          PREV_BUS="$(find /tmp/senju-agency-prev -name agency-bus.json -print -quit || true)"
+          if [[ -n "$PREV_BUS" ]]; then
+            cp "$PREV_BUS" /tmp/senju-agency/previous-agency-bus.json
+            echo "previous agency bus restored from run $PREV_RUN"
+          fi
+
+      - name: Explore diversified public external frontier
+        run: |
+          set -euo pipefail
+          python senju/scripts/run_external_frontier.py \
+            --seed-url https://www.python.org/ \
+            --seed-url https://www.w3.org/ \
+            --seed-url https://www.cisa.gov/known-exploited-vulnerabilities-catalog \
+            --seed-url https://github.blog/ \
+            --seed-url https://www.ietf.org/ \
+            --seed-url https://nvd.nist.gov/ \
+            --max-steps 36 \
+            --max-host-budget 8 \
+            --max-unique-hosts 18 \
+            --max-visits-per-host 2 \
+            --delay-seconds 0.25 \
+            --out-dir /tmp/senju-agency/frontier \
+            --out /tmp/senju-agency/external-frontier.json
+
+      - name: Restore PR273 and PR275 evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/senju-agency/pr273 /tmp/senju-agency/pr275
+
+          FULL_RUN="$(gh run list --repo "$GITHUB_REPOSITORY" \
+            --workflow "Senju Adversary Full Join" --status success --limit 20 \
+            --json databaseId --jq '.[0].databaseId // empty' || true)"
+          OPP_RUN="$(gh run list --repo "$GITHUB_REPOSITORY" \
+            --workflow "Senju Live Opposition Force" --status success --limit 20 \
+            --json databaseId --jq '.[0].databaseId // empty' || true)"
+
+          if [[ -n "$FULL_RUN" ]]; then
+            gh run download "$FULL_RUN" --repo "$GITHUB_REPOSITORY" \
+              --dir /tmp/senju-agency/pr273 || true
+          fi
+          if [[ -n "$OPP_RUN" ]]; then
+            gh run download "$OPP_RUN" --repo "$GITHUB_REPOSITORY" \
+              --dir /tmp/senju-agency/pr275 || true
+          fi
+
+          echo "PR273_RUN=${FULL_RUN:-none}" >> "$GITHUB_ENV"
+          echo "PR275_RUN=${OPP_RUN:-none}" >> "$GITHUB_ENV"
+
+      - name: Restore latest owned-range active evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/senju-agency/owned-range
+          OWNED_RUN="$(gh run list --repo "$GITHUB_REPOSITORY" \
+            --workflow "Senju Owned Range Active Evolution" --status success --limit 20 \
+            --json databaseId --jq '.[0].databaseId // empty' || true)"
+          if [[ -n "$OWNED_RUN" ]]; then
+            gh run download "$OWNED_RUN" --repo "$GITHUB_REPOSITORY" \
+              --name senju-owned-range-active-evidence \
+              --dir /tmp/senju-agency/owned-range || true
+          fi
+          OWNED_REPORT="$(find /tmp/senju-agency/owned-range -name report.json -print -quit || true)"
+          if [[ -n "$OWNED_REPORT" ]]; then
+            cp "$OWNED_REPORT" /tmp/senju-agency/owned-range.json
+            echo "owned-range active evidence restored from run $OWNED_RUN"
+          else
+            printf '{}\n' > /tmp/senju-agency/owned-range.json
+            echo "no successful owned-range artifact yet; bus continues without it"
+          fi
+          echo "OWNED_RANGE_RUN=${OWNED_RUN:-none}" >> "$GITHUB_ENV"
+
+      - name: Snapshot recent PR swarm and OpenHands machine audits
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh pr list --repo "$GITHUB_REPOSITORY" --state all --limit 80 \
+            --json number,title,state,isDraft,headRefName,headRefOid,baseRefName,updatedAt,url,mergedAt \
+            > /tmp/senju-agency/recent-prs.json
+          python - <<'PY'
+          import json
+          import os
+          import subprocess
+          from pathlib import Path
+
+          repo = os.environ['GITHUB_REPOSITORY']
+          rows = json.loads(Path('/tmp/senju-agency/recent-prs.json').read_text())
+          states = []
+          for pr in rows:
+              title = str(pr.get('title') or '')
+              branch = str(pr.get('headRefName') or '')
+              is_senju = (
+                  'senju' in title.lower()
+                  or branch.startswith('senju/')
+                  or branch.startswith('feat/senju-')
+                  or branch.startswith('fix/senju-')
+              )
+              if not is_senju:
+                  continue
+              number = int(pr['number'])
+              sha = str(pr.get('headRefOid') or '')
+              proc = subprocess.run(
+                  ['gh', 'api', f'repos/{repo}/issues/{number}/comments', '--paginate', '--jq', '.[].body'],
+                  check=False, capture_output=True, text=True,
+              )
+              bodies = proc.stdout or ''
+              pass_marker = f'AI_MERGE_AUDIT: PASS {sha}'
+              block_marker = f'AI_MERGE_AUDIT: BLOCK {sha}'
+              if pr.get('mergedAt'):
+                  audit = 'MERGED'
+              elif block_marker in bodies:
+                  audit = 'BLOCK'
+              elif pass_marker in bodies:
+                  audit = 'PASS'
+              else:
+                  audit = 'WAITING'
+              states.append({
+                  'number': number,
+                  'head_sha': sha,
+                  'audit': audit,
+                  'state': str(pr.get('state') or ''),
+                  'title': title[:180],
+              })
+          Path('/tmp/senju-agency/merge-audit.json').write_text(
+              json.dumps({'schema':'senju-machine-merge-audit/v1','prs':states}, ensure_ascii=False, indent=2) + '\n',
+              encoding='utf-8',
+          )
+          print(json.dumps({'senju_prs':len(states),'blocked':sum(x['audit']=='BLOCK' for x in states),'waiting':sum(x['audit']=='WAITING' for x in states)}))
+          PY
+
+      - name: Build shared agency bus
+        run: |
+          set -euo pipefail
+          python senju/scripts/agency_bus.py \
+            --frontier /tmp/senju-agency/external-frontier.json \
+            --evolution senju/state/last-evolution-summary.json \
+            --prs /tmp/senju-agency/recent-prs.json \
+            --merge-audit /tmp/senju-agency/merge-audit.json \
+            --pr273 /tmp/senju-agency/pr273 \
+            --pr275 /tmp/senju-agency/pr275 \
+            --owned-range /tmp/senju-agency/owned-range.json \
+            --out /tmp/senju-agency/agency-bus.json \
+            --markdown /tmp/senju-agency/agency-bus.md
+          cat /tmp/senju-agency/agency-bus.md >> "$GITHUB_STEP_SUMMARY"
+
+          current="$(jq -r '.digest' /tmp/senju-agency/agency-bus.json)"
+          previous=""
+          if [[ -f /tmp/senju-agency/previous-agency-bus.json ]]; then
+            previous="$(jq -r '.digest // ""' /tmp/senju-agency/previous-agency-bus.json)"
+          fi
+          if [[ -n "$previous" && "$current" == "$previous" ]]; then
+            echo "AGENCY_CHANGED=false" >> "$GITHUB_ENV"
+            echo "Agency digest unchanged; implementation churn will be suppressed."
+          else
+            echo "AGENCY_CHANGED=true" >> "$GITHUB_ENV"
+            echo "Agency digest changed: ${previous:-none} -> $current"
+          fi
+          echo "AGENCY_DIGEST=$current" >> "$GITHUB_ENV"
+          echo "AGENCY_FOCUS=$(jq -r '.next_focus' /tmp/senju-agency/agency-bus.json)" >> "$GITHUB_ENV"
+
+      - name: Build cross-system agency question
+        if: env.AGENCY_CHANGED == 'true'
+        shell: python
+        run: |
+          import json
+          from pathlib import Path
+
+          root = Path('/tmp/senju-agency')
+          bus = json.loads((root / 'agency-bus.json').read_text())
+          question = (
+              'Act as Senju agency director. Use the current evolution state and the shared agency bus below. '
+              'Select ONE concrete, testable repository improvement that closes the loop between external public-read research, '
+              'the explicitly owned active test range, PR outcomes, adversarial counterexamples, AI delegation, code generation, '
+              'observability, and reliability. If focus begins with owned_range_, use the owned-range evidence and evolving probe '
+              'ranking to add a regression test or the smallest reliability/verification fix; never generalize that authority to '
+              'another hostname. If focus is blocked_pr_repair, inspect the blocked PR and change the hypothesis instead of '
+              'duplicating it. If focus is guard_regression_repair or counterexample_expansion, add a regression test/counterexample '
+              'first and then propose the smallest defensive or reliability fix. Prefer senju/, value-lab/, company-society/, '
+              'automation/world/, automation/control_plane/, automation/ai_foundry/, automation/agent_factory/, automation/codegen/, '
+              'api/, public/, non-security scripts/, or docs/. Detect overlap with active PRs before acting. Do not propose '
+              'credential expansion, unauthorized third-party writes, live guard bypass, exploit deployment, guard removal, or '
+              'security-policy weakening.\n\nAGENCY BUS:\n' + json.dumps(bus, ensure_ascii=False)[:18000]
+          )
+          (root / 'agency-question.txt').write_text(question, encoding='utf-8')
+          print(question[:6000])
+
+      - name: Ask Personal AI Core and AI FOUNDRY for one action
+        if: env.AGENCY_CHANGED == 'true'
+        run: |
+          set -euo pipefail
+          python -m senju.advisors \
+            --summary senju/state/last-evolution-summary.json \
+            --out /tmp/senju-agency/advisor-brief.json \
+            --payload-out /tmp/senju-agency/foundry-request.json \
+            --question "$(cat /tmp/senju-agency/agency-question.txt)"
+          python senju/scripts/autonomy_delegate.py \
+            --advisor /tmp/senju-agency/advisor-brief.json \
+            --out /tmp/senju-agency/delegation.json
+
+      - name: Direct Jules without human plan approval
+        if: env.AGENCY_CHANGED == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROUTE="$(jq -r '.route' /tmp/senju-agency/delegation.json)"
+          if [[ "$ROUTE" != "jules" && "$ROUTE" != "self" ]]; then
+            echo "No approval-free implementation dispatch for route=$ROUTE"
+            exit 0
+          fi
+          if [[ -z "${JULES_API_KEY:-}" ]]; then
+            echo "JULES_API_KEY is unavailable; evidence remains for the next cycle."
+            exit 0
+          fi
+
+          key="$(jq -r '.delegation_key // ""' /tmp/senju-agency/delegation.json)"
+          if [[ -z "$key" ]]; then
+            echo "No delegation key; dispatch skipped."
+            exit 0
+          fi
+          duplicate="$(gh api -X GET search/issues \
+            -f q="repo:$GITHUB_REPOSITORY is:pr $key" \
+            --jq '.items[0].number // empty' 2>/dev/null || true)"
+          if [[ -n "$duplicate" ]]; then
+            echo "Delegation key $key already exists in PR #$duplicate; duplicate generation suppressed."
+            exit 0
+          fi
+
+          owner="${GITHUB_REPOSITORY%%/*}"
+          repo="${GITHUB_REPOSITORY#*/}"
+          sources_json="$(curl --fail-with-body --silent --show-error \
+            -H "X-Goog-Api-Key: $JULES_API_KEY" \
+            "https://jules.googleapis.com/v1alpha/sources")"
+          source_name="$(jq -r --arg owner "$owner" --arg repo "$repo" \
+            '.sources[]? | select(.githubRepo.owner == $owner and .githubRepo.repo == $repo) | .name' \
+            <<<"$sources_json" | head -n 1)"
+          if [[ -z "$source_name" ]]; then
+            echo "Repository is not configured as a Jules source; dispatch skipped."
+            exit 0
+          fi
+
+          request="$(jq -r '.decision.request // ""' /tmp/senju-agency/advisor-brief.json)"
+          rationale="$(jq -r '.decision.rationale // ""' /tmp/senju-agency/advisor-brief.json)"
+          prompt="$(jq -nr \
+            --arg request "$request" \
+            --arg rationale "$rationale" \
+            --arg key "$key" \
+            --arg digest "$AGENCY_DIGEST" \
+            --arg focus "$AGENCY_FOCUS" \
+            --arg pr273 "$PR273_RUN" \
+            --arg pr275 "$PR275_RUN" \
+            --arg owned "$OWNED_RANGE_RUN" \
+            '$request + "\n\nRationale: " + $rationale + "\n\nSenju agency key: " + $key + "\nAgency digest: " + $digest + "\nAgency focus: " + $focus + "\nPR273 evidence run: " + $pr273 + "\nPR275 evidence run: " + $pr275 + "\nOwned-range evidence run: " + $owned + "\n\nInspect current default branch, recent [Senju] PRs, and active overlap first. If repairing a blocked attempt, change the hypothesis and add a regression test before retrying the implementation. Implement one focused change, run relevant tests, and open a pull request. PR title MUST begin with [Senju]. Include senju-delegation-key: " + $key + " in the PR body. Do not push directly to the default branch. Public external research is GET/HEAD only. The exact host kabeya-authorized-test-range.onrender.com is separately ownership-verified and may receive the bounded same-origin non-destructive active probes and dummy POSTs declared by AUTHORIZED_TEST_TARGETS.json; never extend that write authority to another host. Do not expand credentials, unauthorized third-party write/exploit authority, live guard bypass, or weaken security/authorization policy. The PR will be independently audited by OpenHands; Senju automation may approve it only after AI_MERGE_AUDIT PASS for the exact head SHA."')"
+          payload="$(jq -n \
+            --arg prompt "$prompt" \
+            --arg source "$source_name" \
+            --arg branch "$GITHUB_REF_NAME" \
+            '{prompt:$prompt,title:"Senju Agency closed-loop implementation",sourceContext:{source:$source,githubRepoContext:{startingBranch:$branch}},requirePlanApproval:false,automationMode:"AUTO_CREATE_PR"}')"
+
+          response_file=/tmp/senju-agency/jules-response.json
+          code="$(curl --silent --show-error -o "$response_file" -w '%{http_code}' -X POST \
+            -H "Content-Type: application/json" \
+            -H "X-Goog-Api-Key: $JULES_API_KEY" \
+            "https://jules.googleapis.com/v1alpha/sessions" \
+            --data-binary "$payload")"
+          echo "Jules HTTP $code"
+          if [[ "$code" != "200" && "$code" != "201" ]]; then
+            cat "$response_file" || true
+            exit 0
+          fi
+          jq '{name,id,url,state}' "$response_file" || cat "$response_file"
+          jq -n \
+            --arg key "$key" \
+            --arg digest "$AGENCY_DIGEST" \
+            --arg focus "$AGENCY_FOCUS" \
+            --arg session "$(jq -r '.name // .id // "unknown"' "$response_file")" \
+            '{schema:"senju-agency-dispatch/v1",delegation_key:$key,agency_digest:$digest,focus:$focus,jules_session:$session}' \
+            > /tmp/senju-agency/jules-dispatch.json
+
+      - name: Upload closed-loop agency evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: senju-agency-${{ github.run_id }}
+          path: /tmp/senju-agency/
+          if-no-files-found: warn
+          retention-days: 30

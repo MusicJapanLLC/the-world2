@@ -1,0 +1,307 @@
+name: Senju SPEAR Continuous Authorized Assessment
+
+on:
+  schedule:
+    - cron: "41 */6 * * *"
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "senju/senju/authorized_assessment.py"
+      - "senju/senju/spear_web.py"
+      - "senju/senju/spear_compare.py"
+      - "senju/tests/test_authorized_assessment.py"
+      - "senju/tests/test_spear_web.py"
+      - "senju/tests/test_spear_compare.py"
+      - ".github/workflows/senju-spear-continuous.yml"
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: senju-spear-continuous-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  assess:
+    name: Authority -> posture -> sanitized evidence -> regression diff
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      GH_TOKEN: ${{ github.token }}
+      SENJU_SPEAR_ENGAGEMENT_JSON: ${{ secrets.SENJU_SPEAR_ENGAGEMENT_JSON }}
+      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: "3.12"
+
+      - name: Verify SPEAR core before any network execution
+        working-directory: senju
+        env:
+          PIP_DISABLE_PIP_VERSION_CHECK: "1"
+          PIP_NO_INPUT: "1"
+        run: |
+          set -euo pipefail
+          python -m pip install pytest==9.1.1
+          python -m pytest \
+            tests/test_authorized_assessment.py \
+            tests/test_spear_web.py \
+            tests/test_spear_compare.py \
+            tests/test_external_contact.py \
+            -q
+
+      - name: Restore previous sanitized evidence
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/spear-evidence /tmp/spear-prev /tmp/spear-work /tmp/spear-input
+          PREV_RUN="$(gh run list \
+            --repo "$GITHUB_REPOSITORY" \
+            --workflow "Senju SPEAR Continuous Authorized Assessment" \
+            --status success \
+            --limit 10 \
+            --json databaseId \
+            --jq '.[0].databaseId // empty' || true)"
+          if [[ -n "$PREV_RUN" ]]; then
+            gh run download "$PREV_RUN" \
+              --repo "$GITHUB_REPOSITORY" \
+              --name senju-spear-continuous-evidence \
+              --dir /tmp/spear-prev || true
+          fi
+          if [[ -f /tmp/spear-prev/current-summary.json ]]; then
+            cp /tmp/spear-prev/current-summary.json /tmp/spear-prev/previous-summary.json
+            echo "Restored previous sanitized SPEAR baseline from run $PREV_RUN"
+          else
+            echo "No previous SPEAR baseline available"
+          fi
+
+      - name: Build plan or execute configured authorized engagement
+        working-directory: senju
+        run: |
+          set -euo pipefail
+          if [[ -z "${SENJU_SPEAR_ENGAGEMENT_JSON:-}" ]]; then
+            python -m senju.authorized_assessment \
+              examples/spear-engagement.example.json \
+              --out /tmp/spear-evidence/plan.json
+            python - <<'PY'
+          import json
+          from datetime import datetime, timezone
+          from pathlib import Path
+          summary = {
+              'schema': 'senju-spear-continuous-summary/v1',
+              'configured': False,
+              'generated_at_utc': datetime.now(timezone.utc).isoformat(timespec='seconds'),
+              'engagement_id': None,
+              'manifest_sha256': None,
+              'targets': [],
+              'note': 'No SENJU_SPEAR_ENGAGEMENT_JSON secret configured; no external assessment executed.',
+          }
+          Path('/tmp/spear-evidence/current-summary.json').write_text(
+              json.dumps(summary, indent=2) + '\n', encoding='utf-8'
+          )
+          print('SENJU_SPEAR_NOT_CONFIGURED_NO_EXTERNAL_CONTACT')
+          PY
+            exit 0
+          fi
+
+          printf '%s' "$SENJU_SPEAR_ENGAGEMENT_JSON" > /tmp/spear-input/engagement.json
+          chmod 600 /tmp/spear-input/engagement.json
+
+          python -m senju.authorized_assessment \
+            /tmp/spear-input/engagement.json \
+            --out /tmp/spear-evidence/plan.json
+
+          python - <<'PY'
+          from pathlib import Path
+          from senju.authorized_assessment import EngagementManifest
+          manifest = EngagementManifest.load('/tmp/spear-input/engagement.json')
+          Path('/tmp/spear-input/hosts.txt').write_text(
+              ''.join(f'{target.host}\n' for target in manifest.targets), encoding='utf-8'
+          )
+          PY
+
+          index=0
+          while IFS= read -r host; do
+            [[ -z "$host" ]] && continue
+            index=$((index + 1))
+            python -m senju.spear_web \
+              /tmp/spear-input/engagement.json \
+              --target-host "$host" \
+              --out "/tmp/spear-work/report-${index}.json"
+          done < /tmp/spear-input/hosts.txt
+
+          python - <<'PY'
+          import json
+          from datetime import datetime, timezone
+          from pathlib import Path
+          from senju.authorized_assessment import EngagementManifest
+
+          manifest = EngagementManifest.load('/tmp/spear-input/engagement.json')
+          targets = []
+          for path in sorted(Path('/tmp/spear-work').glob('report-*.json')):
+              raw = json.loads(path.read_text(encoding='utf-8'))
+              findings = []
+              for item in raw.get('findings', []):
+                  safe = {
+                      'severity': item.get('severity', 'info'),
+                      'key': item.get('key', ''),
+                      'title': item.get('title', ''),
+                      'remediation': item.get('remediation', ''),
+                  }
+                  if str(item.get('key', '')).startswith('cookie-'):
+                      safe['evidence'] = 'Cookie attribute posture only; cookie value intentionally omitted.'
+                  else:
+                      evidence = str(item.get('evidence', ''))
+                      safe['evidence'] = evidence[:400]
+                  findings.append(safe)
+
+              receipts = []
+              for item in raw.get('receipts', []):
+                  receipts.append({
+                      'check': item.get('check', ''),
+                      'method': item.get('method', ''),
+                      'status': item.get('status', 0),
+                      'elapsed_ms': item.get('elapsed_ms', 0),
+                      'response_bytes': item.get('response_bytes', 0),
+                      'response_sha256': item.get('response_sha256', ''),
+                  })
+
+              targets.append({
+                  'target_host': raw.get('target_host'),
+                  'target_url': raw.get('target_url'),
+                  'requests_used': raw.get('requests_used', 0),
+                  'severity_counts': raw.get('severity_counts', {}),
+                  'findings': findings,
+                  'receipts': receipts,
+              })
+
+          summary = {
+              'schema': 'senju-spear-continuous-summary/v1',
+              'configured': True,
+              'generated_at_utc': datetime.now(timezone.utc).isoformat(timespec='seconds'),
+              'engagement_id': manifest.engagement_id,
+              'manifest_sha256': manifest.sha256(),
+              'targets': targets,
+              'boundaries': {
+                  'exact_hosts_only': True,
+                  'methods': ['GET', 'HEAD', 'OPTIONS'],
+                  'credential_guessing': False,
+                  'auth_bypass': False,
+                  'exploit_delivery': False,
+                  'destructive_requests': False,
+                  'raw_response_bodies_persisted': False,
+                  'raw_response_headers_persisted': False,
+              },
+          }
+          Path('/tmp/spear-evidence/current-summary.json').write_text(
+              json.dumps(summary, indent=2) + '\n', encoding='utf-8'
+          )
+          print(f"SENJU_SPEAR_AUTHORIZED_TARGETS_ASSESSED={len(targets)}")
+          PY
+
+          rm -rf /tmp/spear-input /tmp/spear-work
+
+      - name: Compare against previous sanitized baseline
+        working-directory: senju
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          current = json.loads(Path('/tmp/spear-evidence/current-summary.json').read_text())
+          previous_path = Path('/tmp/spear-prev/previous-summary.json')
+          previous = json.loads(previous_path.read_text()) if previous_path.exists() else None
+          comparable = bool(current.get('configured')) and bool(previous and previous.get('configured'))
+          Path('/tmp/spear-evidence/comparable.flag').write_text('1' if comparable else '0')
+          PY
+          if [[ "$(cat /tmp/spear-evidence/comparable.flag)" == "1" ]]; then
+            python -m senju.spear_compare \
+              --current /tmp/spear-evidence/current-summary.json \
+              --previous /tmp/spear-prev/previous-summary.json \
+              --out /tmp/spear-evidence/regression-diff.json
+          else
+            python - <<'PY'
+          import json
+          from pathlib import Path
+          current = json.loads(Path('/tmp/spear-evidence/current-summary.json').read_text())
+          state = 'not_configured' if not current.get('configured') else 'baseline_created'
+          diff = {
+              'schema': 'senju-spear-regression-diff/v1',
+              'baseline_present': False,
+              'counts': {'new': 0, 'resolved': 0, 'persisting': 0, 'severity_up': 0, 'severity_down': 0, 'response_changed': 0},
+              'risk_direction': state,
+              'new_findings': [],
+              'resolved_findings': [],
+              'persisting_findings': [],
+              'severity_changes': [],
+              'response_changes': [],
+          }
+          Path('/tmp/spear-evidence/regression-diff.json').write_text(json.dumps(diff, indent=2) + '\n')
+          PY
+          fi
+          rm -f /tmp/spear-evidence/comparable.flag
+
+      - name: Publish compact evidence summary
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          current = json.loads(Path('/tmp/spear-evidence/current-summary.json').read_text())
+          diff = json.loads(Path('/tmp/spear-evidence/regression-diff.json').read_text())
+          finding_count = sum(len(target.get('findings', [])) for target in current.get('targets', []))
+          lines = [
+              '# Senju SPEAR Continuous Assessment',
+              '',
+              f"- configured: `{current.get('configured')}`",
+              f"- targets assessed: `{len(current.get('targets', []))}`",
+              f"- findings observed: `{finding_count}`",
+              f"- risk direction: `{diff.get('risk_direction')}`",
+              f"- new/resolved/persisting: `{diff.get('counts', {}).get('new', 0)}` / `{diff.get('counts', {}).get('resolved', 0)}` / `{diff.get('counts', {}).get('persisting', 0)}`",
+              f"- response fingerprints changed: `{diff.get('counts', {}).get('response_changed', 0)}`",
+              '',
+              'Raw response bodies, raw headers, cookie values, credentials, and authorization references are not persisted in the uploaded evidence bundle.',
+          ]
+          Path('/tmp/spear-evidence/job-summary.md').write_text('\n'.join(lines) + '\n')
+          PY
+          cat /tmp/spear-evidence/job-summary.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Notify Slack when configured
+        if: ${{ env.SLACK_WEBHOOK_URL != '' }}
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          current = json.loads(Path('/tmp/spear-evidence/current-summary.json').read_text())
+          diff = json.loads(Path('/tmp/spear-evidence/regression-diff.json').read_text())
+          counts = diff.get('counts', {})
+          finding_count = sum(len(target.get('findings', [])) for target in current.get('targets', []))
+          text = (
+              '🛡️ Senju SPEAR: '
+              f"targets={len(current.get('targets', []))}, findings={finding_count}, "
+              f"risk={diff.get('risk_direction')}, new={counts.get('new', 0)}, "
+              f"resolved={counts.get('resolved', 0)}, changed={counts.get('response_changed', 0)}"
+          )
+          Path('/tmp/spear-evidence/slack-payload.json').write_text(json.dumps({'text': text}))
+          PY
+          curl --fail --silent --show-error \
+            --max-time 10 \
+            -H 'Content-Type: application/json' \
+            --data-binary @/tmp/spear-evidence/slack-payload.json \
+            "$SLACK_WEBHOOK_URL"
+          rm -f /tmp/spear-evidence/slack-payload.json
+
+      - name: Upload sanitized SPEAR evidence
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        with:
+          name: senju-spear-continuous-evidence
+          retention-days: 30
+          if-no-files-found: error
+          path: /tmp/spear-evidence/

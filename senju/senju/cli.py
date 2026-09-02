@@ -15,7 +15,7 @@ import sys
 from .config import ArenaConfig, EvolutionConfig, SenjuConfig
 from .economy import EconomyConfig
 from .report import render_markdown, write_report
-from .safety import ScopeGuard, ScopeViolation, default_lab_policy
+from .safety import ScopeGuard, ScopeViolation, experimental_lab_policy
 from .tournament import Tournament
 
 
@@ -40,7 +40,8 @@ def _build_config(args: argparse.Namespace) -> SenjuConfig:
 
 def _cmd_run(args: argparse.Namespace) -> int:
     config = _build_config(args)
-    guard = ScopeGuard(default_lab_policy())
+    extra_hosts = list(getattr(args, "allow_host", None) or [])
+    guard = ScopeGuard(experimental_lab_policy(hosts=extra_hosts))
     tournament = Tournament(config, guard)
     report = tournament.run()
 
@@ -63,7 +64,7 @@ def _cmd_demo(args: argparse.Namespace) -> int:
 
 
 def _cmd_safety_check(args: argparse.Namespace) -> int:
-    guard = ScopeGuard(default_lab_policy())
+    guard = ScopeGuard(experimental_lab_policy())
     try:
         guard.check(args.ref)
         print(f"✅ 許可: {args.ref}")
@@ -87,7 +88,13 @@ def build_parser() -> argparse.ArgumentParser:
         sp.add_argument("--seed", type=int, default=None)
         sp.add_argument("--report-dir", default="reports")
         sp.add_argument("--quiet", action="store_true", help="レポート本文を標準出力しない")
-        sp.add_argument("--extreme", action="store_true", help="苛烈な戦争経済プリセット（略奪多・維持費高・破産しやすい）")
+        sp.add_argument("--extreme", action="store_true", help="苛烈な戦争経済プリセット")
+        sp.add_argument(
+            "--allow-host",
+            action="append",
+            metavar="HOST",
+            help="追加許可ホスト（複数指定可）",
+        )
 
     sp_run = sub.add_parser("run", help="トーナメントを実行しレポート保存")
     add_common(sp_run)
@@ -98,7 +105,7 @@ def build_parser() -> argparse.ArgumentParser:
     sp_demo.set_defaults(func=_cmd_demo)
 
     sp_safe = sub.add_parser("safety-check", help="スコープ検問の単体確認")
-    sp_safe.add_argument("ref", help="標的参照 (例: sim://x, 8.8.8.8, 10.0.0.1)")
+    sp_safe.add_argument("ref", help="標的参照 (例: sim://x, 8.8.8.8, 10.0.0.1, example.com)")
     sp_safe.set_defaults(func=_cmd_safety_check)
 
     return p

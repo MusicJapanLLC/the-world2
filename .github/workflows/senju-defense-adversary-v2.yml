@@ -1,0 +1,84 @@
+name: Senju Defense Adversary Suite V2
+
+on:
+  pull_request:
+    branches: ["claude/employee-onboarding-setup-udm86"]
+    paths:
+      - "senju/**"
+      - "scripts/security/artifact_guard.py"
+      - ".github/workflows/security-guard.yml"
+      - ".github/workflows/senju-defense-adversary-v2.yml"
+  push:
+    branches: ["claude/employee-onboarding-setup-udm86"]
+    paths:
+      - "senju/**"
+      - "scripts/security/artifact_guard.py"
+      - ".github/workflows/security-guard.yml"
+      - ".github/workflows/senju-defense-adversary-v2.yml"
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: senju-defense-adversary-v2-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  adversary-v2:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Run seven-layer adversary suite
+        env:
+          PYTHONPATH: senju
+        run: >-
+          python -m senju.defense_adversary_team_v2
+          --scope-cases 4096
+          --seed 26002
+          --json security-reports/senju-defense-adversary-v2.json
+
+      - name: Verify requested layer coverage
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          path = Path("security-reports/senju-defense-adversary-v2.json")
+          report = json.loads(path.read_text(encoding="utf-8"))
+          layers = set(report["summary"]["layers"])
+          required = {
+              "scopeguard",
+              "offense-first",
+              "engagement-json",
+              "external-contact",
+              "security-guard-workflow",
+              "artifact-guard",
+              "autonomy-engine",
+          }
+          missing = sorted(required - layers)
+          if missing:
+              raise SystemExit(f"missing adversary layers: {missing}")
+          print(json.dumps(report["summary"], ensure_ascii=False, indent=2))
+          PY
+
+      - name: Upload V2 adversary evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: senju-defense-adversary-v2-${{ github.sha }}
+          path: security-reports/senju-defense-adversary-v2.json
+          if-no-files-found: error
+          retention-days: 30

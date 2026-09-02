@@ -1,0 +1,123 @@
+name: Senju Blitz — Parallel Adversary Surge
+
+on:
+  schedule:
+    - cron: "*/20 * * * *"  # every 20 minutes
+  workflow_dispatch:
+    inputs:
+      slots:
+        description: "Number of parallel slots (1-20)"
+        default: "10"
+
+permissions:
+  contents: write
+  actions: write
+  issues: write
+
+concurrency:
+  group: senju-blitz-${{ github.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  blitz:
+    name: Blitz slot ${{ matrix.slot }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    strategy:
+      fail-fast: false
+      max-parallel: 20
+      matrix:
+        slot: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+
+    env:
+      PYTHONPATH: ${{ github.workspace }}/senju
+      SLOT: ${{ matrix.slot }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        env:
+          PIP_DISABLE_PIP_VERSION_CHECK: "1"
+          PIP_NO_INPUT: "1"
+        run: |
+          if [[ -f senju/pyproject.toml || -f senju/setup.py ]]; then
+            pip install -e './senju[dev]'
+          else
+            pip install pytest
+          fi
+
+      - name: Run adversary campaign (slot ${{ matrix.slot }})
+        id: campaign
+        env:
+          SENJU_ADVERSARY_STATE: ${{ runner.temp }}/blitz-state-${{ matrix.slot }}
+        shell: bash
+        run: |
+          set +e
+          SEED=$(( 1000 * $SLOT + ${{ github.run_number }} ))
+          PYTHONPATH=senju python -m senju.autonomy.adversary_loop \
+            --state-dir "$SENJU_ADVERSARY_STATE" \
+            --cycles 50 \
+            --rounds-per-cycle 20 \
+            --senju-joins-per-round 100 \
+            --seed "$SEED" \
+            --json "/tmp/blitz-slot-${SLOT}-effects.json" || true
+
+      - name: Upload blitz artifacts
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: senju-blitz-slot-${{ matrix.slot }}-${{ github.run_id }}
+          path: /tmp/blitz-slot-${{ matrix.slot }}-effects.json
+          if-no-files-found: warn
+          retention-days: 14
+
+  broadcast-and-trigger-mesh:
+    name: Broadcast externally + trigger data mesh
+    needs: blitz
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      issues: write
+      actions: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      REPO: ${{ github.repository }}
+      OUTBOUND_WEBHOOK_URL: ${{ secrets.OUTBOUND_WEBHOOK_URL }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: "3.12"
+
+      - name: Broadcast blitz completion externally
+        shell: bash
+        run: |
+          python senju/scripts/external_broadcast.py \
+            --state senju/state/last-evolution-summary.json \
+            --source senju-blitz \
+            --repo "$REPO" \
+            --out /tmp/blitz-broadcast.json || true
+          cat /tmp/blitz-broadcast.json 2>/dev/null || true
+
+      - name: Dispatch data mesh
+        run: |
+          gh workflow run senju-data-mesh.yml \
+            --repo "$REPO" \
+            --ref claude/employee-onboarding-setup-udm86 || true

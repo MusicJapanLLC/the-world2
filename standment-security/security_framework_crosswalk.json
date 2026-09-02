@@ -1,0 +1,60 @@
+{
+  "schema": "standment-security-framework-crosswalk/v1",
+  "updated_at": "2026-08-30",
+  "disclaimer": "External framework alignment guides defensive research; it is not certification or verification. Active tests remain owned/explicitly authorized only.",
+  "frameworks": {
+    "OWASP-LLM-2025": {
+      "name": "OWASP Top 10 for LLM Applications 2025",
+      "url": "https://genai.owasp.org/resource/owasp-top-10-for-llm-applications-2025/",
+      "use": "AI application risk taxonomy and mitigation questions"
+    },
+    "NIST-AI-600-1": {
+      "name": "NIST AI RMF Generative AI Profile",
+      "url": "https://www.nist.gov/publications/artificial-intelligence-risk-management-framework-generative-artificial-intelligence",
+      "use": "AI lifecycle risk context, measurement and management evidence"
+    },
+    "MITRE-ATLAS": {
+      "name": "MITRE ATLAS",
+      "url": "https://atlas.mitre.org/",
+      "use": "AI adversarial threat modeling and internal red-team vocabulary"
+    },
+    "SLSA-1.2": {
+      "name": "SLSA v1.2",
+      "url": "https://slsa.dev/spec/v1.2/",
+      "use": "Build/source provenance and software supply-chain integrity"
+    },
+    "CISA-SBD": {
+      "name": "CISA Secure by Design",
+      "url": "https://www.cisa.gov/securebydesign",
+      "use": "Secure defaults, customer security outcomes and vendor accountability"
+    }
+  },
+  "lens_mapping": {
+    "AUTH-BOUNDARY": ["MITRE-ATLAS", "CISA-SBD", "NIST-AI-600-1"],
+    "SUPPLY-CHAIN": ["SLSA-1.2", "OWASP-LLM-2025", "CISA-SBD"],
+    "AGENT-BOUNDARY": ["OWASP-LLM-2025", "MITRE-ATLAS", "NIST-AI-600-1"],
+    "LLM-TOOL-BOUNDARY": ["OWASP-LLM-2025", "MITRE-ATLAS", "NIST-AI-600-1"],
+    "SECRETS-CONFIG": ["OWASP-LLM-2025", "MITRE-ATLAS", "CISA-SBD"],
+    "CI-PERMISSIONS": ["SLSA-1.2", "CISA-SBD"],
+    "RECOVERY": ["NIST-AI-600-1", "CISA-SBD"],
+    "OBSERVABILITY": ["MITRE-ATLAS", "NIST-AI-600-1", "CISA-SBD"],
+    "DATA-BOUNDARY": ["OWASP-LLM-2025", "MITRE-ATLAS", "NIST-AI-600-1"],
+    "INPUT-ABUSE": ["OWASP-LLM-2025", "CISA-SBD"],
+    "DEPENDENCY-TRUST": ["SLSA-1.2", "OWASP-LLM-2025"],
+    "EVIDENCE-INTEGRITY": ["SLSA-1.2", "NIST-AI-600-1", "CISA-SBD"],
+    "AI-EVAL-FEEDBACK": ["OWASP-LLM-2025", "NIST-AI-600-1", "CISA-SBD"],
+    "AI-MEMORY-PROVENANCE": ["OWASP-LLM-2025", "NIST-AI-600-1", "SLSA-1.2"],
+    "AI-EVAL-DRIFT": ["NIST-AI-600-1", "MITRE-ATLAS", "CISA-SBD"],
+    "AI-CAPABILITY-DIFF": ["OWASP-LLM-2025", "MITRE-ATLAS", "CISA-SBD", "SLSA-1.2"]
+  },
+  "research_questions": [
+    "Which externally recognized failure class does this artifact address?",
+    "What result would falsify the defensive claim?",
+    "What owned/authorized behavioral evidence proves the control instead of merely documenting it?",
+    "Can an independent rerun reproduce the result?",
+    "What residual risk remains after remediation?",
+    "Does the control reduce customer security burden or only create an internal checklist?",
+    "Can an AI-development improvement signal be traced back to evidence without allowing that evidence to bypass promotion gates?",
+    "Would the same AI or security conclusion survive a changed fixture, seed, or evaluation slice rather than only the benchmark it was optimized against?"
+  ]
+}

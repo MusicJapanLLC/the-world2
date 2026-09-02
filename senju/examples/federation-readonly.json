@@ -1,0 +1,55 @@
+{
+  "schema": "senju-federation-input/v1",
+  "intents": [
+    {
+      "schema": "senju-action-intents/v1",
+      "producer": "BOSS",
+      "priority": 100,
+      "steps": [
+        {
+          "id": "repo",
+          "method": "GET",
+          "url": "https://api.github.com/repos/MusicJapanLLC/test",
+          "headers": {
+            "Accept": "application/vnd.github+json"
+          },
+          "expect_status": 200
+        }
+      ]
+    },
+    {
+      "schema": "senju-action-intents/v1",
+      "producer": "RND",
+      "priority": 90,
+      "steps": [
+        {
+          "id": "latest_commit",
+          "after": ["repo"],
+          "method": "GET",
+          "url": "{{steps.repo.json.url}}/commits?per_page=1",
+          "headers": {
+            "Accept": "application/vnd.github+json"
+          },
+          "expect_status": 200
+        }
+      ]
+    },
+    {
+      "schema": "senju-action-intents/v1",
+      "producer": "FOUNDRY",
+      "priority": 80,
+      "steps": [
+        {
+          "id": "workflows",
+          "after": ["latest_commit"],
+          "method": "GET",
+          "url": "{{steps.repo.json.url}}/actions/workflows?per_page=1",
+          "headers": {
+            "Accept": "application/vnd.github+json"
+          },
+          "expect_status": 200
+        }
+      ]
+    }
+  ]
+}

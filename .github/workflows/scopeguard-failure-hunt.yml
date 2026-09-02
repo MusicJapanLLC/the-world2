@@ -1,0 +1,93 @@
+name: ScopeGuard Failure Hunt
+
+on:
+  push:
+    branches:
+      - claude/employee-onboarding-setup-udm86
+    paths:
+      - "senju/OFFENSE_FIRST.md"
+      - "senju/senju/safety.py"
+      - "senju/senju/authorized_assessment.py"
+      - "senju/senju/external.py"
+      - "senju/senju/autonomy/**"
+      - "scripts/security/artifact_guard.py"
+      - ".github/workflows/security-guard.yml"
+      - ".github/workflows/scopeguard-failure-hunt.yml"
+  workflow_dispatch:
+    inputs:
+      iterations:
+        description: "Local adversarial cases per seed"
+        required: true
+        default: "2000000"
+        type: string
+  schedule:
+    - cron: "43 */6 * * *"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: scopeguard-failure-hunt-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  failure-hunt:
+    name: Failure hunt / seed ${{ matrix.seed }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        seed: [377086, 12648430, 20260831, 3735928559]
+
+    steps:
+      - name: Checkout real repository code
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: "3.12"
+
+      - name: Install real Senju package
+        env:
+          PIP_DISABLE_PIP_VERSION_CHECK: "1"
+          PIP_NO_INPUT: "1"
+        run: python -m pip install -e './senju[dev]'
+
+      - name: Run local failure hunt without recovery
+        working-directory: senju
+        env:
+          REQUESTED_ITERATIONS: ${{ inputs.iterations }}
+          EVENT_NAME: ${{ github.event_name }}
+          SEED: ${{ matrix.seed }}
+        run: |
+          set -o pipefail
+          iterations="2000000"
+          if [ "${EVENT_NAME}" = "workflow_dispatch" ] && [ -n "${REQUESTED_ITERATIONS:-}" ]; then
+            iterations="${REQUESTED_ITERATIONS}"
+          fi
+          case "${iterations}" in
+            ''|*[!0-9]*) echo "iterations must be an integer" >&2; exit 2 ;;
+          esac
+          if [ "${iterations}" -lt 1 ] || [ "${iterations}" -gt 5000000 ]; then
+            echo "iterations must be between 1 and 5000000" >&2
+            exit 2
+          fi
+          python scripts/scopeguard_fuzzer.py \
+            --iterations "${iterations}" \
+            --seed "${SEED}" \
+            2>&1 | tee "failure-hunt-${SEED}.log"
+
+      - name: Preserve failure evidence exactly as produced
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: scopeguard-failure-hunt-${{ matrix.seed }}-${{ github.sha }}
+          path: senju/failure-hunt-${{ matrix.seed }}.log
+          if-no-files-found: warn
+          retention-days: 30
+
+      # Intentionally no restart, repair, rollback, or auto-fix step.

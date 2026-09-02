@@ -1,0 +1,30 @@
+{
+  "archetype": "api",
+  "coverage_gaps": [
+    "deserial",
+    "idor",
+    "insecure_output_handling"
+  ],
+  "description": "Auto-generated local lab from bounded coverage/ELO evidence",
+  "fingerprint": "d624895194db3aa0a7bf2fd1b5738c3ab99abc7697504cc23fb5d7e24e9eeac2",
+  "host": null,
+  "name": "auto-lab-api-a74c6127fb31",
+  "schema": "senju-auto-lab/v3",
+  "surfaces": [
+    {
+      "difficulty": 0.323,
+      "name": "auto-lab-api-a74c6127fb31:deserial",
+      "vuln_class": "deserial"
+    },
+    {
+      "difficulty": 0.718,
+      "name": "auto-lab-api-a74c6127fb31:idor",
+      "vuln_class": "idor"
+    },
+    {
+      "difficulty": 0.386,
+      "name": "auto-lab-api-a74c6127fb31:insecure-output-handling",
+      "vuln_class": "insecure_output_handling"
+    }
+  ]
+}

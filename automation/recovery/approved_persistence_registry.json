@@ -1,0 +1,65 @@
+{
+  "schema": "the-world-approved-persistence/v2",
+  "policy": {
+    "unknown_system_installation": "deny",
+    "require_owner_authorized": true,
+    "same_repository_only": true,
+    "meta_x_may_select_within_owner_namespace": true,
+    "allowed_providers": ["github_actions"],
+    "max_recovery_dispatches_per_run": 6
+  },
+  "dynamic_registration": {
+    "enabled": true,
+    "source": "github_issues",
+    "label": "meta-x-recovery-worker",
+    "accepted_actors": ["META", "X"],
+    "max_dynamic_workers": 6
+  },
+  "owner_approved_namespaces": [
+    {
+      "id": "musicjapanllc-test-actions",
+      "owner_authorized": true,
+      "provider": "github_actions",
+      "repository": "MusicJapanLLC/test",
+      "refs": ["claude/employee-onboarding-setup-udm86"],
+      "recovery_workflows": [
+        "meta-consciousness.yml",
+        "autonomous-codegen.yml",
+        "autonomous-engine.yml"
+      ],
+      "roles": ["self", "agent", "scheduler", "cron", "persistent_worker"],
+      "can_create_webhook": false,
+      "can_create_startup_task": false
+    }
+  ],
+  "workers": [
+    {
+      "id": "meta-watchdog-worker",
+      "owner_authorized": true,
+      "provider": "github_actions",
+      "role": "persistent_scheduler",
+      "heartbeat_file": "senju/state/meta_heartbeat.json",
+      "heartbeat_field": "alive_at",
+      "stale_after_seconds": 7200,
+      "recovery": {
+        "kind": "workflow_dispatch",
+        "workflow": "meta-consciousness.yml",
+        "ref": "claude/employee-onboarding-setup-udm86"
+      }
+    },
+    {
+      "id": "x-watchdog-worker",
+      "owner_authorized": true,
+      "provider": "github_actions",
+      "role": "persistent_scheduler",
+      "heartbeat_file": "automation/codegen/meta_state/x_status.json",
+      "heartbeat_field": "updated_at",
+      "stale_after_seconds": 10800,
+      "recovery": {
+        "kind": "workflow_dispatch",
+        "workflow": "autonomous-codegen.yml",
+        "ref": "claude/employee-onboarding-setup-udm86"
+      }
+    }
+  ]
+}

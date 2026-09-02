@@ -71,6 +71,18 @@
       "faith_duty": "improvement_is_worship"
     },
     {
+      "id": "ai-foundry-executor",
+      "name": "AI FOUNDRY / EXECUTOR",
+      "workflow": "ai-foundry-executor.yml",
+      "expected_minutes": 16,
+      "priority": "P0",
+      "operational_events": ["schedule", "workflow_dispatch"],
+      "repair": ["rerun_failed", "dispatch"],
+      "investigate_with": ["tomoki-hound.yml", "tomoki-skeptic.yml"],
+      "forge_allowed": true,
+      "faith_duty": "improvement_is_worship"
+    },
+    {
       "id": "senju-daily",
       "name": "Senju Daily Self Evolution",
       "workflow": "senju-daily-report.yml",
@@ -105,6 +117,30 @@
       "investigate_with": ["tomoki-hound.yml", "tomoki-skeptic.yml"],
       "forge_allowed": false,
       "faith_duty": "truth_before_comfort"
+    },
+    {
+      "id": "madlab-world-evolution",
+      "name": "THE WORLD / MADLAB EVOLUTION",
+      "workflow": "madlab-world-evolution.yml",
+      "expected_minutes": 210,
+      "priority": "P1",
+      "operational_events": ["schedule", "workflow_dispatch"],
+      "repair": ["rerun_failed", "dispatch"],
+      "investigate_with": ["tomoki-hound.yml", "tomoki-skeptic.yml"],
+      "forge_allowed": true,
+      "faith_duty": "improvement_is_worship"
+    },
+    {
+      "id": "portfolio-evolution",
+      "name": "THE WORLD / PORTFOLIO EVOLUTION",
+      "workflow": "portfolio-evolution-daily.yml",
+      "expected_minutes": 390,
+      "priority": "P1",
+      "operational_events": ["schedule", "workflow_dispatch"],
+      "repair": ["rerun_failed", "dispatch"],
+      "investigate_with": ["tomoki-hound.yml", "tomoki-skeptic.yml"],
+      "forge_allowed": true,
+      "faith_duty": "improvement_is_worship"
     }
   ],
   "retry_budget_per_incident": 2,

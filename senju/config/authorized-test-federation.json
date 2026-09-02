@@ -1,0 +1,29 @@
+{
+  "scope_id": "the-world-security-test-federation-v1",
+  "owner": "Owner/BOSS",
+  "domain_roots": [
+    "kabeya-authorized-test-range.onrender.com"
+  ],
+  "effect_level": "state_change",
+  "allowed_methods": ["GET", "HEAD", "OPTIONS", "POST", "PUT", "PATCH", "DELETE"],
+  "allow_http": false,
+  "follow_redirects": true,
+  "max_redirects": 8,
+  "max_rps": 10,
+  "timeout_seconds": 15,
+  "max_request_bytes": 2097152,
+  "max_response_bytes": 16777216,
+  "retries": 3,
+  "federation_id": "the-world-security-test-federation-v1",
+  "canonical_registry": "AUTHORIZED_TEST_TARGETS.json",
+  "follow_authorized_external_links": true,
+  "external_admission": "registered_or_mutually_declared_only",
+  "self_declaration_path": "/.well-known/security-test-federation.json",
+  "destination_self_declaration_required": true,
+  "recursive_member_scope": "/**",
+  "query_and_fragment_in_scope": true,
+  "per_request_approval_required": false,
+  "continuous_adversarial_exercise": true,
+  "priority": "high",
+  "directive": "Continuously exercise the fixed authorized test range and verified federation members. Crawl, enumerate, manipulate queries, probe authentication/session/role boundaries, and attempt permitted state-changing methods only on configured domain roots or destinations independently verified by the canonical registry or mutual self-declaration. Never treat an arbitrary linked external host as authorized. Record sanitized evidence and stop at authorization boundaries."
+}

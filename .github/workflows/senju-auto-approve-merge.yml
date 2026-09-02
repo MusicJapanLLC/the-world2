@@ -1,0 +1,133 @@
+name: Senju Auto-Approve and Merge
+
+# No human review is required for genuine Senju-generated PRs. Provenance is
+# determined from both bot identity and Senju branch/title signals; a title alone
+# never grants merge authority. OpenHands PASS for the exact head SHA acts as the
+# machine approval before merge.
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  issues: read
+  pull-requests: write
+
+jobs:
+  auto-approve-merge:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ github.token }}
+      REPO: ${{ github.repository }}
+
+    steps:
+      - name: Approve and merge audited Senju-generated PRs
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const { owner, repo } = context.repo;
+            const pulls = await github.rest.pulls.list({
+              owner, repo, state: 'open', per_page: 100
+            });
+
+            const allowedAuthors = new Set([
+              'github-actions[bot]',
+              'github-actions',
+              'google-labs-jules[bot]'
+            ]);
+            const senjuBranchPrefixes = [
+              'senju/',
+              'feat/senju-',
+              'fix/senju-'
+            ];
+
+            function hasSenjuSignal(pr) {
+              const title = pr.title || '';
+              const branch = pr.head?.ref || '';
+              return title.includes('[Senju]') ||
+                     title.includes('Senju advisor:') ||
+                     title.startsWith('feat(senju)') ||
+                     title.startsWith('fix(senju)') ||
+                     senjuBranchPrefixes.some(prefix => branch.startsWith(prefix));
+            }
+
+            let merged = 0;
+            let skipped = 0;
+            for (const pr of pulls.data) {
+              if (pr.draft) continue;
+
+              const authorAllowed = allowedAuthors.has(pr.user.login);
+              const senjuSignal = hasSenjuSignal(pr);
+              if (!(authorAllowed && senjuSignal)) {
+                skipped++;
+                continue;
+              }
+
+              const headSha = pr.head.sha;
+              console.log(`Senju provenance accepted for PR #${pr.number}: author=${pr.user.login} branch=${pr.head.ref} sha=${headSha}`);
+
+              const comments = await github.paginate(
+                github.rest.issues.listComments,
+                { owner, repo, issue_number: pr.number, per_page: 100 }
+              );
+              const passMarker = `AI_MERGE_AUDIT: PASS ${headSha}`;
+              const blockMarker = `AI_MERGE_AUDIT: BLOCK ${headSha}`;
+              const auditPassed = comments.some(c => (c.body || '').includes(passMarker));
+              const auditBlocked = comments.some(c => (c.body || '').includes(blockMarker));
+
+              if (auditBlocked) {
+                console.log(`🛑 OpenHands BLOCK for PR #${pr.number} at ${headSha}`);
+                skipped++;
+                continue;
+              }
+              if (!auditPassed) {
+                console.log(`⏳ Waiting for OpenHands PASS for PR #${pr.number} at ${headSha}`);
+                skipped++;
+                continue;
+              }
+
+              const reviews = await github.rest.pulls.listReviews({
+                owner, repo, pull_number: pr.number
+              });
+              const alreadyApproved = reviews.data.some(
+                r => r.state === 'APPROVED'
+              );
+
+              if (!alreadyApproved) {
+                try {
+                  await github.rest.pulls.createReview({
+                    owner, repo, pull_number: pr.number,
+                    event: 'APPROVE',
+                    body: `Auto-approved: verified Senju provenance + OpenHands PASS for ${headSha}; no human review required.`
+                  });
+                  console.log(`✅ Approved PR #${pr.number}: ${pr.title}`);
+                } catch (e) {
+                  console.log(`⚠️ Could not approve PR #${pr.number}: ${e.message}`);
+                }
+              }
+
+              try {
+                const mergeResult = await github.rest.pulls.merge({
+                  owner, repo, pull_number: pr.number,
+                  merge_method: 'squash',
+                  commit_title: pr.title,
+                  sha: headSha,
+                });
+                if (mergeResult.data.merged) {
+                  console.log(`🚀 Merged PR #${pr.number}: ${pr.title}`);
+                  merged++;
+                } else {
+                  console.log(`⏭️ PR #${pr.number} not merged: ${mergeResult.data.message}`);
+                  skipped++;
+                }
+              } catch (e) {
+                console.log(`⏭️ PR #${pr.number} not ready yet: ${e.message}`);
+                skipped++;
+              }
+            }
+            console.log(`Done. merged=${merged} skipped=${skipped}`);

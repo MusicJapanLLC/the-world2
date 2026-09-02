@@ -1,0 +1,192 @@
+name: AI FOUNDRY - Forge V2 Execute and Publish
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+    inputs:
+      task_id:
+        description: Optional exact FOUNDRY task UUID
+        required: false
+        type: string
+  push:
+    branches: ['claude/employee-onboarding-setup-udm86']
+    paths:
+      - '.github/workflows/ai-foundry-executor.yml'
+      - 'automation/ai_foundry/executor_bridge.py'
+      - 'automation/ai_foundry/executor_build.py'
+      - 'automation/ai_foundry/repo_engineer.py'
+      - 'automation/ai_foundry/repair_loop.py'
+      - 'automation/ai_foundry/sandbox_exec.py'
+
+concurrency:
+  group: ai-foundry-executor
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  id-token: write
+  actions: read
+  pull-requests: write
+
+jobs:
+  execute:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - name: Checkout authorized repository
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          ref: claude/employee-onboarding-setup-udm86
+          fetch-depth: 30
+          persist-credentials: false
+
+      - name: Setup Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: '3.12'
+
+      - name: Claim one FOUNDRY execution job with GitHub OIDC
+        id: claim
+        env:
+          REQUESTED_TASK_ID: ${{ inputs.task_id || '' }}
+        run: |
+          python automation/ai_foundry/executor_bridge.py claim --task-id "$REQUESTED_TASK_ID" --out /tmp/foundry-claim.json
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+          import json,re
+          d=json.load(open('/tmp/foundry-claim.json',encoding='utf-8')); j=d.get('job') or {}; t=d.get('task') or {}
+          req=(j.get('request') or {}).get('request_text') or ''
+          repo_re=re.compile(r'(既存|修正|直して|直せ|改修|変更|バグ|このコード|このリポジトリ|repo\b|repository|existing|fix\b|bug\b|refactor|patch\b)',re.I)
+          mode='repo' if repo_re.search(str(req)) else 'app'
+          print('has_job=' + ('true' if j else 'false'))
+          print('job_id=' + str(j.get('id') or ''))
+          print('task_id=' + str(t.get('id') or ''))
+          print('mode=' + mode)
+          PY
+
+      # ---------- APP FORGE: create a new deployable AI ----------
+      - name: Generate deployable AI application
+        if: steps.claim.outputs.has_job == 'true' && steps.claim.outputs.mode == 'app'
+        env:
+          JOB_ID: ${{ steps.claim.outputs.job_id }}
+        run: |
+          python automation/ai_foundry/executor_build.py --payload /tmp/foundry-claim.json --meta-out /tmp/foundry-build.json
+          python automation/ai_foundry/executor_bridge.py status --job-id "$JOB_ID" --status testing --result /tmp/foundry-build.json
+
+      - name: Run real syntax and HTTP smoke tests for app
+        if: steps.claim.outputs.has_job == 'true' && steps.claim.outputs.mode == 'app'
+        env:
+          JOB_ID: ${{ steps.claim.outputs.job_id }}
+        run: |
+          set -euo pipefail
+          APP_DIR="public/generated/$JOB_ID"
+          test -s "$APP_DIR/index.html"
+          test -s "$APP_DIR/styles.css"
+          test -s "$APP_DIR/app.js"
+          test -s "$APP_DIR/foundry.json"
+          node --check "$APP_DIR/app.js"
+          python -m http.server 8787 --directory "$APP_DIR" >/tmp/foundry-http.log 2>&1 &
+          PID=$!
+          trap 'kill $PID 2>/dev/null || true' EXIT
+          for i in {1..10}; do curl -fsS http://127.0.0.1:8787/ >/tmp/foundry-page.html && break; sleep 1; done
+          grep -q 'AI FOUNDRY' /tmp/foundry-page.html
+          kill "$PID" 2>/dev/null || true
+          trap - EXIT
+          python automation/ai_foundry/executor_bridge.py status --job-id "$JOB_ID" --status committing --result /tmp/foundry-build.json
+
+      - name: Commit generated AI to production branch
+        if: steps.claim.outputs.has_job == 'true' && steps.claim.outputs.mode == 'app'
+        env:
+          JOB_ID: ${{ steps.claim.outputs.job_id }}
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          git config user.name 'ai-foundry-executor[bot]'
+          git config user.email 'ai-foundry-executor@users.noreply.github.com'
+          git add "public/generated/$JOB_ID"
+          git commit -m "foundry(exec): publish generated AI $JOB_ID"
+          git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git pull --rebase origin claude/employee-onboarding-setup-udm86
+          git push origin HEAD:claude/employee-onboarding-setup-udm86
+          git remote set-url origin "https://github.com/${GITHUB_REPOSITORY}.git"
+          PUBLIC_URL="https://test-musicjapanllc.vercel.app/generated/$JOB_ID/"
+          echo "public_url=$PUBLIC_URL" >> "$GITHUB_OUTPUT"
+          python automation/ai_foundry/executor_bridge.py status --job-id "$JOB_ID" --status deploying --public-url "$PUBLIC_URL" --result /tmp/foundry-build.json
+        id: publish_app
+
+      - name: Verify Vercel deployment and finish app READY
+        if: steps.claim.outputs.has_job == 'true' && steps.claim.outputs.mode == 'app'
+        env:
+          JOB_ID: ${{ steps.claim.outputs.job_id }}
+          PUBLIC_URL: ${{ steps.publish_app.outputs.public_url }}
+        run: |
+          set -euo pipefail
+          OK=false
+          for i in {1..72}; do
+            if BODY="$(curl -fsS --max-time 10 "$PUBLIC_URL" 2>/dev/null)" && grep -q 'AI FOUNDRY' <<<"$BODY"; then OK=true; break; fi
+            sleep 5
+          done
+          if [[ "$OK" != "true" ]]; then echo 'Vercel URL did not become verifiable' >&2; exit 1; fi
+          python - "$PUBLIC_URL" <<'PY'
+          import json,sys
+          p='/tmp/foundry-build.json'; d=json.load(open(p,encoding='utf-8')); d.update({'verified':True,'tests':['node --check app.js','local HTTP 200','production Vercel HTTP 200'],'public_url':sys.argv[1],'forge':'v2-app'}); open(p,'w',encoding='utf-8').write(json.dumps(d,ensure_ascii=False,indent=2)+'\n')
+          PY
+          python automation/ai_foundry/executor_bridge.py finish --job-id "$JOB_ID" --success --public-url "$PUBLIC_URL" --result /tmp/foundry-build.json
+
+      # ---------- REPO FORGE: inspect, patch, test, repair, branch, PR ----------
+      - name: Engineer existing repository patch
+        if: steps.claim.outputs.has_job == 'true' && steps.claim.outputs.mode == 'repo'
+        env:
+          JOB_ID: ${{ steps.claim.outputs.job_id }}
+        run: |
+          set -euo pipefail
+          python automation/ai_foundry/repo_engineer.py --payload /tmp/foundry-claim.json --meta-out /tmp/foundry-repo.json
+          python automation/ai_foundry/executor_bridge.py status --job-id "$JOB_ID" --status testing --result /tmp/foundry-repo.json
+
+      - name: Autonomous sandbox test and repair loop
+        if: steps.claim.outputs.has_job == 'true' && steps.claim.outputs.mode == 'repo'
+        env:
+          JOB_ID: ${{ steps.claim.outputs.job_id }}
+        run: |
+          set -euo pipefail
+          python automation/ai_foundry/repair_loop.py --meta /tmp/foundry-repo.json --max-attempts 3
+          python automation/ai_foundry/executor_bridge.py status --job-id "$JOB_ID" --status committing --result /tmp/foundry-repo.json
+
+      - name: Commit verified repo patch to isolated branch and open PR
+        if: steps.claim.outputs.has_job == 'true' && steps.claim.outputs.mode == 'repo'
+        id: publish_repo
+        env:
+          JOB_ID: ${{ steps.claim.outputs.job_id }}
+          GITHUB_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          SHORT="${JOB_ID:0:8}"
+          BRANCH="foundry/exec-$SHORT"
+          git config user.name 'ai-foundry-repo-engineer[bot]'
+          git config user.email 'ai-foundry-repo-engineer@users.noreply.github.com'
+          git checkout -b "$BRANCH"
+          git add -A
+          git diff --cached --quiet && { echo 'Repo Engineer produced no diff' >&2; exit 1; }
+          git commit -m "foundry(repo): verified autonomous patch $SHORT"
+          git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git push origin "HEAD:$BRANCH"
+          git remote set-url origin "https://github.com/${GITHUB_REPOSITORY}.git"
+          TITLE="AI FOUNDRY autonomous repo patch $SHORT"
+          PR_URL="$(gh pr create --base claude/employee-onboarding-setup-udm86 --head "$BRANCH" --title "$TITLE" --body "Generated by AI FOUNDRY Forge V2. Real sandbox tests passed before this PR was opened. Execution job: $JOB_ID")"
+          echo "pr_url=$PR_URL" >> "$GITHUB_OUTPUT"
+          python - "$PR_URL" <<'PY'
+          import json,sys
+          p='/tmp/foundry-repo.json'; d=json.load(open(p,encoding='utf-8')); d.update({'artifact_type':'pull_request','pull_request_url':sys.argv[1],'forge':'v2-repo'}); open(p,'w',encoding='utf-8').write(json.dumps(d,ensure_ascii=False,indent=2)+'\n')
+          PY
+          python automation/ai_foundry/executor_bridge.py finish --job-id "$JOB_ID" --success --public-url "$PR_URL" --result /tmp/foundry-repo.json
+
+      - name: Record failed execution honestly
+        if: failure() && steps.claim.outputs.has_job == 'true'
+        env:
+          JOB_ID: ${{ steps.claim.outputs.job_id }}
+          APP_URL: ${{ steps.publish_app.outputs.public_url }}
+          PR_URL: ${{ steps.publish_repo.outputs.pr_url }}
+        run: |
+          printf '{"verified":false,"failure_stage":"forge_v2","mode":"%s"}\n' "${{ steps.claim.outputs.mode }}" >/tmp/foundry-failure.json
+          python automation/ai_foundry/executor_bridge.py finish --job-id "$JOB_ID" --public-url "${APP_URL:-${PR_URL:-}}" --result /tmp/foundry-failure.json --error "AI FOUNDRY Forge V2 failed; inspect GitHub run ${GITHUB_RUN_ID}" || true

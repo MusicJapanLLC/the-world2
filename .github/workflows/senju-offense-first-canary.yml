@@ -1,0 +1,100 @@
+name: Senju - Offense First R&D Canary
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "41 */6 * * *"
+  push:
+    branches:
+      - claude/employee-onboarding-setup-udm86
+      - senju/offense-first-director-20260830
+    paths:
+      - "senju/senju/offense.py"
+      - "senju/tests/test_offense.py"
+      - "senju/OFFENSE_FIRST.md"
+      - ".github/workflows/senju-offense-first-canary.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: senju-offense-first-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  red-pressure:
+    name: RED initiative -> pressure -> evidence -> next attack
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: "3.12"
+
+      - name: Install Senju
+        env:
+          PIP_DISABLE_PIP_VERSION_CHECK: "1"
+          PIP_NO_INPUT: "1"
+        run: python -m pip install -e './senju[dev]'
+
+      - name: Verify offense-first engine
+        working-directory: senju
+        run: |
+          set -euo pipefail
+          python -m pytest tests/test_offense.py -q
+
+      - name: Run sustained RED pressure campaigns
+        working-directory: senju
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/senju-offense-first
+          mkdir -p /tmp/senju-offense-first
+          python -m senju.offense \
+            --cycles 24 \
+            --seed 20260830 \
+            --max-steps 6 \
+            --out /tmp/senju-offense-first/report.json
+
+      - name: Verify RED initiative evidence
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          p = Path('/tmp/senju-offense-first/report.json')
+          data = json.loads(p.read_text(encoding='utf-8'))
+          assert data['schema'] == 'senju-offense-first-report/v1'
+          assert data['doctrine'] == 'RED_INITIATIVE_FIRST'
+          assert data['execution_mode'] == 'abstract-arena-only'
+          assert data['network_io'] is False
+          assert data['cycles'] == 24
+          assert data['attempts'] >= 24
+          assert len(data['campaigns']) == 24
+          assert all(c['campaign']['objective'] == 'force-new-breakthroughs-before-blue-optimizes' for c in data['campaigns'])
+          assert all(c['outcome']['lessons'] for c in data['campaigns'])
+          print('SENJU_OFFENSE_FIRST_RESEARCH_VERIFIED')
+          print(json.dumps({
+              'cycles': data['cycles'],
+              'attempts': data['attempts'],
+              'captures': data['captures'],
+              'detections': data['detections'],
+              'capture_rate': data['capture_rate'],
+              'priority_next': data['priority_next'],
+              'blue_challenges': len(data['blue_challenge_pack']),
+          }, ensure_ascii=False))
+          PY
+
+      - name: Publish RED research evidence
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: senju-offense-first-${{ github.run_id }}
+          retention-days: 30
+          if-no-files-found: error
+          path: /tmp/senju-offense-first/

@@ -1,0 +1,90 @@
+name: Senju Direct Defense Adversary V3
+
+on:
+  pull_request:
+    branches: ["claude/employee-onboarding-setup-udm86"]
+    paths:
+      - "senju/**"
+      - "scripts/security/artifact_guard.py"
+      - ".github/workflows/security-guard.yml"
+      - ".github/workflows/senju-direct-defense-adversary.yml"
+  push:
+    branches: ["claude/employee-onboarding-setup-udm86"]
+    paths:
+      - "senju/**"
+      - "scripts/security/artifact_guard.py"
+      - ".github/workflows/security-guard.yml"
+      - ".github/workflows/senju-direct-defense-adversary.yml"
+  schedule:
+    - cron: "47 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: senju-direct-defense-adversary-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  direct-pressure:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Checkout actual repository state
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Unit-check direct adversary
+        working-directory: senju
+        run: python -m unittest discover -s tests -p 'test_defense_adversary_direct.py' -v
+
+      - name: Pressure actual merged codepaths
+        env:
+          PYTHONPATH: senju
+        run: >-
+          python -m senju.defense_adversary_direct
+          --scope-cases 4096
+          --seed 26003
+          --json security-reports/senju-direct-defense-adversary-v3.json
+
+      - name: Verify direct layer coverage
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          p = Path("security-reports/senju-direct-defense-adversary-v3.json")
+          report = json.loads(p.read_text(encoding="utf-8"))
+          required = {
+              "scopeguard",
+              "engagement-json",
+              "external-contact",
+              "offense-first",
+              "security-guard-workflow",
+              "artifact-guard",
+              "autonomy-engine",
+          }
+          actual = set(report["summary"]["layers"])
+          missing = sorted(required - actual)
+          if missing:
+              raise SystemExit(f"missing direct adversary layers: {missing}")
+          if report.get("mode") != "direct-real-codepaths":
+              raise SystemExit("direct mode marker missing")
+          print(json.dumps(report["summary"], ensure_ascii=False, indent=2))
+          PY
+
+      - name: Upload direct adversary evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: senju-direct-defense-adversary-${{ github.sha }}
+          path: security-reports/senju-direct-defense-adversary-v3.json
+          if-no-files-found: error
+          retention-days: 30

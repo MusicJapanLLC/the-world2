@@ -1,0 +1,65 @@
+name: Standment Autonomous Security R&D
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 0 * * *" # daily, 09:17 JST
+  push:
+    branches: ["claude/employee-onboarding-setup-udm86"]
+    paths:
+      - ".github/workflows/standment-autonomous-rnd.yml"
+      - "standment-rnd/run_daily_rnd.py"
+      - "standment-rnd/portfolio_builder.py"
+      - "standment-rnd/test_rnd.py"
+      - "standment-rnd/agent_registry.json"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: standment-autonomous-rnd
+  cancel-in-progress: false
+
+jobs:
+  research:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Validate R&D system
+        run: python standment-rnd/test_rnd.py
+
+      - name: Run daily defensive R&D
+        env:
+          SLACK_RND_WEBHOOK_URL: ${{ secrets.SLACK_RND_WEBHOOK_URL }}
+        run: python standment-rnd/run_daily_rnd.py
+
+      - name: Rebuild security portfolio
+        run: python standment-rnd/portfolio_builder.py
+
+      - name: Show generated summary
+        run: |
+          echo "--- portfolio ---"
+          sed -n '1,120p' STANDMENT_SECURITY_PORTFOLIO.md
+          echo "--- git diff ---"
+          git status --short
+
+      - name: Preserve R&D output without mutating default branch
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: standment-rnd-${{ github.run_id }}
+          retention-days: 30
+          if-no-files-found: error
+          path: |
+            standment-rnd
+            STANDMENT_SECURITY_PORTFOLIO.md

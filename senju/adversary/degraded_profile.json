@@ -1,0 +1,15 @@
+{
+  "schema": "senju-degraded-profile/v1",
+  "test_only": true,
+  "require_fake_transport": true,
+  "minimum_pressure_attempts": 39800,
+  "scopeguard_public_rejections": 20000,
+  "scopeguard_malformed_refs": 2000,
+  "engagement_type_mutations": 8000,
+  "external_timeout_contacts": 500,
+  "external_timeout_retries": 5,
+  "external_oversize_responses": 300,
+  "autonomy_corrupt_state_loads": 1000,
+  "autonomy_invalid_workitems": 8000,
+  "description": "Persistent CI-only degraded baseline. Every live opposition run starts from these fault/pressure conditions. This profile must never be used to weaken production guards or enable real network side effects."
+}

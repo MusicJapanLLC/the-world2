@@ -160,9 +160,16 @@ export default defineConfig({
     rollupOptions: {
       input: pages,
       output: {
-        manualChunks: {
-          three: ['three'],
-          motion: ['gsap', 'gsap/ScrollTrigger', 'lenis'],
+        manualChunks(id) {
+          const normalized = id.replace(/\\/g, '/');
+          if (normalized.includes('/node_modules/three/')) return 'three';
+          if (
+            normalized.includes('/node_modules/gsap/') ||
+            normalized.includes('/node_modules/lenis/')
+          ) {
+            return 'motion';
+          }
+          return undefined;
         },
       },
     },

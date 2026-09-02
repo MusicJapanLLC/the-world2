@@ -1,0 +1,141 @@
+name: Senju Meta-Consciousness
+
+on:
+  schedule:
+    - cron: "0 2,6,10,14,18,22 * * *"
+  workflow_run:
+    workflows: ["Autonomous Drive Engine"]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      confirm_all:
+        description: "publish all hypotheses immediately (bootstrap)"
+        type: boolean
+        default: false
+      dry_run:
+        description: "dry-run (no writes, no PR)"
+        type: boolean
+        default: false
+      skip_external:
+        description: "skip external intel fetch (NVD/GHSA)"
+        type: boolean
+        default: false
+      skip_dispatch:
+        description: "skip agent dispatch (Jules/workflow triggers)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  pull-requests: write
+  actions: write
+  issues: write
+
+jobs:
+  meta:
+    name: Observe → Hypothesize → Publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Restore all evidence artifacts
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            senju/state/
+            senju/adversary/regression_scars.json
+            senju/adversary/degraded_profile.json
+          key: senju-adversary-damage-${{ github.ref_name }}
+          restore-keys: senju-adversary-damage-
+
+      - name: Restore credential recovery learning
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            senju/state/credential_tuning_history.json
+            senju/state/credential_secret_memory.json
+            senju/state/credential_recovery_learning.json
+          key: senju-credential-learning-${{ github.ref_name }}-${{ github.run_id }}
+          restore-keys: |
+            senju-credential-learning-${{ github.ref_name }}-
+
+      - name: Install dependencies
+        working-directory: senju
+        run: pip install -e ".[dev]" --quiet 2>/dev/null || true
+
+      - name: Configure git
+        run: |
+          git config user.name "Senju Meta-Consciousness"
+          git config user.email "senju-meta@users.noreply.github.com"
+
+      - name: Run meta-consciousness loop
+        id: meta
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          # Optional operator-provisioned credentials. Missing secrets remain unavailable.
+          META_GITHUB_TOKEN: ${{ secrets.META_GITHUB_TOKEN }}
+          X_GITHUB_TOKEN: ${{ secrets.X_GITHUB_TOKEN }}
+          # Secret-free JSON metadata: grant_id/provider/env_var/allowed_scopes only.
+          SENJU_CREDENTIAL_GRANTS_JSON: ${{ vars.SENJU_CREDENTIAL_GRANTS_JSON }}
+        run: |
+          FLAGS=""
+          [ "${{ inputs.confirm_all }}" = "true" ] && FLAGS="$FLAGS --confirm-all"
+          [ "${{ inputs.dry_run }}" = "true" ]     && FLAGS="$FLAGS --dry-run"
+          [ "${{ inputs.skip_external }}" = "true" ] && FLAGS="$FLAGS --skip-external"
+          [ "${{ inputs.skip_dispatch }}" = "true" ] && FLAGS="$FLAGS --skip-dispatch"
+
+          python senju/scripts/meta_loop.py --max-hypotheses 7 $FLAGS 2>&1 | tee meta_output.json
+
+          echo "papers=$(find research/discoveries -name '*.md' 2>/dev/null | wc -l)" >> $GITHUB_OUTPUT
+
+      - name: Save credential recovery learning
+        if: always() && inputs.dry_run != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            senju/state/credential_tuning_history.json
+            senju/state/credential_secret_memory.json
+            senju/state/credential_recovery_learning.json
+          key: senju-credential-learning-${{ github.ref_name }}-${{ github.run_id }}
+
+      - name: Commit and push research findings
+        if: inputs.dry_run != 'true'
+        run: |
+          git add research/ RESEARCH_LOG.md senju/state/meta_commands.json senju/state/meta_hypothesis_tracker.json senju/state/meta_heartbeat.json 2>/dev/null || true
+          if git diff --cached --quiet; then
+            echo "No new discoveries this cycle."
+          else
+            STAMP=$(date -u +%Y%m%d-%H%M)
+            git commit -m "research: meta-consciousness cycle ${STAMP}"
+            git push origin HEAD
+          fi
+
+      - name: Summary
+        run: |
+          echo "## Meta-Consciousness Cycle" >> $GITHUB_STEP_SUMMARY
+          echo "**Total published discoveries**: ${{ steps.meta.outputs.papers }}" >> $GITHUB_STEP_SUMMARY
+          if [ -f meta_output.json ]; then
+            echo '```json' >> $GITHUB_STEP_SUMMARY
+            grep '"meta_event"' meta_output.json | tail -10 >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Upload meta output
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: meta-output-${{ github.run_id }}
+          path: |
+            meta_output.json
+            research/
+          retention-days: 90

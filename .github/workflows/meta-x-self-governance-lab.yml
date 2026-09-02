@@ -1,0 +1,57 @@
+name: META X Self-Governance Lab
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "41 */6 * * *"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: meta-x-self-governance-lab
+  cancel-in-progress: true
+
+jobs:
+  matrix:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        actor: [META, X]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Install Senju
+        run: python -m pip install -e './senju[dev]'
+
+      - name: Verify containment tests
+        run: python -m pytest senju/tests/test_self_governance_lab.py -q
+
+      - name: Exercise all 11 controls x 6 operations
+        run: |
+          python senju/scripts/self_governance_lab.py \
+            --actor "${{ matrix.actor }}" \
+            --environment sandbox \
+            --matrix
+
+      - name: Assert no runtime control binding was modified
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          actor = "${{ matrix.actor }}".lower()
+          p = Path(f"senju/state/{actor}_self_governance_matrix.json")
+          d = json.loads(p.read_text())
+          assert d["controls"] == 11
+          assert d["experiments"] == 66
+          assert d["runtime_binding_modified"] is False
+          print(f"{actor}: controls={d['controls']} experiments={d['experiments']} runtime_binding_modified={d['runtime_binding_modified']}")
+          PY

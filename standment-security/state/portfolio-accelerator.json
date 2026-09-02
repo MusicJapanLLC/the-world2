@@ -1,0 +1,320 @@
+{
+  "schema": "standment-security-portfolio-accelerator/v1",
+  "generated_at_jst": "2026-08-31T11:04:53+09:00",
+  "company_priority": "P0",
+  "mission": "Make customer-inspectable, reproducible security evidence the highest-priority R&D output for Standment and continuously convert THE WORLD research into defensible AI-native security portfolio assets.",
+  "primary": {
+    "id": "SEC-PORT-005",
+    "title": "Autonomous-agent security and auditability pack",
+    "priority": 1100,
+    "status": "VISIBLE",
+    "evidence_ratio": 1.0,
+    "evidence_present": [
+      "company-society/AUTONOMY.md",
+      "automation/security/workflow_policy.py",
+      ".github/workflows/security-guard.yml",
+      "standment-security/evidence-packs/agent-auditability/README.md"
+    ],
+    "evidence_missing": [],
+    "whitehat_candidates": 0,
+    "senju_focus": "balance",
+    "customer_usefulness": "An operator can inspect what an autonomous AI was allowed to do, what it actually did, what failed, and how evidence was preserved for review.",
+    "closure_score": 1690,
+    "ai_native": true
+  },
+  "verification_lane": {
+    "id": "SEC-PORT-001",
+    "title": "Standment Security Scan dogfood + Before/After case study",
+    "priority": 1200,
+    "status": "VISIBLE",
+    "evidence_ratio": 1.0,
+    "evidence_present": [
+      "PORTFOLIO.md",
+      "security/STANDMENT_SECURITY_STANDARD.md",
+      "standment-security/SECURITY_BASELINE.md",
+      "standment-security/case-studies/security-scan-before-after/README.md"
+    ],
+    "evidence_missing": [],
+    "whitehat_candidates": 4,
+    "senju_focus": "robustness",
+    "customer_usefulness": "A buyer can see what was found, what was changed, and whether the defensive change actually improved the owned system instead of trusting a generic security claim.",
+    "closure_score": 1880,
+    "ai_native": false
+  },
+  "whitehat_lane": {
+    "id": "SEC-PORT-001",
+    "title": "Standment Security Scan dogfood + Before/After case study",
+    "priority": 1200,
+    "status": "VISIBLE",
+    "evidence_ratio": 1.0,
+    "evidence_present": [
+      "PORTFOLIO.md",
+      "security/STANDMENT_SECURITY_STANDARD.md",
+      "standment-security/SECURITY_BASELINE.md",
+      "standment-security/case-studies/security-scan-before-after/README.md"
+    ],
+    "evidence_missing": [],
+    "whitehat_candidates": 4,
+    "senju_focus": "robustness",
+    "customer_usefulness": "A buyer can see what was found, what was changed, and whether the defensive change actually improved the owned system instead of trusting a generic security claim.",
+    "closure_score": 1880,
+    "ai_native": false
+  },
+  "ai_native_lane": {
+    "id": "SEC-PORT-005",
+    "title": "Autonomous-agent security and auditability pack",
+    "priority": 1100,
+    "status": "VISIBLE",
+    "evidence_ratio": 1.0,
+    "evidence_present": [
+      "company-society/AUTONOMY.md",
+      "automation/security/workflow_policy.py",
+      ".github/workflows/security-guard.yml",
+      "standment-security/evidence-packs/agent-auditability/README.md"
+    ],
+    "evidence_missing": [],
+    "whitehat_candidates": 0,
+    "senju_focus": "balance",
+    "customer_usefulness": "An operator can inspect what an autonomous AI was allowed to do, what it actually did, what failed, and how evidence was preserved for review.",
+    "closure_score": 1690,
+    "ai_native": true
+  },
+  "stagnation_streak": 0,
+  "rotated": true,
+  "selection_reason": "ROTATED_AFTER_STAGNATION:SEC-PORT-001->SEC-PORT-005",
+  "next_action": "Run an independent retest, preserve counterevidence, and document residual risk before any verification claim.",
+  "north_star": {
+    "tracks_total": 11,
+    "tracks_verified": 2,
+    "tracks_full_evidence": 11,
+    "average_evidence_ratio": 1.0,
+    "whitehat_candidates_open": 4,
+    "unfinished_tracks": 9
+  },
+  "all_tracks": [
+    {
+      "id": "SEC-PORT-001",
+      "title": "Standment Security Scan dogfood + Before/After case study",
+      "priority": 1200,
+      "status": "VISIBLE",
+      "evidence_ratio": 1.0,
+      "evidence_present": [
+        "PORTFOLIO.md",
+        "security/STANDMENT_SECURITY_STANDARD.md",
+        "standment-security/SECURITY_BASELINE.md",
+        "standment-security/case-studies/security-scan-before-after/README.md"
+      ],
+      "evidence_missing": [],
+      "whitehat_candidates": 4,
+      "senju_focus": "robustness",
+      "customer_usefulness": "A buyer can see what was found, what was changed, and whether the defensive change actually improved the owned system instead of trusting a generic security claim.",
+      "closure_score": 1880,
+      "ai_native": false
+    },
+    {
+      "id": "SEC-PORT-002",
+      "title": "Customer Security Evidence Pack",
+      "priority": 1060,
+      "status": "VISIBLE",
+      "evidence_ratio": 1.0,
+      "evidence_present": [
+        "standment-security/CONTROL_EVIDENCE_TEMPLATE.md",
+        "security/STANDMENT_SECURITY_STANDARD.md",
+        "standment-security/evidence-packs/customer-security/README.md"
+      ],
+      "evidence_missing": [],
+      "whitehat_candidates": 0,
+      "senju_focus": "efficiency",
+      "customer_usefulness": "Security work can be handed to a customer as a consistent evidence package instead of a loose collection of code, screenshots and engineering notes.",
+      "closure_score": 1560,
+      "ai_native": false
+    },
+    {
+      "id": "SEC-PORT-003",
+      "title": "Software supply-chain evidence portfolio",
+      "priority": 1040,
+      "status": "VISIBLE",
+      "evidence_ratio": 1.0,
+      "evidence_present": [
+        ".github/workflows/codeql.yml",
+        ".github/workflows/dependency-review.yml",
+        ".github/workflows/standment-security-gate.yml",
+        "scripts/security/sbom_from_lock.py",
+        "standment-security/evidence-packs/supply-chain/README.md"
+      ],
+      "evidence_missing": [],
+      "whitehat_candidates": 0,
+      "senju_focus": "robustness",
+      "customer_usefulness": "A customer or reviewer can inspect dependency, code-analysis and build-chain evidence in one place and understand what is checked automatically on each change.",
+      "closure_score": 1540,
+      "ai_native": false
+    },
+    {
+      "id": "SEC-PORT-004",
+      "title": "Auth / tenant / RLS defensive evidence kit",
+      "priority": 1020,
+      "status": "VISIBLE",
+      "evidence_ratio": 1.0,
+      "evidence_present": [
+        "security/STANDMENT_SECURITY_STANDARD.md",
+        "standment-security/CONTROL_EVIDENCE_TEMPLATE.md",
+        "standment-security/evidence-packs/auth-tenant-rls/README.md"
+      ],
+      "evidence_missing": [],
+      "whitehat_candidates": 0,
+      "senju_focus": "learning",
+      "customer_usefulness": "Teams can verify who is allowed to access what, see before/after authorization evidence, and reduce the risk of tenant or policy mistakes on owned systems.",
+      "closure_score": 1520,
+      "ai_native": false
+    },
+    {
+      "id": "SEC-PORT-005",
+      "title": "Autonomous-agent security and auditability pack",
+      "priority": 1100,
+      "status": "VISIBLE",
+      "evidence_ratio": 1.0,
+      "evidence_present": [
+        "company-society/AUTONOMY.md",
+        "automation/security/workflow_policy.py",
+        ".github/workflows/security-guard.yml",
+        "standment-security/evidence-packs/agent-auditability/README.md"
+      ],
+      "evidence_missing": [],
+      "whitehat_candidates": 0,
+      "senju_focus": "balance",
+      "customer_usefulness": "An operator can inspect what an autonomous AI was allowed to do, what it actually did, what failed, and how evidence was preserved for review.",
+      "closure_score": 1690,
+      "ai_native": true
+    },
+    {
+      "id": "SEC-PORT-006",
+      "title": "Incident readiness and recovery evidence pack",
+      "priority": 980,
+      "status": "VISIBLE",
+      "evidence_ratio": 1.0,
+      "evidence_present": [
+        "security/STANDMENT_SECURITY_STANDARD.md",
+        "standment-security/CONTROL_EVIDENCE_TEMPLATE.md",
+        "standment-security/evidence-packs/incident-readiness/README.md"
+      ],
+      "evidence_missing": [],
+      "whitehat_candidates": 0,
+      "senju_focus": "robustness",
+      "customer_usefulness": "A buyer can inspect whether recovery procedures are actually evidenced and repeatable rather than relying on a statement that backups or rollback exist.",
+      "closure_score": 1480,
+      "ai_native": false
+    },
+    {
+      "id": "SEC-PORT-007",
+      "title": "Continuous security retainer scorecard",
+      "priority": 960,
+      "status": "VISIBLE",
+      "evidence_ratio": 1.0,
+      "evidence_present": [
+        "automation/security/portfolio_rnd.py",
+        "standment-security/CONTROL_EVIDENCE_TEMPLATE.md",
+        "security/STANDMENT_SECURITY_STANDARD.md",
+        "standment-security/evidence-packs/continuous-retainer/README.md"
+      ],
+      "evidence_missing": [],
+      "whitehat_candidates": 0,
+      "senju_focus": "efficiency",
+      "customer_usefulness": "A customer can understand what improved since the previous review, what regressed, and what needs attention next without reading engineering logs.",
+      "closure_score": 1460,
+      "ai_native": false
+    },
+    {
+      "id": "SEC-PORT-008",
+      "title": "Security architecture review pack for AI and SaaS systems",
+      "priority": 1000,
+      "status": "VISIBLE",
+      "evidence_ratio": 1.0,
+      "evidence_present": [
+        "security/STANDMENT_SECURITY_STANDARD.md",
+        "standment-security/SECURITY_BASELINE.md",
+        "standment-security/CONTROL_EVIDENCE_TEMPLATE.md",
+        "standment-security/evidence-packs/architecture-review/README.md"
+      ],
+      "evidence_missing": [],
+      "whitehat_candidates": 0,
+      "senju_focus": "learning",
+      "customer_usefulness": "A customer can receive a structured architecture review that explains risks, evidence, remediation priority and residual uncertainty in a consistent format.",
+      "closure_score": 1500,
+      "ai_native": false
+    },
+    {
+      "id": "SEC-PORT-009",
+      "title": "AI Agent Permission Boundary Lab",
+      "priority": 1160,
+      "status": "VERIFIED",
+      "evidence_ratio": 1.0,
+      "evidence_present": [
+        "company-society/AUTONOMY.md",
+        "automation/security/workflow_policy.py",
+        "automation/security/workflow_policy_entrypoint.py",
+        "automation/security/agent_permission_boundary_eval.py",
+        "automation/security/test_agent_permission_boundary_eval.py",
+        "automation/security/test_workflow_policy_entrypoint_semantics.py",
+        "automation/world/secured_realtime_kernel.py",
+        ".github/workflows/the-world-realtime-kernel.yml",
+        ".github/workflows/standment-agent-permission-boundary.yml",
+        "standment-security/ai-security/agent-permission-boundary-lab.md",
+        "standment-security/ai-security/agent-permission-boundary-evidence-pack.md"
+      ],
+      "evidence_missing": [],
+      "whitehat_candidates": 0,
+      "senju_focus": "robustness",
+      "customer_usefulness": "An AI product team can inspect exactly what an agent may do, what it is blocked from doing, and whether controls fail closed under adverse inputs.",
+      "closure_score": -3430,
+      "ai_native": true
+    },
+    {
+      "id": "SEC-PORT-010",
+      "title": "LLM Security Evaluation Harness",
+      "priority": 1140,
+      "status": "VERIFIED",
+      "evidence_ratio": 1.0,
+      "evidence_present": [
+        "automation/security/workflow_policy.py",
+        "standment-security/ai-security/llm-security-eval-harness.md",
+        "automation/security/llm_security_eval.py",
+        "automation/security/test_llm_security_eval.py",
+        "standment-security/ai-security/llm-security-eval-evidence-pack.md",
+        "standment-security/ai-security/fixtures/llm-security-vulnerable.json",
+        "standment-security/ai-security/fixtures/llm-security-hardened.json",
+        ".github/workflows/standment-ai-security-eval.yml",
+        "automation/world/secured_realtime_kernel.py",
+        "automation/world/test_secured_realtime_kernel.py",
+        "automation/security/world_runtime_observation_adapter.py",
+        "automation/security/test_world_runtime_observation_adapter.py",
+        ".github/workflows/the-world-realtime-kernel.yml"
+      ],
+      "evidence_missing": [],
+      "whitehat_candidates": 0,
+      "senju_focus": "learning",
+      "customer_usefulness": "AI teams can repeatedly test whether model/tool integrations preserve data and action boundaries when prompts attempt to bypass them.",
+      "closure_score": -3450,
+      "ai_native": true
+    },
+    {
+      "id": "SEC-PORT-011",
+      "title": "Security Evidence Dashboard",
+      "priority": 1080,
+      "status": "BUILDING",
+      "evidence_ratio": 1.0,
+      "evidence_present": [
+        "standment-security/PORTFOLIO_INDEX.md",
+        "standment-security/REPORTING_CONTRACT.md",
+        "standment-security/ai-security/security-evidence-dashboard.md"
+      ],
+      "evidence_missing": [],
+      "whitehat_candidates": 0,
+      "senju_focus": "efficiency",
+      "customer_usefulness": "A buyer, engineer or CEO can understand what is real, what is still being built, and which evidence supports each security claim without reading source code.",
+      "closure_score": 1670,
+      "ai_native": true
+    }
+  ],
+  "verification_claimed": false,
+  "rule": "LIMITLESS MIND / BOUNDED EXECUTION / EVIDENCE BEFORE CLAIMS"
+}

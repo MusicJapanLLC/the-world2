@@ -1,0 +1,96 @@
+name: Auto Update PR Branches + Deploy Budget
+
+on:
+  pull_request:
+    types: [opened, reopened, ready_for_review]
+  push:
+    branches:
+      - claude/employee-onboarding-setup-udm86
+      - main
+      - master
+  schedule:
+    - cron: '0 * * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: auto-update-and-deploy-budget
+  cancel-in-progress: false
+
+jobs:
+  update-branches:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Checkout repository for deploy-budget calculation
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Update outdated PR branches
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const pulls = await github.rest.pulls.list({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              per_page: 100
+            });
+            for (const pr of pulls.data) {
+              if (pr.draft) continue;
+              try {
+                await github.rest.pulls.updateBranch({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  pull_number: pr.number
+                });
+                console.log(`Updated PR #${pr.number}: ${pr.title}`);
+              } catch (e) {
+                console.log(`Skipped PR #${pr.number}: ${e.message}`);
+              }
+            }
+
+      - name: Select at most two automatic deployment permits this hour
+        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+        run: python automation/deploy_budget.py --out /tmp/deploy-budget.json
+
+      - name: Issue bounded deployment permits
+        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            const plan = JSON.parse(fs.readFileSync('/tmp/deploy-budget.json', 'utf8'));
+            if (plan.max_automatic_per_day > 48 || plan.selected.length > 2) {
+              core.setFailed('Deploy budget invariant violated');
+              return;
+            }
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const repoInfo = await github.rest.repos.get({ owner, repo });
+            const branch = repoInfo.data.default_branch;
+            for (const item of plan.selected) {
+              const current = await github.rest.repos.getContent({
+                owner, repo, path: item.permit_path, ref: branch
+              });
+              const content = Buffer.from(JSON.stringify({
+                fingerprint: item.fingerprint,
+                issued_at_run: context.runId,
+                controller: 'automation/deploy_budget.py'
+              }) + '\n').toString('base64');
+              await github.rest.repos.createOrUpdateFileContents({
+                owner,
+                repo,
+                path: item.permit_path,
+                message: `chore(deploy): issue ${item.name} hourly permit`,
+                content,
+                sha: current.data.sha,
+                branch
+              });
+              console.log(`Issued permit: ${item.name}`);
+            }

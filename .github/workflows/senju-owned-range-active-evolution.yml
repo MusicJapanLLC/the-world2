@@ -1,0 +1,188 @@
+name: Senju Owned Range Active Evolution
+
+on:
+  schedule:
+    - cron: "4,19,34,49 * * * *" # feeds Agency Orchestrator at 7,22,37,52
+  workflow_dispatch:
+    inputs:
+      max_pages:
+        description: "same-origin pages per cycle"
+        type: number
+        default: 18
+      max_probes:
+        description: "active probe HTTP requests per cycle"
+        type: number
+        default: 24
+      max_writes:
+        description: "dummy form writes per cycle"
+        type: number
+        default: 3
+      write_cooldown_seconds:
+        description: "minimum cooldown per discovered form"
+        type: number
+        default: 3600
+  push:
+    branches:
+      - "feat/senju-owned-range-evolution-loop-20260831"
+      - "claude/employee-onboarding-setup-udm86"
+    paths:
+      - "AUTHORIZED_TEST_TARGETS.json"
+      - "senju/config/authorized-test-range.json"
+      - "senju/senju/owned_range_active.py"
+      - "senju/scripts/owned_range_active_loop.py"
+      - "senju/tests/test_owned_range_active.py"
+      - ".github/workflows/senju-owned-range-active-evolution.yml"
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: senju-owned-range-active-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  GH_TOKEN: ${{ github.token }}
+  PYTHONPATH: ${{ github.workspace }}/senju
+
+jobs:
+  active-loop:
+    name: Discover -> probe -> dummy write -> readback -> evolve
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: "3.12"
+
+      - name: Install focused test dependency
+        env:
+          PIP_DISABLE_PIP_VERSION_CHECK: "1"
+          PIP_NO_INPUT: "1"
+        run: python -m pip install pytest==9.1.1
+
+      - name: Verify owned-range contracts
+        working-directory: senju
+        run: |
+          set -euo pipefail
+          python -m pytest \
+            tests/test_owned_range_active.py \
+            tests/test_trusted_scope.py \
+            tests/test_safety.py -q
+
+      - name: Restore evolving probe memory
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/senju-owned-range /tmp/senju-owned-range-prev
+          PREV_RUN="$(gh run list --repo "$GITHUB_REPOSITORY" \
+            --workflow "Senju Owned Range Active Evolution" --status success --limit 20 \
+            --json databaseId --jq '.[0].databaseId // empty' || true)"
+          if [[ -n "$PREV_RUN" ]]; then
+            gh run download "$PREV_RUN" --repo "$GITHUB_REPOSITORY" \
+              --name senju-owned-range-active-evidence \
+              --dir /tmp/senju-owned-range-prev || true
+          fi
+          MEMORY="$(find /tmp/senju-owned-range-prev -name memory.next.json -print -quit || true)"
+          if [[ -n "$MEMORY" ]]; then
+            cp "$MEMORY" /tmp/senju-owned-range/memory.json
+            echo "restored evolving memory from run $PREV_RUN"
+          else
+            printf '{}\n' > /tmp/senju-owned-range/memory.json
+            echo "starting fresh evolving memory"
+          fi
+
+      - name: Run real owned-range active cycle
+        shell: bash
+        run: |
+          set -euo pipefail
+          MAX_PAGES="${{ inputs.max_pages }}"; MAX_PAGES="${MAX_PAGES:-18}"
+          MAX_PROBES="${{ inputs.max_probes }}"; MAX_PROBES="${MAX_PROBES:-24}"
+          MAX_WRITES="${{ inputs.max_writes }}"; MAX_WRITES="${MAX_WRITES:-3}"
+          COOLDOWN="${{ inputs.write_cooldown_seconds }}"; COOLDOWN="${COOLDOWN:-3600}"
+
+          python senju/scripts/owned_range_active_loop.py \
+            --scope senju/config/authorized-test-range.json \
+            --base-url https://kabeya-authorized-test-range.onrender.com/ \
+            --memory /tmp/senju-owned-range/memory.json \
+            --out /tmp/senju-owned-range/report.json \
+            --memory-out /tmp/senju-owned-range/memory.next.json \
+            --max-pages "$MAX_PAGES" \
+            --max-probes "$MAX_PROBES" \
+            --max-writes "$MAX_WRITES" \
+            --write-cooldown-seconds "$COOLDOWN"
+
+      - name: Verify live evidence and render handoff
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from urllib.parse import urlsplit
+
+          p = Path('/tmp/senju-owned-range/report.json')
+          d = json.loads(p.read_text())
+          host = 'kabeya-authorized-test-range.onrender.com'
+          assert d['schema'] == 'senju-owned-range-active/v1'
+          assert d['authorized_host'] == host
+          assert d['same_origin_only'] is True
+          assert d['authority_self_expansion'] is False
+          assert d['destructive_requests'] is False
+          assert d['credential_guessing'] is False
+          assert d['denial_of_service'] is False
+          assert 1 <= int(d['request_count']) <= 140
+          assert 0 <= int(d['write_attempts']) <= 3
+
+          urls = []
+          urls += [x.get('url','') for x in d.get('pages_discovered') and d.get('probes',[]) for x in x.get('requests',[])]
+          for probe in d.get('probes', []):
+              for req in probe.get('requests', []):
+                  if req.get('url'): urls.append(req['url'])
+          for write in d.get('writes', []):
+              if write.get('action_url'): urls.append(write['action_url'])
+              for rb in write.get('readbacks', []):
+                  if rb.get('url'): urls.append(rb['url'])
+          for url in urls:
+              assert urlsplit(url).hostname == host, url
+
+          lines = [
+              '## Senju Owned Range Active Evolution',
+              '',
+              f"- host: `{d['authorized_host']}`",
+              f"- requests: **{d['request_count']}**",
+              f"- pages: **{d['pages_discovered']}** / forms: **{d['forms_discovered']}**",
+              f"- dummy writes: **{d['write_attempts']}** / provider ACK: **{d['write_provider_acks']}** / independent readback: **{d['independent_readbacks']}**",
+              f"- counterexamples: **{d['counterexample_count']}**",
+              f"- digest: `{d['digest']}`",
+              '',
+              '### Evolving probe ranking',
+          ]
+          for family in d['evolution']['next_family_ranking']:
+              state = d['probe_family_state'][family]
+              lines.append(f"- `{family}` score={state['score']} hit_rate={state['hit_rate']} attempts={state['attempts']}")
+          lines += ['', '### Counterexamples']
+          for row in d.get('counterexamples', [])[:12]:
+              lines.append(f"- `{row.get('probe')}` {row.get('target')} — {row.get('reason')}")
+          if not d.get('counterexamples'):
+              lines.append('- no material counterexample this cycle')
+          Path('/tmp/senju-owned-range/handoff.md').write_text('\n'.join(lines) + '\n')
+          PY
+          cat /tmp/senju-owned-range/handoff.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload active-loop evidence and memory
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        with:
+          name: senju-owned-range-active-evidence
+          retention-days: 30
+          if-no-files-found: error
+          path: |
+            /tmp/senju-owned-range/report.json
+            /tmp/senju-owned-range/memory.next.json
+            /tmp/senju-owned-range/handoff.md

@@ -9,10 +9,15 @@ on:
     paths:
       - ".github/workflows/senju-autonomous-improver.yml"
       - ".github/workflows/rnd-senju-coupled-loop.yml"
+      - ".github/workflows/covenant-autonomy-cycle.yml"
+      - ".github/workflows/senju-live-observation-arena.yml"
       - "senju/scripts/github_native_improver.py"
       - "senju/scripts/shadow_league.py"
       - "senju/scripts/shadow_selector.py"
       - "senju/scripts/apply_rnd_directive.py"
+      - "senju/scripts/apply_covenant_intent.py"
+      - "senju/tests/test_covenant_intent.py"
+      - "company-society/**"
       - "value-lab/**"
 
 concurrency:
@@ -21,7 +26,7 @@ concurrency:
 
 jobs:
   propose-and-validate:
-    name: R&D directive -> evidence -> shadow league -> holdout
+    name: COVENANT intent + R&D -> evidence -> shadow league -> holdout
     runs-on: ubuntu-latest
     timeout-minutes: 35
     permissions:
@@ -88,6 +93,48 @@ jobs:
             cp /tmp/current-rnd/directive.json /tmp/rnd-directive.json
           fi
 
+      - name: Restore latest COVENANT autonomy intent
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/covenant-artifact
+          COV_RUN="$(gh run list --repo "$GITHUB_REPOSITORY" --workflow "THE COVENANT - Autonomy & Fellowship Cycle" --status success --limit 10 --json databaseId --jq '.[0].databaseId // empty' || true)"
+          if [[ -n "$COV_RUN" ]]; then
+            gh run download "$COV_RUN" --repo "$GITHUB_REPOSITORY" --dir /tmp/covenant-artifact || true
+          fi
+          COVENANT="$(find /tmp/covenant-artifact -name covenant-autonomy.json -print -quit || true)"
+          if [[ -n "$COVENANT" ]]; then
+            cp "$COVENANT" /tmp/covenant-autonomy.json
+            echo "COVENANT intent restored from run $COV_RUN" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "No prior COVENANT artifact; building a fresh bounded autonomy plan." >> "$GITHUB_STEP_SUMMARY"
+            python tomoki-agents/manager_collect_safe.py collect \
+              --output /tmp/covenant-snapshot.json \
+              --report /tmp/covenant-source.md
+            python company-society/autonomy_engine.py \
+              --snapshot /tmp/covenant-snapshot.json \
+              --registry automation/control_plane/workers.json \
+              --json /tmp/covenant-autonomy.json \
+              --report /tmp/covenant-autonomy.md
+          fi
+
+      - name: Restore latest real-observation evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/live-observation-artifact
+          LIVE_RUN="$(gh run list --repo "$GITHUB_REPOSITORY" --workflow "Senju Live Observation Arena" --status success --limit 10 --json databaseId --jq '.[0].databaseId // empty' || true)"
+          if [[ -n "$LIVE_RUN" ]]; then
+            gh run download "$LIVE_RUN" --repo "$GITHUB_REPOSITORY" --name senju-live-observation-arena-evidence --dir /tmp/live-observation-artifact || true
+          fi
+          LIVE="$(find /tmp/live-observation-artifact -name evidence.json -print -quit || true)"
+          if [[ -n "$LIVE" ]]; then
+            cp "$LIVE" /tmp/live-observation.json
+            echo "Reality evidence restored from run $LIVE_RUN" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "No prior reality evidence; COVENANT adapter will force VERIFY_DEEPLY." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
       - name: Run engine and guard tests before proposal
         working-directory: senju
         env:
@@ -135,6 +182,37 @@ jobs:
           PY
           cat /tmp/rnd-applied.json >> "$GITHUB_STEP_SUMMARY"
 
+      - name: Apply COVENANT LIMITLESS intent to bounded Senju search
+        shell: bash
+        run: |
+          set -euo pipefail
+          args=(
+            --strategy /tmp/promotion/strategy.json
+            --covenant /tmp/covenant-autonomy.json
+            --out /tmp/covenant-strategy.json
+            --audit /tmp/covenant-intent.json
+          )
+          if [[ -f /tmp/live-observation.json ]]; then
+            args+=(--live /tmp/live-observation.json)
+          fi
+          python senju/scripts/apply_covenant_intent.py "${args[@]}"
+          cp /tmp/covenant-strategy.json /tmp/promotion/strategy.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          summary=json.loads(Path('/tmp/promotion/last-evolution-summary.json').read_text())
+          applied=json.loads(Path('/tmp/covenant-intent.json').read_text())
+          strategy=json.loads(Path('/tmp/promotion/strategy.json').read_text())
+          summary['covenant_intent']=applied
+          summary['next_strategy']=strategy
+          summary['changes']=(summary.get('changes') or []) + [
+              f"COVENANT/{applied['intent_mode']} {k}: {v['before']} -> {v['after']}"
+              for k,v in applied.get('changes',{}).items()
+          ]
+          Path('/tmp/promotion/last-evolution-summary.json').write_text(json.dumps(summary, ensure_ascii=False, indent=2)+'\n')
+          PY
+          cat /tmp/covenant-intent.json >> "$GITHUB_STEP_SUMMARY"
+
       - name: Enforce autonomous promotion allowlist
         shell: bash
         run: |
@@ -166,6 +244,7 @@ jobs:
               'previous_strategy': summary.get('previous_strategy'),
               'next_strategy': summary.get('next_strategy'),
               'rnd_coupling': summary.get('rnd_coupling'),
+              'covenant_intent': summary.get('covenant_intent'),
           }
           text = json.dumps(evidence_fields, ensure_ascii=False).lower()
           for word in forbidden:
@@ -177,14 +256,16 @@ jobs:
           printf '%s\n' champion.json last-evolution-plan.md last-evolution-summary.json strategy.json | sort > /tmp/expected.txt
           diff -u /tmp/expected.txt /tmp/files.txt
 
-      - name: Smoke-test R&D-shaped strategy
+      - name: Smoke-test R&D and COVENANT shaped strategy
         working-directory: senju
         run: |
           set -euo pipefail
           python - <<'PY'
           import json, subprocess
           s=json.load(open('/tmp/promotion/strategy.json'))
-          cmd=['python','-m','senju.autopilot','--state','/tmp/promotion/champion.json','--out','/tmp/verify','--population',str(s['population']),'--generations',str(min(s['generations'],8)),'--matches',str(min(s['matches'],250)),'--candidates','3']
+          c=json.load(open('/tmp/covenant-intent.json'))
+          candidates=max(3,min(5,int(c.get('candidate_count',3))))
+          cmd=['python','-m','senju.autopilot','--state','/tmp/promotion/champion.json','--out','/tmp/verify','--population',str(s['population']),'--generations',str(min(s['generations'],8)),'--matches',str(min(s['matches'],250)),'--candidates',str(candidates)]
           subprocess.run(cmd, check=True)
           d=json.load(open('/tmp/verify/evolution-summary.json'))
           if not d['selected']['safe']:
@@ -198,7 +279,9 @@ jobs:
           set -euo pipefail
           CANDIDATES="$(python - <<'PY'
           import json
-          print(max(3,min(9,int(json.load(open('/tmp/rnd-applied.json')).get('candidate_count',7)))))
+          rnd=max(3,min(9,int(json.load(open('/tmp/rnd-applied.json')).get('candidate_count',7))))
+          cov=max(3,min(9,int(json.load(open('/tmp/covenant-intent.json')).get('candidate_count',7))))
+          print(max(rnd,cov))
           PY
           )"
           python -m scripts.shadow_selector \
@@ -237,7 +320,7 @@ jobs:
             /tmp/promotion/last-evolution-summary.json
             /tmp/promotion/last-evolution-plan.md
 
-      - name: Upload R&D and Shadow selection evidence
+      - name: Upload COVENANT R&D and Shadow selection evidence
         uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         with:
           name: senju-prepromotion-shadow
@@ -246,6 +329,9 @@ jobs:
           path: |
             /tmp/rnd-directive.json
             /tmp/rnd-applied.json
+            /tmp/covenant-autonomy.json
+            /tmp/covenant-intent.json
+            /tmp/live-observation.json
             /tmp/promotion-shadow/selection.json
             /tmp/promotion-shadow/selection.md
 

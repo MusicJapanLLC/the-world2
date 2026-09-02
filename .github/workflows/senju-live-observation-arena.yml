@@ -1,0 +1,111 @@
+name: Senju Live Observation Arena
+
+on:
+  schedule:
+    - cron: "20 */6 * * *"
+  workflow_dispatch:
+  push:
+    branches:
+      - "feat/senju-live-observation-arena-20260830"
+    paths:
+      - "senju/senju/live_arena.py"
+      - "senju/senju/targets/observed.py"
+      - "senju/tests/test_live_arena.py"
+      - ".github/workflows/senju-live-observation-arena.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: senju-live-observation-arena-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  live-coupling:
+    name: Real HTTP observation -> RED/BLUE arena -> evidence
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: "3.12"
+
+      - name: Run Senju test suite
+        working-directory: senju
+        env:
+          PIP_DISABLE_PIP_VERSION_CHECK: "1"
+          PIP_NO_INPUT: "1"
+        run: |
+          set -euo pipefail
+          python -m pip install pytest==9.1.1
+          python -m pytest tests -q
+
+      - name: Run live-observation arena against public read-only endpoint
+        working-directory: senju
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/senju-live-arena
+          python -m senju.live_arena \
+            https://api.github.com/zen \
+            --allow-host api.github.com \
+            --method GET \
+            --timeout 8 \
+            --retries 2 \
+            --population 12 \
+            --generations 2 \
+            --matches 18 \
+            --seed 42 \
+            --out /tmp/senju-live-arena/evidence.json
+
+      - name: Run live Senju autonomy research loop
+        working-directory: senju
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/senju-live-autonomy
+          python -m senju.cli autonomy-loop \
+            --url https://github.com \
+            --allow-host github.com \
+            --canary-url https://httpbin.org/post \
+            --allow-host httpbin.org \
+            --out-dir /tmp/senju-live-autonomy \
+            --max-steps 3
+
+      - name: Verify real-to-arena coupling evidence
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p = Path('/tmp/senju-live-arena/evidence.json')
+          data = json.loads(p.read_text())
+          assert data['schema'] == 'senju-live-observation-arena/v1'
+          assert data['coupling']['real_external_observation'] is True
+          assert data['coupling']['observation_influences_arena_target'] is True
+          assert data['coupling']['arena_influences_evolution'] is True
+          assert data['coupling']['real_exploit_traffic'] is False
+          assert data['observation']['host'] == 'api.github.com'
+          assert data['observation']['provider_acknowledged'] is True
+          assert data['observation']['status'] == 200
+          assert data['observed_target']['response_sha256'] == data['observation']['response_sha256']
+          assert data['observed_target']['surfaces_are_simulated_hypotheses'] is True
+          assert len(data['arena']['generations']) == 2
+          assert not data['arena']['scope_violations']
+          print('SENJU_LIVE_OBSERVATION_ARENA_VERIFIED')
+          print(json.dumps(data['coupling'], indent=2))
+          PY
+
+      - name: Upload coupling evidence
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        with:
+          name: senju-live-observation-arena-evidence
+          retention-days: 30
+          if-no-files-found: error
+          path: |
+            /tmp/senju-live-arena/evidence.json
+            /tmp/senju-live-autonomy/**

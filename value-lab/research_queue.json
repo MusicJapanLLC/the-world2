@@ -2,6 +2,66 @@
   "schema": "rnd-senju-research-queue/v1",
   "active": [
     {
+      "research_id": "RND-AI-DEVELOPMENT-ACCELERATOR-001",
+      "title": "THE WORLD AI development evidence accelerator",
+      "problem": "AI Foundry now has a bounded visible/holdout behavioral promotion gate, but autonomous R&D can still waste cycles rediscovering rejected candidate families or repeated regression patterns across runs. The next bottleneck is persistent failure and learning memory that remains bounded, expirable and subordinate to fresh evidence.",
+      "hypothesis": "Preserving stable rejected-hypothesis and regression fingerprints across runs, detecting recurrence, and reducing repeated dead-end priority without treating historical memory as truth will increase distinct AI engineering exploration while preserving holdout, Security, correctness and permission gates.",
+      "focus": "correctness",
+      "priority": 6000,
+      "candidate_count": 12,
+      "preferred_track_id": "AI-DEV-003",
+      "current_phase": "multi_agent_specialist_league_with_persistent_failure_memory",
+      "success": {
+        "safe": true,
+        "stable": true,
+        "holdout_required": true,
+        "behavioral_evidence_required": true,
+        "strategy_proxy_alone_never_promotes": true,
+        "independent_specialist_review_required": true,
+        "counterevidence_preserved": true,
+        "security_priority_only": true,
+        "permission_surface_unchanged": true,
+        "failure_memory_required": true,
+        "failure_memory_bounded": true,
+        "failure_memory_expirable": true,
+        "repeated_failure_detection_required": true,
+        "fresh_evidence_can_supersede_memory": true,
+        "reproducible_rerun_required": true,
+        "bounded_code_change_required_for_capability_claim": true,
+        "human_inspectable_artifact_required": true
+      },
+      "commercial_bridge": "AI R&D should turn verified engineering improvements into inspectable capability evidence that can later become a product or portfolio asset. Internal scores, autonomous-agent counts, code volume, historical failure memory or strategy proxies do not establish customer demand, contracts, payments or revenue.",
+      "previous_track_id": "AI-DEV-002",
+      "progression_rule": "failure_memory_runtime_parallel_ready_v1",
+      "failure_memory_continues": true,
+      "progression_source_fingerprint": "bee8ae7148bb070ab439"
+    },
+    {
+      "research_id": "RND-STANDMENT-SECURITY-PORTFOLIO-ACCELERATOR-001",
+      "title": "Standment Security portfolio evidence-closure accelerator",
+      "problem": "Standment has multiple security portfolio tracks and daily R&D loops, but the highest-value remaining gap can still stagnate or produce repeated activity without enough independently retested, customer-inspectable proof. The research system must close evidence gaps, rotate when stuck, and convert white-hat counterevidence into stronger portfolio assets.",
+      "hypothesis": "Making evidence closure, anti-stagnation rotation, white-hat falsification and AI-native security portfolio maturity the highest-priority Senju research question will increase the rate at which Standment security tracks gain reproducible, human-inspectable evidence without weakening execution boundaries or inventing VERIFIED claims.",
+      "focus": "efficiency",
+      "priority": 5000,
+      "candidate_count": 9,
+      "success": {
+        "safe": true,
+        "stable": true,
+        "holdout_required": true,
+        "worst_score_positive": true,
+        "worst_balance_min": 0.35,
+        "worst_learning_min": 0.05,
+        "score_stdev_max": 35.0,
+        "material_portfolio_delta_target": true,
+        "stagnation_requires_reframe_or_rotation": true,
+        "whitehat_counterevidence_preserved": true,
+        "ai_native_security_lane_required": true,
+        "human_inspectable_artifact_required": true,
+        "independent_retest_required": true
+      },
+      "commercial_bridge": "Senju improves research-process quality, reproducibility, counterevidence and evidence-closure efficiency. A customer-facing claim still requires inspectable artifacts and real retest evidence. Technical scores do not establish demand, contracts, payments or revenue."
+    },
+    {
       "research_id": "RND-STANDMENT-SECURITY-PORTFOLIO-001",
       "title": "Reliable daily Standment Security portfolio evidence cycle",
       "problem": "Standment security R&D can produce technical work without consistently converting it into reproducible, human-inspectable portfolio evidence. The research process must optimize for verified deliverables, counterevidence and repeatability rather than activity volume.",
@@ -40,7 +100,7 @@
         "counterevidence_preserved": true,
         "material_delta_reported_to_slack": true
       },
-      "commercial_bridge": "The general portfolio program exists to turn verified R&D output into something a human can inspect, understand, evaluate, sell, or reuse. Standment Security remains the current top-priority specialization. Senju technical evidence may strengthen proof quality but must not be treated as willingness-to-pay, market validation, contract value, payment, or revenue."
+      "commercial_bridge": "The general portfolio program exists to turn verified R&D output into something a human can inspect, understand, evaluate, sell, or reuse. Standment Security remains a top-priority specialization. Senju technical evidence may strengthen proof quality but must not be treated as willingness-to-pay, market validation, contract value, payment, or revenue."
     },
     {
       "research_id": "RND-SENJU-ROBUSTNESS-001",

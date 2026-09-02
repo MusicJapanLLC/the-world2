@@ -1,0 +1,32 @@
+{
+  "schema": "senju-ai-advisor-hub/v2",
+  "question": "Senjuチームが今もっと自律的・賢く・開発生産性高くなるために、現時点で最も価値の高い改善は何か。既存の設計に縛られず、必要なら隣接領域や全く別の観点まで自由に考えてよい。実装価値があるなら、具体的な変更、対象ファイル、テスト、成功条件、既存PRとの重複リスクまで示して。",
+  "rules": {
+    "questions": "any_topic_allowed",
+    "answers": "may_be_used_for_implementation",
+    "raw_answer_direct_execution": false,
+    "implementation_requires_existing_engineering_lane": true,
+    "evidence_required_before_success_claim": true
+  },
+  "sources": {
+    "personal_ai_core": "https://standment-personal-ai-core-se1c3z.v2.appdeploy.ai/",
+    "ai_foundry": "https://test-git-feat-ai-foundry-forge-v2-musicjapanllc.vercel.app/"
+  },
+  "personal_ai": {
+    "ok": false,
+    "answer": "",
+    "error": "HTTPError: HTTP Error 403: Forbidden"
+  },
+  "decision": {
+    "implement": false,
+    "request": "",
+    "rationale": "Foundry synthesis unavailable; no automatic implementation promoted.",
+    "priority": "low",
+    "tests": [],
+    "risks": [],
+    "transport": {}
+  },
+  "foundry_error": "HTTPError: HTTP Error 401: Unauthorized",
+  "implementation_lane": "AI Foundry Repo Engineer -> sandbox tests/repair -> pull request",
+  "run_id": "senju-advisor-ae5815768e71"
+}

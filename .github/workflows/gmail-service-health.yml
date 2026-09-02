@@ -29,40 +29,63 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Verify heartbeat freshness and safety
+      - name: Verify heartbeat evidence, freshness, and safety
         shell: bash
         run: |
           set -euo pipefail
           python - <<'PY'
-          import json, subprocess, time
+          import datetime as dt
+          import json
           from pathlib import Path
 
-          p=Path('runtime/nerve/gmail-heartbeat.json')
+          p = Path('runtime/nerve/gmail-heartbeat.json')
           if not p.exists():
               raise SystemExit('GMAIL_SERVICE_UNHEALTHY: heartbeat missing')
-          d=json.loads(p.read_text(encoding='utf-8'))
+          d = json.loads(p.read_text(encoding='utf-8'))
+
           if d.get('status') != 'VERIFIED':
               raise SystemExit('GMAIL_SERVICE_UNHEALTHY: heartbeat status is not VERIFIED')
-          safety=d.get('safety', {})
-          if int(safety.get('deleted', 0) or 0) != 0:
-              raise SystemExit('GMAIL_SERVICE_UNHEALTHY: deletion safety invariant violated')
-          if int(safety.get('customer_messages_sent', 0) or 0) != 0:
-              raise SystemExit('GMAIL_SERVICE_UNHEALTHY: outbound safety invariant violated')
-          ts=int(subprocess.check_output([
-              'git','log','-1','--format=%ct','--','runtime/nerve/gmail-heartbeat.json'
-          ], text=True).strip())
-          age=(int(time.time())-ts)/60
-          print(f'heartbeat_age_minutes={age:.1f}')
-          print(f'execution_runtime={d.get("execution_runtime")}')
+
+          truth = d.get('truth_contract', {})
+          if truth.get('connected_product_path_verified') is not True:
+              raise SystemExit('GMAIL_SERVICE_UNHEALTHY: connected Gmail execution path is not verified')
+          if truth.get('search_success_is_not_sorting_success') is not True:
+              raise SystemExit('GMAIL_SERVICE_UNHEALTHY: search must not masquerade as sorting success')
+
+          evidence = d.get('evidence', {})
+          if evidence.get('operation') != 'gmail.search_email_ids':
+              raise SystemExit('GMAIL_SERVICE_UNHEALTHY: expected authenticated Gmail search evidence')
+          if int(evidence.get('result_count_at_least', 0) or 0) < 1:
+              raise SystemExit('GMAIL_SERVICE_UNHEALTHY: Gmail search returned no verifiable result count')
+
+          safety = d.get('safety', {})
+          for key in ('deleted', 'customer_messages_sent', 'ambiguous_mail_archived', 'mailbox_mutations_this_check'):
+              if int(safety.get(key, 0) or 0) != 0:
+                  raise SystemExit(f'GMAIL_SERVICE_UNHEALTHY: read-only proof mutated mailbox: {key}')
+
+          raw_ts = d.get('checked_at_utc')
+          if not isinstance(raw_ts, str) or not raw_ts.endswith('Z'):
+              raise SystemExit('GMAIL_SERVICE_UNHEALTHY: checked_at_utc missing or malformed')
+          checked = dt.datetime.fromisoformat(raw_ts.replace('Z', '+00:00'))
+          now = dt.datetime.now(dt.timezone.utc)
+          age = (now - checked).total_seconds() / 60
+          if age < -5:
+              raise SystemExit(f'GMAIL_SERVICE_UNHEALTHY: heartbeat timestamp is {abs(age):.1f}m in the future')
           if age > 90:
-              raise SystemExit(f'GMAIL_SERVICE_STALE: heartbeat age {age:.1f}m > 90m')
+              raise SystemExit(f'GMAIL_SERVICE_STALE: authenticated execution age {age:.1f}m > 90m')
+
+          print(f'authenticated_execution_age_minutes={age:.1f}')
+          print(f'execution_runtime={d.get("execution_runtime")}')
+          print('GMAIL_EXECUTION_VERIFIED: connected Gmail search path is live; sorting remains a separate unverified claim')
           PY
 
-      - name: Explain runtime split
+      - name: Explain claim boundary
         run: |
           cat >> "$GITHUB_STEP_SUMMARY" <<'EOF'
           ## Gmail service health
-          - Product health is proven by the authenticated Gmail execution heartbeat.
-          - GitHub-native Gmail OAuth is an optional execution runtime and may be BLOCKED independently.
-          - MANAGER should escalate only if the service heartbeat becomes stale/unsafe, not merely because one runtime lacks credentials.
+          - VERIFIED means the connected Gmail path performed a real authenticated search recently.
+          - A search success is **not** counted as autonomous sorting success.
+          - GitHub-native Gmail OAuth is not claimed by this gate.
+          - Placeholder/bootstrap evidence never passes this gate.
+          - Freshness comes from the execution timestamp inside the evidence, not from a later Git commit touching the file.
           EOF

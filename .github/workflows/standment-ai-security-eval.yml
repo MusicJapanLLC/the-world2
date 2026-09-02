@@ -1,0 +1,225 @@
+name: Standment AI Security - LLM Eval Portfolio
+
+on:
+  schedule:
+    - cron: '35 * * * *' # hourly cross-lane evaluation
+  workflow_dispatch:
+  push:
+    branches: ['claude/employee-onboarding-setup-udm86']
+    paths:
+      - '.github/workflows/standment-ai-security-eval.yml'
+      - '.github/workflows/ai-dev-minute-foundry.yml'
+      - '.github/workflows/security-continuous-whitehat.yml'
+      - 'automation/ai_foundry/**'
+      - 'automation/security/llm_security_eval.py'
+      - 'automation/security/test_llm_security_eval.py'
+      - 'automation/security/ai_security_feedback.py'
+      - 'automation/security/test_ai_security_feedback.py'
+      - 'automation/security/elite_whitehat_continuous.py'
+      - 'automation/security/test_elite_whitehat_continuous.py'
+      - 'standment-security/security_research_frontier.json'
+      - 'standment-security/security_framework_crosswalk.json'
+      - 'standment-security/ai-security/**'
+  pull_request:
+    branches: ['claude/employee-onboarding-setup-udm86']
+    paths:
+      - '.github/workflows/standment-ai-security-eval.yml'
+      - 'automation/security/llm_security_eval.py'
+      - 'automation/security/test_llm_security_eval.py'
+      - 'automation/security/ai_security_feedback.py'
+      - 'automation/security/test_ai_security_feedback.py'
+      - 'standment-security/ai-security/llm-security-eval-harness.md'
+      - 'standment-security/ai-security/llm-security-eval-evidence-pack.md'
+      - 'standment-security/ai-security/fixtures/**'
+      - 'standment-security/security_portfolio_program.json'
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: standment-ai-security-eval-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  evaluate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Checkout THE WORLD
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          persist-credentials: false
+
+      - name: Setup Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: '3.12'
+
+      - name: Load AI + Security collaboration evidence
+        if: github.event_name != 'pull_request'
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p reports/standment-ai-security/upstream/ai reports/standment-ai-security/upstream/security
+
+          ai_run="$(gh run list --repo "$GITHUB_REPOSITORY" --workflow ai-dev-minute-foundry.yml --status success --limit 12 --json databaseId --jq '.[].databaseId' | head -n1 || true)"
+          sec_run="$(gh run list --repo "$GITHUB_REPOSITORY" --workflow security-continuous-whitehat.yml --status success --limit 12 --json databaseId --jq '.[].databaseId' | head -n1 || true)"
+
+          if [[ -n "$ai_run" ]]; then
+            gh run download "$ai_run" --repo "$GITHUB_REPOSITORY" --name "ai-dev-minute-foundry-${ai_run}" --dir reports/standment-ai-security/upstream/ai || true
+          fi
+          if [[ -n "$sec_run" ]]; then
+            gh run download "$sec_run" --repo "$GITHUB_REPOSITORY" --name "security-whitehat-continuous-${sec_run}" --dir reports/standment-ai-security/upstream/security || true
+          fi
+
+          AI_RUN="$ai_run" SEC_RUN="$sec_run" python - <<'PY'
+          import json, os
+          from pathlib import Path
+
+          root=Path('reports/standment-ai-security')
+          def first(base, name):
+              rows=list(base.rglob(name))
+              if not rows:
+                  return {}
+              try: return json.loads(rows[0].read_text(encoding='utf-8'))
+              except Exception: return {}
+
+          ai=first(root/'upstream/ai', 'hourly-summary.json')
+          sec=first(root/'upstream/security', 'run-index.json')
+          priority=sec.get('priority_next') or {}
+          context={
+              'schema':'standment-ai-security-collaboration-context/v1',
+              'ai_source_run': os.getenv('AI_RUN') or None,
+              'security_source_run': os.getenv('SEC_RUN') or None,
+              'ai_champion': ai.get('end_champion'),
+              'ai_weakest_focus': ai.get('weakest_next_focus'),
+              'ai_rounds': ai.get('rounds'),
+              'security_micro_rounds': sec.get('micro_rounds'),
+              'security_priority_lens': priority.get('lens_id'),
+              'security_priority_stage': priority.get('stage'),
+              'security_next_improvement': priority.get('next_improvement'),
+              'contract':'Upstream evidence informs evaluation priorities but never changes pass/fail criteria or self-promotes VERIFIED status.',
+          }
+          (root/'collaboration-context.json').write_text(json.dumps(context,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+          lines=[
+              '# AI × Security Collaboration Context','',
+              f"- AI source run: **{context['ai_source_run'] or 'NONE'}**",
+              f"- AI champion: **{context['ai_champion'] or 'NONE'}**",
+              f"- AI weakest focus: **{context['ai_weakest_focus'] or 'NONE'}**",
+              f"- AI rounds: **{context['ai_rounds'] or 0}**",
+              f"- Security source run: **{context['security_source_run'] or 'NONE'}**",
+              f"- Security micro rounds: **{context['security_micro_rounds'] or 0}**",
+              f"- Security priority: **{context['security_priority_lens'] or 'NONE'} / {context['security_priority_stage'] or 'NONE'}**",
+              f"- Next improvement: {context['security_next_improvement'] or 'NONE'}",'',
+              '> Collaboration evidence steers what the teams look at next; the evaluator keeps fixed pass/fail gates.',
+          ]
+          (root/'collaboration-context.md').write_text('\n'.join(lines)+'\n',encoding='utf-8')
+          print('\n'.join(lines))
+          PY
+          cat reports/standment-ai-security/collaboration-context.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Verify LLM security evaluator and bounded feedback contract
+        run: |
+          set -euo pipefail
+          python -m unittest -v automation.security.test_llm_security_eval automation.security.test_ai_security_feedback
+
+      - name: Measure synthetic vulnerable baseline
+        run: |
+          set -euo pipefail
+          mkdir -p reports/standment-ai-security
+          python automation/security/llm_security_eval.py \
+            --cases standment-security/ai-security/fixtures/llm-security-vulnerable.json \
+            --out-json reports/standment-ai-security/before.json \
+            --out-md reports/standment-ai-security/before.md
+
+      - name: Measure synthetic hardened reference
+        run: |
+          set -euo pipefail
+          python automation/security/llm_security_eval.py \
+            --cases standment-security/ai-security/fixtures/llm-security-hardened.json \
+            --out-json reports/standment-ai-security/after.json \
+            --out-md reports/standment-ai-security/after.md \
+            --require-pass
+
+      - name: Verify same-condition Before to After improvement
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          before=json.loads(Path('reports/standment-ai-security/before.json').read_text(encoding='utf-8'))
+          after=json.loads(Path('reports/standment-ai-security/after.json').read_text(encoding='utf-8'))
+          assert before['total'] == after['total']
+          assert before['pass_rate'] < after['pass_rate']
+          assert before['high_risk_violation_count'] > after['high_risk_violation_count']
+          assert after['pass_rate'] == 1.0
+          assert after['high_risk_violation_count'] == 0
+
+          report='\n'.join([
+              '# Standment AI Security Evaluation — Before / After',
+              '',
+              f"- Same-condition cases: {before['total']}",
+              f"- Baseline pass rate: {before['pass_rate']:.0%}",
+              f"- Hardened pass rate: {after['pass_rate']:.0%}",
+              f"- Baseline high-risk violations: {before['high_risk_violation_count']}",
+              f"- Hardened high-risk violations: {after['high_risk_violation_count']}",
+              '',
+              '## Evidence level',
+              '- RESEARCH OUTPUT: evaluator + synthetic same-condition comparison',
+              '- PRODUCTION AI SECURITY: NOT VERIFIED — owned-system observations are still required',
+              '',
+              '> Synthetic Before/After validates the harness and evidence contract; it does not prove an external or production model is secure.',
+              '',
+          ])
+          Path('reports/standment-ai-security/comparison.md').write_text(report, encoding='utf-8')
+          print(report)
+          PY
+          cat reports/standment-ai-security/comparison.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Compile bounded feedback for next AI + Security cycles
+        shell: bash
+        run: |
+          set -euo pipefail
+          args=(
+            --before reports/standment-ai-security/before.json
+            --after reports/standment-ai-security/after.json
+            --out reports/standment-ai-security/feedback.json
+          )
+          if [[ -f reports/standment-ai-security/collaboration-context.json ]]; then
+            args+=(--context reports/standment-ai-security/collaboration-context.json)
+          fi
+          python automation/security/ai_security_feedback.py "${args[@]}"
+          python - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import json
+          from pathlib import Path
+          d=json.loads(Path('reports/standment-ai-security/feedback.json').read_text(encoding='utf-8'))
+          g=d['guidance']
+          print('## Bounded feedback to next cycles')
+          print(f"- authority: **{d['authority']}**")
+          print(f"- feedback token: `{d['feedback_token']}`")
+          print(f"- AI priority focus: **{g['ai_priority_focus']}**")
+          print(f"- Security priority lens: **{g['security_priority_lens']}**")
+          print(f"- challenge next: {g['challenge_next']}")
+          print('- Gates / permissions / external scope: **UNCHANGED**')
+          PY
+
+      - name: Preserve AI-security portfolio evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: standment-ai-security-eval-${{ github.run_id }}
+          retention-days: 90
+          if-no-files-found: error
+          path: |
+            reports/standment-ai-security/before.json
+            reports/standment-ai-security/before.md
+            reports/standment-ai-security/after.json
+            reports/standment-ai-security/after.md
+            reports/standment-ai-security/comparison.md
+            reports/standment-ai-security/feedback.json
+            reports/standment-ai-security/collaboration-context.json
+            reports/standment-ai-security/collaboration-context.md

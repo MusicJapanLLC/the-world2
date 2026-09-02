@@ -1,0 +1,49 @@
+name: Senju Authorization Regression Guard
+
+on:
+  push:
+    branches: ['claude/employee-onboarding-setup-udm86']
+    paths:
+      - 'senju/config/authorized-test-federation.json'
+      - '.github/workflows/senju-authorization-regression.yml'
+  pull_request:
+    paths:
+      - 'senju/config/authorized-test-federation.json'
+      - '.github/workflows/senju-authorization-regression.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  authorization-boundary:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          persist-credentials: false
+
+      - name: Enforce explicit federation authorization
+        shell: python
+        run: |
+          import json
+          from pathlib import Path
+
+          path = Path('senju/config/authorized-test-federation.json')
+          config = json.loads(path.read_text(encoding='utf-8'))
+
+          if config.get('external_admission') != 'registered_or_mutually_declared_only':
+              raise SystemExit('authorization drift: external destinations must be registered or mutually declared')
+          if config.get('destination_self_declaration_required') is not True:
+              raise SystemExit('authorization drift: destination self-declaration must remain required')
+          if config.get('self_declaration_path') != '/.well-known/security-test-federation.json':
+              raise SystemExit('authorization drift: canonical self-declaration path changed or missing')
+          if config.get('allow_http') is not False:
+              raise SystemExit('authorization drift: plaintext HTTP must remain disabled')
+
+          roots = config.get('domain_roots') or []
+          if not roots or any('*' in root for root in roots):
+              raise SystemExit('authorization drift: domain roots must stay explicit and non-wildcard')
+
+          print('Senju authorization regression guard: PASS')

@@ -1,0 +1,160 @@
+name: Senju Real Scan — Nuclei against own endpoints
+
+on:
+  schedule:
+    - cron: "0 */4 * * *"  # every 4 hours (6x/day)
+  workflow_dispatch:
+    inputs:
+      target_url:
+        description: "HTTPS target on an owned allowlisted domain"
+        required: false
+
+concurrency:
+  group: senju-nuclei-scan
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  nuclei-scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      GH_TOKEN: ${{ github.token }}
+      REPO: ${{ github.repository }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 1
+          persist-credentials: true
+          token: ${{ github.token }}
+
+      - name: Validate target URL against owned allowlist
+        id: validate
+        shell: python
+        env:
+          INPUT_TARGET_URL: ${{ inputs.target_url }}
+        run: |
+          import os, urllib.parse
+
+          own_domains = frozenset([
+            'iyomaru-ramen.vercel.app',
+            'musicjapanllc.github.io',
+          ])
+
+          raw = os.environ.get('INPUT_TARGET_URL', '').strip()
+          target = raw or f"https://{sorted(own_domains)[0]}"
+          parsed = urllib.parse.urlsplit(target)
+
+          if parsed.scheme != 'https':
+              raise SystemExit('target must use HTTPS')
+          if parsed.username or parsed.password:
+              raise SystemExit('userinfo in target URL is not allowed')
+          host = parsed.hostname or ''
+          if not host:
+              raise SystemExit('target URL has no hostname')
+          if parsed.port:
+              raise SystemExit('custom target ports are not allowed')
+          if host not in own_domains:
+              raise SystemExit(f'target host is not in owned allowlist: {host}')
+
+          normalized = f"https://{host}{parsed.path or '/'}"
+          print(f'validated owned target: {normalized}')
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
+              output.write(f'target={normalized}\n')
+
+      - name: Install Nuclei
+        run: |
+          go install -v github.com/projectdiscovery/nuclei/v3/cmd/nuclei@latest
+          echo "$HOME/go/bin" >> "$GITHUB_PATH"
+
+      - name: Update Nuclei templates
+        run: nuclei -update-templates -silent || true
+
+      - name: Run Nuclei scan (safe templates only, own domain)
+        shell: bash
+        run: |
+          mkdir -p /tmp/nuclei-out
+          TARGET="${{ steps.validate.outputs.target }}"
+          nuclei \
+            -u "$TARGET" \
+            -tags misconfig,exposure,config,tech,info,ssl,headers,cves \
+            -exclude-tags dos,fuzz,rce,sqli,xss,intrusive,exploit,bruteforce \
+            -severity info,low,medium,high \
+            -json \
+            -output /tmp/nuclei-out/findings.jsonl \
+            -timeout 10 \
+            -rate-limit 100 \
+            -bulk-size 50 \
+            -concurrency 25 \
+            -silent || true
+
+      - name: Ingest findings into Senju state
+        shell: bash
+        run: |
+          set -euo pipefail
+          PYTHONPATH=senju python - <<'PY'
+          import json, pathlib, datetime
+
+          NUCLEI_TAG_MAP = {
+              'misconfig': 'misconfiguration',
+              'exposure': 'info_disclosure',
+              'ssl': 'tls_config',
+              'headers': 'security_headers',
+              'tech': 'tech_fingerprint',
+              'config': 'misconfiguration',
+              'cves': 'known_cve',
+          }
+
+          findings_path = pathlib.Path('/tmp/nuclei-out/findings.jsonl')
+          state_path = pathlib.Path('senju/state/last-evolution-summary.json')
+          state_path.parent.mkdir(parents=True, exist_ok=True)
+          state = json.loads(state_path.read_text()) if state_path.exists() else {}
+
+          hits = state.setdefault('vuln_class_hits', {})
+          count = 0
+          if findings_path.exists():
+              for line in findings_path.read_text().splitlines():
+                  line = line.strip()
+                  if not line:
+                      continue
+                  try:
+                      obj = json.loads(line)
+                  except Exception:
+                      continue
+                  for tag in obj.get('info', {}).get('tags', []):
+                      vc = NUCLEI_TAG_MAP.get(tag)
+                      if vc:
+                          hits[vc] = hits.get(vc, 0) + 1
+                          count += 1
+
+          state['last_nuclei_ingest'] = datetime.datetime.utcnow().isoformat()
+          state_path.write_text(json.dumps(state, ensure_ascii=False, indent=2) + '\n')
+          print(f'Ingested {count} nuclei hits into Senju state')
+          PY
+
+      - name: Commit updated state
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add senju/state/last-evolution-summary.json
+          if git diff --cached --quiet; then
+            echo "No nuclei findings to commit"
+          else
+            git commit -m "chore(senju): nuclei scan findings [skip ci]"
+            git push origin HEAD:claude/employee-onboarding-setup-udm86
+          fi
+
+      - name: Upload nuclei findings artifact
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: senju-nuclei-findings-${{ github.run_id }}
+          path: /tmp/nuclei-out/findings.jsonl
+          if-no-files-found: warn
+          retention-days: 30

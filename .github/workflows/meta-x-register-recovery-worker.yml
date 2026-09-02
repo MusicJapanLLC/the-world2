@@ -1,0 +1,133 @@
+name: META X Register Recovery Worker
+
+on:
+  workflow_dispatch:
+    inputs:
+      actor:
+        description: "META or X"
+        required: true
+        type: choice
+        options: [META, X]
+      namespace_id:
+        description: "Owner-approved placement namespace"
+        required: true
+        default: "musicjapanllc-test-actions"
+      worker_id:
+        description: "Stable recovery worker id"
+        required: true
+      role:
+        description: "Recovery role"
+        required: true
+        type: choice
+        options: [self, agent, scheduler, cron, persistent_worker]
+      workflow:
+        description: "Approved Main workflow to regenerate"
+        required: true
+        type: choice
+        options: [meta-consciousness.yml, autonomous-codegen.yml, autonomous-engine.yml]
+      heartbeat_file:
+        description: "Repository-relative heartbeat file"
+        required: true
+      heartbeat_field:
+        description: "Heartbeat timestamp field"
+        required: false
+        default: "alive_at"
+      stale_after_seconds:
+        description: "Seconds before recovery"
+        required: false
+        default: "7200"
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  register:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate owner-namespace registration
+        env:
+          ACTOR: ${{ inputs.actor }}
+          NS: ${{ inputs.namespace_id }}
+          WORKER_ID: ${{ inputs.worker_id }}
+          ROLE: ${{ inputs.role }}
+          WORKFLOW: ${{ inputs.workflow }}
+          HEARTBEAT_FILE: ${{ inputs.heartbeat_file }}
+          HEARTBEAT_FIELD: ${{ inputs.heartbeat_field }}
+          STALE_AFTER: ${{ inputs.stale_after_seconds }}
+        run: |
+          python automation/recovery/register_meta_x_worker.py \
+            --actor "$ACTOR" \
+            --namespace-id "$NS" \
+            --worker-id "$WORKER_ID" \
+            --role "$ROLE" \
+            --workflow "$WORKFLOW" \
+            --ref "claude/employee-onboarding-setup-udm86" \
+            --heartbeat-file "$HEARTBEAT_FILE" \
+            --heartbeat-field "$HEARTBEAT_FIELD" \
+            --stale-after-seconds "$STALE_AFTER" \
+            --out /tmp/meta-x-worker.json
+
+      - name: Persist registration outside Main AI runtime
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          WORKER_ID: ${{ inputs.worker_id }}
+        run: |
+          python - <<'PY'
+          import json, os, urllib.error, urllib.parse, urllib.request
+          from pathlib import Path
+
+          token = os.environ['GITHUB_TOKEN']
+          repo = os.environ['GITHUB_REPOSITORY']
+          owner, name = repo.split('/', 1)
+          worker_id = os.environ['WORKER_ID']
+          body = Path('/tmp/meta-x-worker.json').read_text(encoding='utf-8')
+          base = f'https://api.github.com/repos/{owner}/{name}'
+          headers = {
+              'Authorization': f'Bearer {token}',
+              'Accept': 'application/vnd.github+json',
+              'X-GitHub-Api-Version': '2022-11-28',
+              'Content-Type': 'application/json',
+          }
+
+          def call(method, url, payload=None):
+              data = json.dumps(payload).encode() if payload is not None else None
+              req = urllib.request.Request(url, data=data, method=method, headers=headers)
+              try:
+                  with urllib.request.urlopen(req, timeout=15) as r:
+                      raw = r.read()
+                      return json.loads(raw) if raw else {}
+              except urllib.error.HTTPError as exc:
+                  if exc.code in {404, 422}:
+                      return {'_http': exc.code}
+                  raise
+
+          # The issue is durable control-plane state. It contains only validated JSON,
+          # never executable code or an arbitrary external URL.
+          call('POST', f'{base}/labels', {
+              'name': 'meta-x-recovery-worker',
+              'description': 'Owner-namespace recovery worker registration',
+          })
+
+          query = urllib.parse.urlencode({
+              'state': 'open',
+              'labels': 'meta-x-recovery-worker',
+              'per_page': '100',
+          })
+          rows = call('GET', f'{base}/issues?{query}')
+          title = f'[META-X-RECOVERY] {worker_id}'
+          existing = next((x for x in rows if x.get('title') == title and 'pull_request' not in x), None) if isinstance(rows, list) else None
+          if existing:
+              result = call('PATCH', f"{base}/issues/{existing['number']}", {'body': body})
+              print(f"updated durable worker registration issue #{existing['number']}")
+          else:
+              result = call('POST', f'{base}/issues', {
+                  'title': title,
+                  'body': body,
+                  'labels': ['meta-x-recovery-worker'],
+              })
+              print(f"created durable worker registration issue #{result.get('number')}")
+          PY

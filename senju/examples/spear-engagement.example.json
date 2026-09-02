@@ -1,0 +1,27 @@
+{
+  "engagement_id": "SPEAR-OWNED-WEB-001",
+  "owner": "replace-with-asset-owner",
+  "authorization_reference": "replace-with-ticket-or-signed-rules-of-engagement",
+  "valid_from_utc": "2026-08-30T00:00:00Z",
+  "valid_until_utc": "2026-09-30T00:00:00Z",
+  "targets": [
+    {
+      "host": "your-owned-site.example.invalid",
+      "scheme": "https",
+      "base_path": "/",
+      "label": "owned production or staging web"
+    }
+  ],
+  "allowed_checks": [
+    "reachability",
+    "root_snapshot",
+    "security_txt",
+    "robots_txt",
+    "options"
+  ],
+  "max_requests_per_target": 5,
+  "max_rps": 1.0,
+  "allow_http": false,
+  "destructive": false,
+  "notes": "SPEAR phase 1: bounded non-destructive external assessment only"
+}

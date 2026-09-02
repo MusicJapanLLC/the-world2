@@ -95,7 +95,11 @@ class Tournament:
             seed=self._rng.randint(0, 10_000_000),
         )
 
-    def run(self) -> TournamentReport:
+    def run(self, red: list[Agent] | None = None, blue: list[Agent] | None = None) -> TournamentReport:
+        if red is not None:
+            self.red_pop = red
+        if blue is not None:
+            self.blue_pop = blue
         report = TournamentReport(scenario=self.config.scenario_name)
         ev = self.config.evolution
         for gen in range(ev.generations):

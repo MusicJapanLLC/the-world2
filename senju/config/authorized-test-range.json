@@ -1,0 +1,25 @@
+{
+  "scope_id": "kabeya-authorized-test-range",
+  "owner": "Owner/BOSS",
+  "domain_roots": [
+    "kabeya-authorized-test-range.onrender.com"
+  ],
+  "effect_level": "state_change",
+  "allowed_methods": [
+    "GET",
+    "HEAD",
+    "OPTIONS",
+    "POST"
+  ],
+  "allow_http": false,
+  "follow_redirects": true,
+  "max_redirects": 4,
+  "max_rps": 5,
+  "timeout_seconds": 15,
+  "max_request_bytes": 1048576,
+  "max_response_bytes": 8388608,
+  "retries": 2,
+  "recursive_same_origin": true,
+  "path_scope": "/**",
+  "note": "Every HTTPS URL on this exact host, including discovered internal/relative links, paths, queries and fragments, is explicitly authorized. Other hosts are not inherited."
+}

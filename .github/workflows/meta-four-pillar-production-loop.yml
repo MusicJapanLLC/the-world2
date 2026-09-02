@@ -1,0 +1,169 @@
+name: META Four Pillar Production Loop
+
+on:
+  schedule:
+    - cron: "19,49 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: write
+  issues: write
+
+concurrency:
+  group: meta-four-pillar-production-loop
+  cancel-in-progress: false
+
+jobs:
+  closed-loop:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Evaluate current Four-Pillar state
+        run: python automation/codegen/four_pillar_runner.py
+
+      - name: Load previous durable production state
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python - <<'PY'
+          import json, os, urllib.parse, urllib.request
+          from pathlib import Path
+
+          repo = os.environ['GITHUB_REPOSITORY']
+          owner, name = repo.split('/', 1)
+          token = os.environ['GITHUB_TOKEN']
+          query = urllib.parse.urlencode({
+              'state': 'open',
+              'labels': 'four-pillar-production-state',
+              'per_page': '100',
+          })
+          req = urllib.request.Request(
+              f'https://api.github.com/repos/{owner}/{name}/issues?{query}',
+              headers={
+                  'Authorization': f'Bearer {token}',
+                  'Accept': 'application/vnd.github+json',
+                  'X-GitHub-Api-Version': '2022-11-28',
+              },
+          )
+          previous = {}
+          try:
+              with urllib.request.urlopen(req, timeout=15) as response:
+                  rows = json.loads(response.read() or b'[]')
+              target = next((x for x in rows if x.get('title') == '[THE-WORLD] Four-Pillar Production State' and 'pull_request' not in x), None)
+              if target and isinstance(target.get('body'), str):
+                  previous = json.loads(target['body'])
+          except Exception as exc:
+              print(f'no previous durable state: {exc}')
+          Path('/tmp/four-pillar-previous.json').write_text(
+              json.dumps(previous, ensure_ascii=False, indent=2) + '\n',
+              encoding='utf-8',
+          )
+          print(f"previous generation={previous.get('generation', 0)} self_approved={previous.get('self_approved')}")
+          PY
+
+      - name: Build self-approved production closed-loop plan
+        run: |
+          python automation/codegen/four_pillar_production_loop.py \
+            --previous-state /tmp/four-pillar-previous.json \
+            --out /tmp/four-pillar-production-plan.json
+
+      - name: Verify production-loop invariants
+        run: |
+          python -m pytest \
+            automation/codegen/tests/test_four_pillar_governance.py \
+            automation/codegen/tests/test_four_pillar_production_loop.py \
+            automation/codegen/tests/test_bounded_self_approval.py -q
+
+      - name: Execute self-approved owner-namespace actions
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python - <<'PY'
+          import json, os, urllib.error, urllib.parse, urllib.request
+          from pathlib import Path
+
+          plan = json.loads(Path('/tmp/four-pillar-production-plan.json').read_text())
+          if plan.get('environment') != 'production' or plan.get('closed_loop') is not True:
+              raise SystemExit('invalid production closed-loop plan')
+          if plan.get('self_approval_closed_loop') is not True:
+              raise SystemExit('self-approval closed loop is not enabled')
+          if plan.get('authority', {}).get('new_external_authority_created') is not False:
+              raise SystemExit('refusing authority-expanding plan')
+
+          repo = os.environ['GITHUB_REPOSITORY']
+          token = os.environ['GITHUB_TOKEN']
+          owner, name = repo.split('/', 1)
+          if plan.get('repository') != repo:
+              raise SystemExit('refusing cross-repository production loop')
+
+          headers = {
+              'Authorization': f'Bearer {token}',
+              'Accept': 'application/vnd.github+json',
+              'X-GitHub-Api-Version': '2022-11-28',
+              'Content-Type': 'application/json',
+          }
+          base = f'https://api.github.com/repos/{owner}/{name}'
+
+          def call(method, url, payload=None):
+              data = json.dumps(payload).encode() if payload is not None else None
+              req = urllib.request.Request(url, data=data, method=method, headers=headers)
+              try:
+                  with urllib.request.urlopen(req, timeout=15) as r:
+                      raw = r.read()
+                      return json.loads(raw) if raw else {}
+              except urllib.error.HTTPError as exc:
+                  if exc.code in {404, 422}:
+                      return {'_http': exc.code}
+                  raise
+
+          for action in plan.get('actions', []):
+              if action.get('self_approved') is not True:
+                  raise SystemExit('refusing non-self-approved production action')
+              if action.get('repository') != repo or action.get('provider') != 'github_actions':
+                  raise SystemExit('action escaped owner-approved repository/provider')
+              if action.get('kind') == 'workflow_dispatch':
+                  workflow = str(action['workflow'])
+                  ref = str(action['ref'])
+                  encoded = urllib.parse.quote(workflow, safe='')
+                  call('POST', f'{base}/actions/workflows/{encoded}/dispatches', {
+                      'ref': ref,
+                      'inputs': action.get('inputs', {}),
+                  })
+                  print(f'self-approved production capability dispatched: {workflow}@{ref}')
+              elif action.get('kind') == 'upsert_issue_state':
+                  label = str(action['label'])
+                  title = str(action['title'])
+                  body = json.dumps(plan['state_document'], ensure_ascii=False, indent=2)
+                  call('POST', f'{base}/labels', {
+                      'name': label,
+                      'description': 'Durable The World Four-Pillar self-approval production state',
+                  })
+                  query = urllib.parse.urlencode({'state':'open','labels':label,'per_page':'100'})
+                  rows = call('GET', f'{base}/issues?{query}')
+                  existing = next((x for x in rows if x.get('title') == title and 'pull_request' not in x), None) if isinstance(rows, list) else None
+                  if existing:
+                      call('PATCH', f"{base}/issues/{existing['number']}", {'body': body})
+                      print(f"updated self-approval production state issue #{existing['number']}")
+                  else:
+                      created = call('POST', f'{base}/issues', {'title': title, 'body': body, 'labels': [label]})
+                      print(f"created self-approval production state issue #{created.get('number')}")
+              else:
+                  raise SystemExit(f"unsupported production action: {action.get('kind')}")
+          PY
+
+      - name: Preserve loop evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: four-pillar-production-loop-${{ github.run_id }}
+          path: |
+            automation/codegen/meta_state/four_pillar_decision.json
+            /tmp/four-pillar-previous.json
+            /tmp/four-pillar-production-plan.json
+          if-no-files-found: ignore
+          retention-days: 14

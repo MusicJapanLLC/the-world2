@@ -1,9 +1,17 @@
-name: R&D Portfolio P0 Daily Evolution
+name: R&D Portfolio P0 Evolution
 
 on:
   schedule:
-    - cron: "50 21 * * *" # 06:50 JST, before R&D x Senju Coupled Loop at 07:20 JST
+    - cron: "50 3,9,15,21 * * *" # 12:50 / 18:50 / 00:50 / 06:50 JST
   workflow_dispatch:
+  push:
+    branches: ["claude/employee-onboarding-setup-udm86"]
+    paths:
+      - "PORTFOLIO.md"
+      - "automation/reporting/portfolio_evolution.py"
+      - "automation/reporting/test_portfolio_evolution.py"
+      - "automation/reporting/portfolio_targets.json"
+      - ".github/workflows/portfolio-evolution-daily.yml"
   pull_request:
     branches: ["claude/employee-onboarding-setup-udm86"]
     paths:
@@ -12,6 +20,7 @@ on:
       - "automation/reporting/PORTFOLIO_EVOLUTION.md"
       - "automation/reporting/portfolio_evolution.py"
       - "automation/reporting/test_portfolio_evolution.py"
+      - "automation/reporting/portfolio_targets.json"
       - "value-lab/research_queue.json"
       - "value-lab/senju_bridge.py"
       - "senju/scripts/apply_rnd_directive.py"
@@ -31,7 +40,7 @@ concurrency:
 jobs:
   evolve:
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 14
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -43,7 +52,83 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Test portfolio gates and daily selector
+      - name: Probe registered production portfolio targets
+        if: github.event_name != 'pull_request'
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p reports/portfolio-evolution
+          python - <<'PY'
+          import hashlib
+          import json
+          import time
+          import urllib.error
+          import urllib.request
+          from datetime import datetime, timezone
+          from pathlib import Path
+
+          registry=json.loads(Path('automation/reporting/portfolio_targets.json').read_text(encoding='utf-8'))
+          rows=[]
+
+          def probe(url):
+              req=urllib.request.Request(url, headers={'User-Agent':'THE-WORLD-Portfolio-Evolution/1.0'})
+              started=time.perf_counter()
+              try:
+                  with urllib.request.urlopen(req, timeout=15) as res:
+                      body=res.read(256 * 1024)
+                      return True, int(res.status), int((time.perf_counter()-started)*1000), body
+              except urllib.error.HTTPError as exc:
+                  body=exc.read(256 * 1024)
+                  return True, int(exc.code), int((time.perf_counter()-started)*1000), body
+              except Exception as exc:
+                  return False, 0, int((time.perf_counter()-started)*1000), str(exc).encode('utf-8','replace')[:4096]
+
+          for target in registry.get('targets') or []:
+              reachable,status,latency,body=probe(target['url'])
+              health_ok=None
+              health_status=None
+              health_latency_ms=None
+              if target.get('health_url'):
+                  hr,hs,hl,_=probe(target['health_url'])
+                  health_status=hs
+                  health_latency_ms=hl
+                  health_ok=bool(hr and hs in set(target.get('expected_status') or [200]))
+              rows.append({
+                  **target,
+                  'checked_at':datetime.now(timezone.utc).isoformat(),
+                  'reachable':reachable,
+                  'status_code':status,
+                  'latency_ms':latency,
+                  'health_ok':health_ok,
+                  'health_status':health_status,
+                  'health_latency_ms':health_latency_ms,
+                  'body_digest':hashlib.sha256(body).hexdigest()[:20],
+              })
+
+          out={
+              'schema':'the-world-portfolio-live-evidence/v1',
+              'generated_at':datetime.now(timezone.utc).isoformat(),
+              'targets':rows,
+          }
+          Path('reports/portfolio-evolution/live-targets.json').write_text(json.dumps(out,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+          with Path('reports/portfolio-evolution/live-targets.md').open('w',encoding='utf-8') as f:
+              f.write('# Live Portfolio Targets\n\n')
+              for row in rows:
+                  f.write(f"- **{row['name']}** HTTP={row['status_code']} reachable={row['reachable']} latency={row['latency_ms']}ms")
+                  if row.get('health_ok') is not None:
+                      f.write(f" health={row['health_ok']}({row.get('health_status')})")
+                  f.write('\n')
+          PY
+          cat reports/portfolio-evolution/live-targets.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Create neutral live evidence for PR tests
+        if: github.event_name == 'pull_request'
+        run: |
+          mkdir -p reports/portfolio-evolution
+          printf '%s\n' '{"schema":"the-world-portfolio-live-evidence/v1","targets":[]}' > reports/portfolio-evolution/live-targets.json
+          printf '# Live Portfolio Targets\n\nPR validation: external probes skipped.\n' > reports/portfolio-evolution/live-targets.md
+
+      - name: Test portfolio gates and selector
         run: |
           set -euo pipefail
           python -m pip install pytest==9.1.1
@@ -52,12 +137,15 @@ jobs:
             automation/reporting/test_portfolio_evolution.py \
             -q
           python -m json.tool value-lab/research_queue.json >/dev/null
+          python -m json.tool automation/reporting/portfolio_targets.json >/dev/null
+          python -m json.tool reports/portfolio-evolution/live-targets.json >/dev/null
 
-      - name: Choose today's single portfolio bet
+      - name: Choose this cycle's single portfolio bet
         run: |
           set -euo pipefail
           python automation/reporting/portfolio_evolution.py \
             --portfolio PORTFOLIO.md \
+            --live-evidence reports/portfolio-evolution/live-targets.json \
             --out reports/portfolio-evolution/plan.json \
             --slack reports/portfolio-evolution/slack.md \
             --directive reports/portfolio-evolution/directive.json
@@ -74,20 +162,22 @@ jobs:
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "Senju directive validated against the bounded numeric strategy surface." >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Upload daily portfolio evolution evidence
+      - name: Upload portfolio evolution evidence
         uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         with:
           name: portfolio-evolution-daily
           retention-days: 30
           if-no-files-found: error
           path: |
+            reports/portfolio-evolution/live-targets.json
+            reports/portfolio-evolution/live-targets.md
             reports/portfolio-evolution/plan.json
             reports/portfolio-evolution/slack.md
             reports/portfolio-evolution/directive.json
             reports/portfolio-evolution/senju-candidate-strategy.json
             reports/portfolio-evolution/senju-audit.json
 
-      - name: Report daily portfolio priority to Slack
+      - name: Report portfolio priority to Slack
         if: github.event_name != 'pull_request'
         shell: bash
         run: |

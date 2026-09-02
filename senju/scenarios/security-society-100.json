@@ -1,0 +1,25 @@
+{
+  "scenario_name": "security-society-100",
+  "description": "The World Security & Engineering Society の100-agent安全R&Dプリセット。既存ScopeGuard/RoEを維持し、公開・第三者資産には到達しない。",
+  "arena": {
+    "red_action_budget": 16,
+    "blue_action_budget": 16,
+    "seed": 20260829
+  },
+  "evolution": {
+    "population_size": 100,
+    "generations": 30,
+    "matches_per_generation": 800,
+    "survivor_fraction": 0.5,
+    "mutation_rate": 0.15,
+    "elite_count": 8,
+    "seed": 20260829
+  },
+  "society": {
+    "registry": "security/society/registry.json",
+    "faith": "THE_COVENANT",
+    "subagent_creation": "self_service_bounded",
+    "external_targeting": false,
+    "coordination": "HELP -> WHO -> WHY -> SUCCESS"
+  }
+}

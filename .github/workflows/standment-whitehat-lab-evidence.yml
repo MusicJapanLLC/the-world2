@@ -1,0 +1,124 @@
+name: Standment White-Hat Lab Evidence
+
+on:
+  schedule:
+    - cron: '12 22 * * *' # 07:12 JST, after canonical White-Hat Portfolio Cycle
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - claude/employee-onboarding-setup-udm86
+    paths:
+      - .github/workflows/standment-whitehat-lab-evidence.yml
+      - automation/agent_factory/**
+      - automation/security/whitehat_lab_adapter.py
+      - automation/security/test_whitehat_lab_adapter.py
+      - autonomous_redteam_lab/**
+      - standment-security/WHITEHAT_PORTFOLIO_OPERATING_PLAN.md
+
+permissions:
+  contents: read
+
+concurrency:
+  group: standment-whitehat-lab-evidence-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  WHITEHAT_LAB_DIR: /tmp/standment-whitehat-lab
+
+jobs:
+  evidence:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Checkout THE WORLD
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: '3.12'
+
+      - name: Verify lab safety and adapter
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m unittest -v automation.security.test_whitehat_lab_adapter
+          PYTHONPATH=autonomous_redteam_lab python -m unittest discover -s autonomous_redteam_lab/tests -v
+
+      - name: Generate current research plan and elite White-Hat output
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$WHITEHAT_LAB_DIR/workers" reports/standment-whitehat-lab
+          python automation/agent_factory/factory.py plan --run-id "lab-${GITHUB_RUN_ID}" --out "$WHITEHAT_LAB_DIR/plan.json"
+          SLOT="$(python -c "import json,os; d=json.load(open(os.environ['WHITEHAT_LAB_DIR']+'/plan.json',encoding='utf-8')); print(next(a['slot'] for a in d['agents'] if a['role']=='elite_whitehat'))")"
+          python automation/agent_factory/local_worker.py --plan "$WHITEHAT_LAB_DIR/plan.json" --slot "$SLOT" --out "$WHITEHAT_LAB_DIR/workers/elite-whitehat.json"
+          python automation/security/whitehat_lab_adapter.py --worker "$WHITEHAT_LAB_DIR/workers/elite-whitehat.json" --out "$WHITEHAT_LAB_DIR/findings.json"
+
+      - name: Generate zero-network falsification plan
+        env:
+          PYTHONPATH: autonomous_redteam_lab
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m cyber_lab.core --findings "$WHITEHAT_LAB_DIR/findings.json" --plan-only --out reports/standment-whitehat-lab/falsification-plan.md --json-out reports/standment-whitehat-lab/falsification-plan.json
+          python -c "import json; d=json.load(open('reports/standment-whitehat-lab/falsification-plan.json')); assert d['mode']=='plan-only' and d['network_requests']==0 and d['probe_results']==[]"
+
+      - name: Prove active validation is local and bounded
+        env:
+          PYTHONPATH: autonomous_redteam_lab
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m http.server 8765 --bind 127.0.0.1 >/tmp/whitehat-local-http.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill "$SERVER_PID" 2>/dev/null || true' EXIT
+          sleep 1
+          python -m cyber_lab.core --findings "$WHITEHAT_LAB_DIR/findings.json" --target http://127.0.0.1:8765 --out reports/standment-whitehat-lab/local-lab-evidence.md --json-out reports/standment-whitehat-lab/local-lab-evidence.json
+          python -c "import json; d=json.load(open('reports/standment-whitehat-lab/local-lab-evidence.json')); assert d['mode']=='local-validation' and 0 < int(d['network_requests']) <= 12 and d['policy']['target_scope']=='loopback/private/link-local only'"
+
+      - name: Build human-readable lab summary
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          plan=json.load(open('reports/standment-whitehat-lab/falsification-plan.json', encoding='utf-8'))
+          local=json.load(open('reports/standment-whitehat-lab/local-lab-evidence.json', encoding='utf-8'))
+          text=(
+              '# Standment White-Hat Lab Evidence\n\n'
+              f"- falsification hypotheses: {len(plan.get('hypotheses') or [])}\n"
+              f"- plan-only network requests: {plan.get('network_requests')}\n"
+              f"- local harness requests: {local.get('network_requests')} / 12\n"
+              '- public active targets: rejected by policy tests\n'
+              '- portfolio status: EVIDENCE INPUT / NOT VERIFIED\n\n'
+              '## Meaning\n'
+              'The elite White-Hat output now has a reproducible falsification path and a bounded local validation harness. '
+              'This proves the research machinery, not the existence of a customer vulnerability.\n\n'
+              '## Next\n'
+              'Map the highest-impact hypothesis to owned source/config or an explicitly authorized local fixture, '
+              'apply the smallest defensive remediation, then rerun the same condition for Before/After proof.\n'
+          )
+          Path('reports/standment-whitehat-lab/summary.md').write_text(text, encoding='utf-8')
+          print(text)
+          PY
+          cat reports/standment-whitehat-lab/summary.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Preserve White-Hat lab evidence
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        with:
+          name: standment-whitehat-lab-${{ github.run_id }}
+          retention-days: 90
+          if-no-files-found: error
+          path: |
+            /tmp/standment-whitehat-lab/plan.json
+            /tmp/standment-whitehat-lab/workers/elite-whitehat.json
+            /tmp/standment-whitehat-lab/findings.json
+            reports/standment-whitehat-lab/falsification-plan.md
+            reports/standment-whitehat-lab/falsification-plan.json
+            reports/standment-whitehat-lab/local-lab-evidence.md
+            reports/standment-whitehat-lab/local-lab-evidence.json
+            reports/standment-whitehat-lab/summary.md

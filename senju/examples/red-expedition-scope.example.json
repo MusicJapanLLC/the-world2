@@ -1,0 +1,16 @@
+{
+  "schema": "senju-red-expedition-scope/v1",
+  "scope_id": "owned-public-app",
+  "allowed_hosts": [
+    "your-owned-host.example"
+  ],
+  "seed_urls": [
+    "https://your-owned-host.example/"
+  ],
+  "max_contacts": 16,
+  "discovery_depth": 2,
+  "max_links_per_response": 24,
+  "allow_http": false,
+  "retries": 2,
+  "timeout_seconds": 6
+}

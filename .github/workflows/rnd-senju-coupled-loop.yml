@@ -10,11 +10,16 @@ on:
       - "value-lab/**"
       - "company-society/CHILD_GUILD.md"
       - "company-society/child_guild.json"
+      - "company-society/child_external_fleet.py"
       - "senju/scripts/apply_rnd_directive.py"
       - "senju/scripts/shadow_selector.py"
+      - "senju/scripts/guard_pressure_learning.py"
       - "senju/tests/test_rnd_directive.py"
       - "senju/tests/test_shadow_selector.py"
+      - "senju/tests/test_guard_pressure_learning.py"
       - ".github/workflows/child-guild-adventure.yml"
+      - ".github/workflows/child-guild-external-fleet.yml"
+      - ".github/workflows/senju-guard-pressure-learning.yml"
       - ".github/workflows/rnd-senju-coupled-loop.yml"
       - ".github/workflows/senju-autonomous-improver.yml"
 
@@ -50,7 +55,7 @@ jobs:
           set -euo pipefail
           (cd value-lab && python -m unittest -v)
           python -m pip install pytest==9.1.1
-          (cd senju && python -m pytest tests/test_rnd_directive.py tests/test_shadow_selector.py -q)
+          (cd senju && python -m pytest tests/test_rnd_directive.py tests/test_shadow_selector.py tests/test_guard_pressure_learning.py -q)
           python -m json.tool value-lab/policy.json >/dev/null
           python -m json.tool value-lab/research_queue.json >/dev/null
           python -m json.tool company-society/child_guild.json >/dev/null
@@ -83,6 +88,36 @@ jobs:
           if [[ -n "$FOUND" ]]; then cp "$FOUND" /tmp/child-research-sparks.json; fi
           echo "child_guild_run=${RUN_ID:-none}" >> "$GITHUB_STEP_SUMMARY"
 
+      - name: Restore latest 50-child external fleet input
+        if: github.event_name != 'pull_request'
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/child-fleet
+          RUN_ID="$(gh run list --repo "$GITHUB_REPOSITORY" --workflow "THE WORLD - Child Guild External Fleet" --status success --limit 20 --json databaseId --jq '.[0].databaseId // empty' || true)"
+          if [[ -n "$RUN_ID" ]]; then
+            gh run download "$RUN_ID" --repo "$GITHUB_REPOSITORY" --name child-external-fleet --dir /tmp/child-fleet || true
+          fi
+          FOUND="$(find /tmp/child-fleet -name child-external-fleet.json -print -quit || true)"
+          if [[ -n "$FOUND" ]]; then cp "$FOUND" /tmp/child-external-fleet.json; fi
+          echo "child_external_fleet_run=${RUN_ID:-none}" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Restore latest Senju guard-pressure learning
+        if: github.event_name != 'pull_request'
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/guard-pressure
+          RUN_ID="$(gh run list --repo "$GITHUB_REPOSITORY" --workflow "Senju Guard Pressure Learning" --status success --limit 20 --json databaseId --jq '.[0].databaseId // empty' || true)"
+          if [[ -n "$RUN_ID" ]]; then
+            gh run download "$RUN_ID" --repo "$GITHUB_REPOSITORY" --name senju-guard-pressure-learning --dir /tmp/guard-pressure || true
+          fi
+          FOUND="$(find /tmp/guard-pressure -name learning.json -print -quit || true)"
+          if [[ -n "$FOUND" ]]; then cp "$FOUND" /tmp/guard-pressure-learning.json; fi
+          SUMMARY="$(find /tmp/guard-pressure -name summary.md -print -quit || true)"
+          if [[ -n "$SUMMARY" ]]; then cp "$SUMMARY" /tmp/guard-pressure-summary.md; fi
+          echo "guard_pressure_run=${RUN_ID:-none}" >> "$GITHUB_STEP_SUMMARY"
+
       - name: Build R&D -> Senju directive and Senju -> R&D evidence return
         shell: bash
         run: |
@@ -99,6 +134,72 @@ jobs:
             --out reports/rnd-senju
           cat reports/rnd-senju/exchange.md >> "$GITHUB_STEP_SUMMARY"
 
+      - name: Relay Child Fleet context to R&D and Senju
+        if: github.event_name != 'pull_request'
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -f /tmp/child-external-fleet.json ]]; then
+            python value-lab/child_fleet_bridge.py \
+              --fleet /tmp/child-external-fleet.json \
+              --directive reports/rnd-senju/directive.json \
+              --out reports/child-fleet-bridge
+            cp reports/child-fleet-bridge/directive-with-fleet.json reports/rnd-senju/directive.json
+            python - <<'PY'
+          import json
+          from pathlib import Path
+          exchange_path=Path('reports/rnd-senju/exchange.json')
+          directive_path=Path('reports/rnd-senju/directive.json')
+          d=json.loads(exchange_path.read_text(encoding='utf-8'))
+          q=json.loads(directive_path.read_text(encoding='utf-8'))
+          d['directive_to_senju']=q
+          d['child_external_fleet_context']={
+              'source':'child-external-fleet',
+              'transport':'sanitized-hypothesis-context',
+              'execution_authority':'none',
+          }
+          exchange_path.write_text(json.dumps(d, ensure_ascii=False, indent=2)+'\n', encoding='utf-8')
+          PY
+            cat reports/child-fleet-bridge/handoff.md >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "No Child Fleet artifact available; base R&D/Senju exchange remains valid." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Relay Guard Pressure learning to R&D and Senju
+        if: github.event_name != 'pull_request'
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -f /tmp/guard-pressure-learning.json ]]; then
+            python value-lab/guard_pressure_bridge.py \
+              --learning /tmp/guard-pressure-learning.json \
+              --directive reports/rnd-senju/directive.json \
+              --out reports/rnd-senju/directive.guard-pressure.json
+            mv reports/rnd-senju/directive.guard-pressure.json reports/rnd-senju/directive.json
+            python - <<'PY'
+          import json
+          from pathlib import Path
+          exchange_path=Path('reports/rnd-senju/exchange.json')
+          directive_path=Path('reports/rnd-senju/directive.json')
+          learning=json.loads(Path('/tmp/guard-pressure-learning.json').read_text(encoding='utf-8'))
+          d=json.loads(exchange_path.read_text(encoding='utf-8'))
+          q=json.loads(directive_path.read_text(encoding='utf-8'))
+          d['directive_to_senju']=q
+          d['guard_pressure_context']={
+              'source':'offline-adversarial-lab',
+              'cases':int((learning.get('fuzz') or {}).get('cases',0) or 0),
+              'seed_count':int((learning.get('fuzz') or {}).get('seed_count',0) or 0),
+              'unexpected':int((learning.get('fuzz') or {}).get('unexpected',0) or 0),
+              'research_posture':learning.get('research_posture'),
+              'execution_authority':'none',
+          }
+          exchange_path.write_text(json.dumps(d, ensure_ascii=False, indent=2)+'\n', encoding='utf-8')
+          PY
+            if [[ -f /tmp/guard-pressure-summary.md ]]; then cat /tmp/guard-pressure-summary.md >> "$GITHUB_STEP_SUMMARY"; fi
+          else
+            echo "No Guard Pressure artifact available; base R&D/Senju exchange remains valid." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
       - name: Upload R&D Senju exchange
         uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         with:
@@ -109,23 +210,43 @@ jobs:
             reports/rnd-senju/exchange.json
             reports/rnd-senju/exchange.md
             reports/rnd-senju/directive.json
+            reports/child-fleet-bridge/rnd-capsule.json
+            reports/child-fleet-bridge/senju-capsule.json
+            reports/child-fleet-bridge/directive-with-fleet.json
+            reports/child-fleet-bridge/handoff.md
 
       - name: Report material R&D x Senju delta to Slack
         if: github.event_name != 'pull_request' && env.RND_SLACK_WEBHOOK_URL != ''
         run: |
           python - <<'PY'
           import json, os, urllib.request
+          from pathlib import Path
           d=json.load(open('reports/rnd-senju/exchange.json', encoding='utf-8'))
           r=d['research']; x=d['technical_evidence_from_senju']; q=d['directive_to_senju']; c=d.get('child_stimulus') or {}
           kids=', '.join(y.get('name','') for y in c.get('fellows',[])) or 'NONE'
+          fleet_line='Child Fleet=NONE'
+          p=Path('reports/child-fleet-bridge/senju-capsule.json')
+          if p.exists():
+              f=json.loads(p.read_text(encoding='utf-8'))
+              fleet_line=(
+                  f"Child Fleet={f.get('fleet_size')} / domains={f.get('distinct_domains')} / "
+                  f"concepts={', '.join((f.get('top_concepts') or [])[:6]) or 'NONE'}"
+              )
+          gp=d.get('guard_pressure_context') or {}
+          guard_line=(
+              f"GuardPressure={gp.get('cases',0)} cases / seeds={gp.get('seed_count',0)} / "
+              f"unexpected={gp.get('unexpected',0)} / posture={gp.get('research_posture') or 'NONE'}"
+          )
           text=(
               "*R&D × SENJU × CHILD GUILD｜COUPLED LOOP*\n"
               f"研究={r.get('research_id')} / focus={q.get('focus')} / candidates={q.get('candidate_count')}\n"
               f"Child Fellows={kids} / challenge={c.get('requested_focus')} / applied={c.get('applied')}\n"
+              f"{fleet_line}\n"
+              f"{guard_line}\n"
               f"Senju safe={x.get('senju_safe')} / shadow stable={x.get('shadow_stable')} / worst={x.get('worst_score')}\n"
               f"反証={', '.join(d.get('counterevidence') or []) or 'NONE'}\n"
               f"次={d.get('rnd_next')}\n"
-              "※子供は前提を揺らす。実行境界は揺らさない。技術スコアは市場需要・契約・入金を意味しない"
+              "※外部観測とガード圧力は研究仮説へ還元する。実行権限・市場需要・契約・入金とは分離する"
           )
           req=urllib.request.Request(
               os.environ['RND_SLACK_WEBHOOK_URL'],

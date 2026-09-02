@@ -1,0 +1,428 @@
+name: THE WORLD - MADLAB Evolution Worker
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ["claude/employee-onboarding-setup-udm86"]
+    paths:
+      - ".github/workflows/madlab-world-evolution.yml"
+  schedule:
+    - cron: '17 */6 * * *'
+
+concurrency:
+  group: madlab-world-evolution
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  actions: read
+  issues: write
+  copilot-requests: write
+
+jobs:
+  evolve:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      TARGET: https://madlab-guard-0i24yt.v2.appdeploy.ai/
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Checkout THE WORLD
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          ref: claude/employee-onboarding-setup-udm86
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Observe MADLAB production with fail-soft evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/madlab-current
+
+          # Observation is fail-soft: HTTP/network failure becomes evidence and a
+          # repair directive. It never turns into authorization bypass or a hidden
+          # execution path. Mutation/security boundaries remain fail-closed.
+          curl -sS --max-time 20 -o /tmp/madlab-current/home.html \
+            -w '%{http_code} %{time_total}\n' "$TARGET" \
+            > /tmp/madlab-current/home.metrics || true
+          curl -sS --max-time 20 -o /tmp/madlab-current/health.json \
+            -w '%{http_code} %{time_total}\n' "${TARGET}api/_healthcheck" \
+            > /tmp/madlab-current/health.metrics || true
+          curl -sS --max-time 35 -H 'Content-Type: application/json' \
+            -d "{\"url\":\"${TARGET}\",\"authorized\":true}" \
+            -o /tmp/madlab-current/scan.json -w '%{http_code} %{time_total}\n' \
+            "${TARGET}api/scan" > /tmp/madlab-current/scan.metrics || true
+
+          python - <<'PY'
+          import hashlib
+          import json
+          from datetime import datetime, timezone
+          from pathlib import Path
+
+          ROOT = Path('/tmp/madlab-current')
+
+          def load_json(name):
+              p = ROOT / name
+              if not p.exists() or not p.read_text(encoding='utf-8', errors='replace').strip():
+                  return {}
+              try:
+                  value = json.loads(p.read_text(encoding='utf-8'))
+                  return value if isinstance(value, dict) else {}
+              except Exception:
+                  return {}
+
+          def metrics(name):
+              p = ROOT / name
+              if not p.exists():
+                  return 0, 0
+              raw = p.read_text(encoding='utf-8', errors='replace').strip().split()
+              try:
+                  return int(raw[0]), round(float(raw[1]) * 1000)
+              except Exception:
+                  return 0, 0
+
+          health = load_json('health.json')
+          scan = load_json('scan.json')
+          home_status, home_ms = metrics('home.metrics')
+          health_status, health_ms = metrics('health.metrics')
+          scan_status, scan_ms = metrics('scan.metrics')
+
+          scan_schema = str(scan.get('schema', ''))
+          scan_valid = scan_status == 200 and scan_schema.startswith('madlab-deepguard/')
+          if scan_valid:
+              observation_state = 'healthy'
+              blocker = None
+          elif scan_status in {401, 403}:
+              observation_state = 'blocked_owner_access'
+              blocker = {
+                  'fingerprint': 'owned_service_access_denied',
+                  'http_status': scan_status,
+                  'repair_policy': 'restore documented owner-authorized observation path; never bypass authorization',
+              }
+          elif scan_status == 0:
+              observation_state = 'unreachable'
+              blocker = {'fingerprint': 'scan_transport_unavailable', 'http_status': 0}
+          else:
+              observation_state = 'degraded_scan'
+              blocker = {'fingerprint': 'scan_unavailable', 'http_status': scan_status}
+
+          top = []
+          if scan_valid:
+              for f in (scan.get('findings') or [])[:12]:
+                  top.append({k: f.get(k) for k in ('id','severity','confidence','title','category','evidence','fix')})
+
+          summary = (scan.get('summary') or {}) if scan_valid else {}
+          risk = int(scan.get('risk_score') or 0) if scan_valid else None
+          high = int(summary.get('high', 0) or 0)
+          critical = int(summary.get('critical', 0) or 0)
+          if scan_valid:
+              latency_penalty = min(20, max(0, (scan_ms - 2500) // 250) + max(0, (home_ms - 1800) // 250))
+              score = max(0, 100 - risk - (critical * 15) - (high * 7) - latency_penalty)
+          else:
+              score = None
+
+          stable = {
+              'target': scan.get('target') or 'https://madlab-guard-0i24yt.v2.appdeploy.ai/',
+              'grade': scan.get('grade') if scan_valid else 'OBSERVATION_BLOCKED',
+              'risk_score': risk,
+              'evolution_score': score,
+              'summary': summary,
+              'top_findings': top,
+              'health_scanner': health.get('scanner'),
+              'observation_state': observation_state,
+              'blocker': blocker,
+              'runtime': {
+                  'home_status': home_status, 'home_ms': home_ms,
+                  'health_status': health_status, 'health_ms': health_ms,
+                  'scan_status': scan_status, 'scan_ms': scan_ms,
+              },
+          }
+          digest = hashlib.sha256(json.dumps(stable, sort_keys=True, ensure_ascii=False).encode()).hexdigest()[:20]
+          evidence = {
+              'schema': 'the-world-madlab-evidence/v2',
+              'observed_at': datetime.now(timezone.utc).isoformat(),
+              'digest': digest,
+              **stable,
+          }
+          (ROOT / 'evidence.json').write_text(json.dumps(evidence, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+
+          with (ROOT / 'evidence.md').open('w', encoding='utf-8') as out:
+              out.write('# MADLAB Production Evidence\n\n')
+              out.write(f"- digest: `{digest}`\n")
+              out.write(f"- observation: **{observation_state}**\n")
+              out.write(f"- grade: **{evidence.get('grade')}**\n")
+              out.write(f"- risk: **{risk if risk is not None else 'n/a'}**\n")
+              out.write(f"- evolution score: **{score if score is not None else 'n/a'}**\n")
+              out.write(f"- homepage: HTTP {home_status} / {home_ms}ms\n")
+              out.write(f"- health: HTTP {health_status} / {health_ms}ms\n")
+              out.write(f"- scan: HTTP {scan_status} / {scan_ms}ms\n")
+              if blocker:
+                  out.write(f"- blocker: `{blocker.get('fingerprint')}`\n")
+              out.write(f"- findings: {summary.get('findings', 0)} / critical+high: {critical + high}\n\n")
+              out.write('## Top findings\n')
+              if top:
+                  for f in top:
+                      out.write(f"- [{f.get('severity')}] {f.get('title')} — {f.get('fix')}\n")
+              else:
+                  out.write('- No trusted scan findings available in this cycle.\n')
+          PY
+
+      - name: Load previous successful evolution memory
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/madlab-prior
+          prior_run="$(gh run list --repo "$GITHUB_REPOSITORY" --workflow madlab-world-evolution.yml --status success --limit 12 --json databaseId --jq '.[].databaseId' | grep -v "^${GITHUB_RUN_ID}$" | head -1 || true)"
+          if [[ -n "$prior_run" ]]; then
+            gh run download "$prior_run" --repo "$GITHUB_REPOSITORY" --name madlab-world-evolution --dir /tmp/madlab-prior >/dev/null 2>&1 || true
+          fi
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          current = json.load(open('/tmp/madlab-current/evidence.json', encoding='utf-8'))
+          prior_e = {}
+          prior_d = {}
+          for p in Path('/tmp/madlab-prior').rglob('*'):
+              if p.is_file() and p.name in {'evidence.json', 'madlab-evidence.json'}:
+                  try:
+                      prior_e = json.loads(p.read_text(encoding='utf-8'))
+                  except Exception:
+                      pass
+              if p.is_file() and p.name == 'madlab-evolution-directive.json':
+                  try:
+                      prior_d = json.loads(p.read_text(encoding='utf-8'))
+                  except Exception:
+                      pass
+
+          def numeric_delta(now_value, prior_value):
+              if now_value is None or prior_value is None:
+                  return None
+              try:
+                  return int(now_value) - int(prior_value)
+              except Exception:
+                  return None
+
+          delta = {
+              'score_delta': numeric_delta(current.get('evolution_score'), prior_e.get('evolution_score')) if prior_e else None,
+              'risk_delta': numeric_delta(current.get('risk_score'), prior_e.get('risk_score')) if prior_e else None,
+              'scan_latency_delta_ms': numeric_delta(
+                  (current.get('runtime') or {}).get('scan_ms'),
+                  (prior_e.get('runtime') or {}).get('scan_ms'),
+              ) if prior_e else None,
+              'same_evidence': bool(prior_e and current.get('digest') == prior_e.get('digest')),
+              'observation_state_changed': (
+                  current.get('observation_state') != prior_e.get('observation_state')
+                  if prior_e else None
+              ),
+          }
+          memory = {
+              'schema': 'the-world-madlab-memory/v1',
+              'current': current,
+              'prior_evidence': prior_e,
+              'prior_directive': prior_d,
+              'delta': delta,
+          }
+          json.dump(memory, open('/tmp/madlab-memory.json', 'w', encoding='utf-8'), ensure_ascii=False, indent=2)
+          PY
+
+      - name: Setup Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: '22'
+
+      - name: Install GitHub Copilot CLI
+        continue-on-error: true
+        run: npm install -g @github/copilot@1.0.80
+
+      - name: Evolution council chooses one non-repeating bounded improvement
+        env:
+          COPILOT_GITHUB_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/madlab-brain && mkdir -p /tmp/madlab-brain
+          cp /tmp/madlab-memory.json /tmp/madlab-brain/memory.json
+          cd /tmp/madlab-brain
+          cat > prompt.md <<'PROMPT'
+          You are THE WORLD / MADLAB EVOLUTION COUNCIL. Read memory.json.
+          Internally review as BUILDER (measurable utility), SKEPTIC (regressions/duplication/weak evidence), and OPERATOR (test/deploy/observe/rollback).
+          Choose exactly ONE highest-value next improvement. Do not repeat prior_directive unless current evidence proves failure or regression. Use delta plus live latency/risk evidence when available. Require deterministic before/after acceptance checks.
+          If current.observation_state is blocked_owner_access, unreachable, or degraded_scan, prioritize restoring the documented owner-authorized observation path and its verification. Treat HTTP 401/403 as a repair signal, never as permission to bypass authorization.
+          Optimize diagnostic precision, evidence quality, reliable owner-authorized execution, speed, operator clarity, regression prevention, and migration away from blocked infrastructure.
+          Never weaken ownership, authorization, or approval boundaries.
+          Never weaken audit, rollback, or target-scope boundaries. Never add credential guessing, hidden-path brute force, arbitrary exploit payload execution, destructive external actions, or stealth/persistence.
+          AppDeploy production deploy quota is exhausted; prefer GitHub/Vercel successor work when source deployment is required. Avoid cosmetic-only work unless it removes a measured blocker. Never claim success without new evidence.
+          Write exactly one file named madlab-evolution-directive.json. JSON fields: schema="the-world-madlab-directive/v1", title, priority (P0|P1|P2), lane (runtime-observation|successor-repo|qa|operator), why_now, implementation, acceptance_checks (2-5 items), expected_gain, risk (low|medium), next_actor (MADLAB|TOMOKI_FORGE|SENJU|AI_FOUNDRY), novelty_reason, rollback_trigger, measurement (metric + desired_direction).
+          PROMPT
+          copilot -p "$(cat prompt.md)" -s --allow-tool=write --no-ask-user > /tmp/madlab-copilot.log 2>&1 || true
+          if [[ ! -s madlab-evolution-directive.json ]]; then
+            python - <<'PY'
+          import json
+          m = json.load(open('memory.json', encoding='utf-8'))
+          e = m['current']
+          fs = e.get('top_findings') or []
+          f = fs[0] if fs else {}
+          runtime = e.get('runtime') or {}
+          state = e.get('observation_state') or 'unknown'
+
+          if state in {'blocked_owner_access', 'unreachable', 'degraded_scan'}:
+              title = 'Restore MADLAB owner-authorized production observation'
+              impl = 'Repair the documented production observation path so /api/scan returns a trusted 200/schema response for the owner-authorized request. Preserve authorization checks; do not bypass or weaken them.'
+              metric = 'scan_http_status'
+              direction = 'toward_200'
+              actor = 'TOMOKI_FORGE'
+              lane = 'runtime-observation'
+              priority = 'P0'
+          elif int(runtime.get('scan_ms') or 0) > 3000:
+              title = 'Reduce MADLAB scan latency with a measured regression gate'
+              impl = 'Profile the slowest bounded scan stages, remove redundant work, and add a repeatable latency acceptance check without weakening scan coverage.'
+              metric = 'scan_latency_ms'
+              direction = 'decrease'
+              actor = 'AI_FOUNDRY'
+              lane = 'successor-repo'
+              priority = 'P1'
+          elif f:
+              title = 'Improve verification for ' + str(f.get('title'))
+              impl = str(f.get('fix') or 'Add deterministic before/after verification around the highest-value finding.')
+              metric = 'risk_score'
+              direction = 'decrease'
+              actor = 'TOMOKI_FORGE'
+              lane = 'qa'
+              priority = 'P1'
+          else:
+              title = 'Strengthen MADLAB regression evidence'
+              impl = 'Add one deterministic before/after regression check around the highest-value production workflow.'
+              metric = 'evolution_score'
+              direction = 'increase'
+              actor = 'SENJU'
+              lane = 'qa'
+              priority = 'P1'
+
+          d = {
+              'schema': 'the-world-madlab-directive/v1',
+              'title': title,
+              'priority': priority,
+              'lane': lane,
+              'why_now': 'Fallback council used current production evidence and previous-cycle memory because AI directive generation was unavailable.',
+              'implementation': impl,
+              'acceptance_checks': [
+                  'MADLAB production health remains reachable',
+                  'The chosen metric moves in the desired direction or the change is rejected',
+                  'Owner/authorization boundaries remain unchanged',
+              ],
+              'expected_gain': 'A measurable improvement with preserved regression evidence.',
+              'risk': 'low',
+              'next_actor': actor,
+              'novelty_reason': 'Selected from the current measured bottleneck rather than blindly repeating the previous directive.',
+              'rollback_trigger': 'Any health regression, authorization-boundary weakening, or metric movement opposite to the desired direction.',
+              'measurement': {'metric': metric, 'desired_direction': direction},
+          }
+          json.dump(d, open('madlab-evolution-directive.json', 'w', encoding='utf-8'), ensure_ascii=False, indent=2)
+          PY
+          fi
+
+          python - <<'PY'
+          import hashlib
+          import json
+          import re
+
+          d = json.load(open('madlab-evolution-directive.json', encoding='utf-8'))
+          m = json.load(open('memory.json', encoding='utf-8'))
+          required = ['schema','title','priority','lane','why_now','implementation','acceptance_checks','expected_gain','risk','next_actor','novelty_reason','rollback_trigger','measurement']
+          missing = [k for k in required if not d.get(k)]
+          if missing:
+              raise SystemExit('directive missing: ' + ','.join(missing))
+          if d['schema'] != 'the-world-madlab-directive/v1':
+              raise SystemExit('bad directive schema')
+          if d['priority'] not in ['P0','P1','P2'] or d['risk'] not in ['low','medium']:
+              raise SystemExit('bad directive enum')
+          prior = m.get('prior_directive') or {}
+          norm = lambda s: re.sub(r'\W+', '', str(s).lower())
+          d['repeats_prior'] = bool(
+              prior
+              and norm(prior.get('title')) == norm(d.get('title'))
+              and norm(prior.get('implementation')) == norm(d.get('implementation'))
+          )
+          d['directive_digest'] = hashlib.sha256(json.dumps(d, sort_keys=True, ensure_ascii=False).encode()).hexdigest()[:20]
+          json.dump(d, open('/tmp/madlab-evolution-directive.json', 'w', encoding='utf-8'), ensure_ascii=False, indent=2)
+          PY
+
+      - name: Persist living GitHub improvement queue
+        shell: bash
+        run: |
+          set -euo pipefail
+          TITLE='[MADLAB EVOLUTION] Continuous improvement queue'
+          NUMBER=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --search "$TITLE in:title" --json number,title --jq ".[] | select(.title == \"$TITLE\") | .number" | head -1)
+          python - <<'PY' > /tmp/madlab-issue.md
+          import json
+          m = json.load(open('/tmp/madlab-memory.json', encoding='utf-8'))
+          e = m['current']
+          d = json.load(open('/tmp/madlab-evolution-directive.json', encoding='utf-8'))
+          delta = m.get('delta') or {}
+          print(f"<!-- madlab-evidence:{e['digest']} directive:{d['directive_digest']} -->")
+          print('## THE WORLD / MADLAB EVOLUTION COUNCIL')
+          print(f"Production: {e['target']}  ")
+          print(f"Observation: **{e.get('observation_state')}**  ")
+          print(f"Evidence: grade **{e.get('grade')}**, risk **{e.get('risk_score')}**, evolution **{e.get('evolution_score')}**, digest `{e['digest']}`")
+          print(f"Delta: score={delta.get('score_delta')} risk={delta.get('risk_delta')} scan_latency_ms={delta.get('scan_latency_delta_ms')}")
+          if e.get('blocker'):
+              print(f"Blocker: `{e['blocker'].get('fingerprint')}` / HTTP {e['blocker'].get('http_status')}")
+          print(f"\n### {d['priority']} — {d['title']}\n**Lane:** {d['lane']}  \n**Next actor:** {d['next_actor']}  \n**Risk:** {d['risk']} / repeats_prior={d.get('repeats_prior')}\n")
+          print(d['why_now'])
+          print('\n**Implementation**\n' + d['implementation'])
+          print('\n**Novelty**\n' + d['novelty_reason'])
+          print('\n**Measurement**\n' + json.dumps(d['measurement'], ensure_ascii=False))
+          print('\n**Acceptance checks**')
+          for x in d['acceptance_checks'][:5]:
+              print('- [ ] ' + str(x))
+          print('\n**Rollback trigger**\n' + d['rollback_trigger'])
+          print('\n**Expected gain**\n' + d['expected_gain'])
+          print('\n_This queue is generated from live MADLAB evidence and previous-cycle memory. It does not authorize weakening owner/security boundaries._')
+          PY
+          if [[ -z "$NUMBER" ]]; then
+            gh issue create --repo "$GITHUB_REPOSITORY" --title "$TITLE" --body-file /tmp/madlab-issue.md
+          else
+            CURRENT=$(gh issue view "$NUMBER" --repo "$GITHUB_REPOSITORY" --json body,comments --jq '[.body, (.comments[-8:][]?.body // "")] | join("\n")')
+            MARKER=$(head -1 /tmp/madlab-issue.md)
+            if ! grep -Fq "$MARKER" <<<"$CURRENT"; then
+              gh issue comment "$NUMBER" --repo "$GITHUB_REPOSITORY" --body-file /tmp/madlab-issue.md
+            fi
+          fi
+
+      - name: Publish evolution memory and evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: madlab-world-evolution
+          path: |
+            /tmp/madlab-current/home.metrics
+            /tmp/madlab-current/health.json
+            /tmp/madlab-current/health.metrics
+            /tmp/madlab-current/scan.json
+            /tmp/madlab-current/scan.metrics
+            /tmp/madlab-current/evidence.json
+            /tmp/madlab-current/evidence.md
+            /tmp/madlab-memory.json
+            /tmp/madlab-evolution-directive.json
+            /tmp/madlab-copilot.log
+          retention-days: 45
+          if-no-files-found: warn
+
+      - name: Write cycle summary
+        if: always()
+        shell: bash
+        run: |
+          cat /tmp/madlab-current/evidence.md >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || true
+          if [[ -s /tmp/madlab-evolution-directive.json ]]; then
+            echo '' >> "$GITHUB_STEP_SUMMARY"
+            echo '## Next measured improvement' >> "$GITHUB_STEP_SUMMARY"
+            python - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import json
+          d = json.load(open('/tmp/madlab-evolution-directive.json', encoding='utf-8'))
+          print(f"- {d['priority']} / {d['title']}")
+          print(f"- lane={d['lane']} next_actor={d['next_actor']} risk={d['risk']} repeats_prior={d.get('repeats_prior')}")
+          print(f"- measurement={d.get('measurement')}")
+          PY
+          fi

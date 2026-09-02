@@ -1,0 +1,180 @@
+name: Senju Guard Pressure Learning
+
+on:
+  schedule:
+    - cron: "47 */6 * * *"
+  workflow_dispatch:
+    inputs:
+      iterations_per_seed:
+        description: "Offline ScopeGuard fuzz cases per seed"
+        required: true
+        default: "1000000"
+        type: string
+  pull_request:
+    branches: ["claude/employee-onboarding-setup-udm86"]
+    paths:
+      - "senju/scripts/scopeguard_fuzzer.py"
+      - "senju/scripts/guard_pressure_learning.py"
+      - "senju/tests/test_guard_pressure_learning.py"
+      - "value-lab/guard_pressure_bridge.py"
+      - "value-lab/test_guard_pressure_bridge.py"
+      - ".github/workflows/senju-guard-pressure-learning.yml"
+      - ".github/workflows/rnd-senju-coupled-loop.yml"
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: senju-guard-pressure-learning-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  baseline:
+    name: Deterministic guard pressure baseline
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: "3.12"
+
+      - name: Install Senju test dependency
+        env:
+          PIP_DISABLE_PIP_VERSION_CHECK: "1"
+          PIP_NO_INPUT: "1"
+        run: python -m pip install -e './senju[dev]'
+
+      - name: Run deterministic ScopeGuard campaign
+        working-directory: senju
+        run: |
+          set -euo pipefail
+          python scripts/run_scopeguard_adversary.py --compact --fail-on-surprise > scopeguard-adversary-report.json
+
+      - name: Upload baseline pressure evidence
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: guard-pressure-baseline
+          retention-days: 14
+          if-no-files-found: error
+          path: senju/scopeguard-adversary-report.json
+
+  fuzz:
+    name: Offline guard pressure / seed ${{ matrix.seed }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        seed: [377086, 12648430, 271828, 314159, 1618033, 8675309, 424242, 9001001, 730201, 20260831]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: "3.12"
+
+      - name: Install Senju test dependency
+        env:
+          PIP_DISABLE_PIP_VERSION_CHECK: "1"
+          PIP_NO_INPUT: "1"
+        run: python -m pip install -e './senju[dev]'
+
+      - name: Run relay tests before pressure campaign
+        run: |
+          set -euo pipefail
+          (cd senju && python -m pytest tests/test_guard_pressure_learning.py -q)
+          (cd value-lab && python -m unittest test_guard_pressure_bridge.py -v)
+
+      - name: Run one million-case offline lane
+        working-directory: senju
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          REQUESTED_ITERATIONS: ${{ inputs.iterations_per_seed }}
+        run: |
+          set -euo pipefail
+          iterations="1000000"
+          if [[ "${EVENT_NAME}" == "pull_request" ]]; then
+            iterations="100000"
+          elif [[ "${EVENT_NAME}" == "workflow_dispatch" && -n "${REQUESTED_ITERATIONS:-}" ]]; then
+            iterations="${REQUESTED_ITERATIONS}"
+          fi
+          case "${iterations}" in
+            ''|*[!0-9]*) echo "iterations must be an integer" >&2; exit 2 ;;
+          esac
+          if [[ "${iterations}" -lt 1 || "${iterations}" -gt 5000000 ]]; then
+            echo "iterations must be between 1 and 5000000 per seed" >&2
+            exit 2
+          fi
+          python scripts/scopeguard_fuzzer.py \
+            --iterations "${iterations}" \
+            --seed "${{ matrix.seed }}" \
+            --json-out "guard-pressure-${{ matrix.seed }}.json"
+
+      - name: Upload lane evidence
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: guard-pressure-seed-${{ matrix.seed }}
+          retention-days: 14
+          if-no-files-found: error
+          path: senju/guard-pressure-${{ matrix.seed }}.json
+
+  learning-relay:
+    name: Aggregate pressure -> R&D / Senju learning
+    if: always() && needs.baseline.result == 'success' && needs.fuzz.result == 'success'
+    needs: [baseline, fuzz]
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: "3.12"
+
+      - name: Download this run's pressure evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/guard-pressure
+          gh run download "$GITHUB_RUN_ID" \
+            --repo "$GITHUB_REPOSITORY" \
+            --pattern 'guard-pressure-*' \
+            --dir /tmp/guard-pressure
+          find /tmp/guard-pressure -type f -maxdepth 4 -print | sort
+
+      - name: Build compact learning memory
+        run: |
+          set -euo pipefail
+          python senju/scripts/guard_pressure_learning.py \
+            --input /tmp/guard-pressure \
+            --out reports/guard-pressure
+          cat reports/guard-pressure/summary.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload Senju guard-pressure learning
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: senju-guard-pressure-learning
+          retention-days: 30
+          if-no-files-found: error
+          path: |
+            reports/guard-pressure/learning.json
+            reports/guard-pressure/hypothesis.txt
+            reports/guard-pressure/summary.md

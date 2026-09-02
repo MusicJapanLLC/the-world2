@@ -1,0 +1,65 @@
+name: OpenHands Audit Router
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+jobs:
+  audit-router:
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
+    steps:
+      - name: Request OpenHands Audit
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const pr = context.payload.pull_request;
+            const headSha = pr.head.sha;
+            const prNumber = pr.number;
+
+            // Fetch existing comments on PR
+            const comments = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+              per_page: 100
+            });
+
+            // Check if @openhands audit was already requested for this head SHA
+            const alreadyRequested = comments.data.some(c =>
+              c.body.includes('@openhands') && c.body.includes(headSha)
+            );
+
+            if (alreadyRequested) {
+              console.log(`Audit request already sent for PR #${prNumber} at head SHA ${headSha}`);
+              return;
+            }
+
+            const commentBody = `@openhands Please perform an independent merge-readiness audit for PR #${prNumber}.
+
+            - **PR Head SHA**: \`${headSha}\`
+            - **Base Branch**: \`${pr.base.ref}\`
+            - **Head Branch**: \`${pr.head.ref}\`
+
+            ### Audit Instructions:
+            Please inspect the diff, CI/test evidence, security/reliability regressions, duplicated architecture, workflow conflicts, and base-branch drift.
+
+            Your final response MUST contain exactly one machine-readable verdict tied to this head SHA:
+            \`AI_MERGE_AUDIT: PASS ${headSha}\`
+            or
+            \`AI_MERGE_AUDIT: BLOCK ${headSha}\``;
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+              body: commentBody
+            });
+
+            console.log(`Created OpenHands audit request for PR #${prNumber} (head SHA ${headSha})`);

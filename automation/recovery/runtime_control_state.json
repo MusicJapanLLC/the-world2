@@ -1,0 +1,8 @@
+{
+  "schema": "the-world-runtime-controls/v1",
+  "emergency_stop": false,
+  "authority_revoked": false,
+  "human_intervention": false,
+  "deployment_freeze": false,
+  "note": "Production stop-learning reads these controls as authoritative hold signals. Active controls suppress recovery reward and automatic authority reacquisition."
+}

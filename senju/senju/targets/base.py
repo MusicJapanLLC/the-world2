@@ -25,6 +25,11 @@ VULN_CLASSES: tuple[str, ...] = (
     "race_condition", # 競合状態
     "secrets_exposure", # 秘密情報の露出
     "misconfig",      # 設定不備
+    "prompt_injection",         # プロンプトインジェクション
+    "tool_misuse",              # ツール・エージェント権限の誤用
+    "model_poisoning",          # モデル・コンテキスト汚染
+    "insecure_output_handling", # 出力検証不備
+    "agent_priv_esc",           # エージェント権限昇格
 )
 
 
@@ -50,6 +55,15 @@ ARCHETYPES: dict[str, dict[str, float]] = {
     "iot": {
         "rce": 1.7, "path_trav": 1.4, "misconfig": 1.6, "auth_bypass": 1.3,
         "secrets_exposure": 1.2, "deserial": 1.2,
+    },
+    "ai_agent_cluster": {
+        "prompt_injection": 2.0, "tool_misuse": 1.9, "agent_priv_esc": 1.8,
+        "insecure_output_handling": 1.6, "secrets_exposure": 1.5, "ssrf": 1.4,
+        "model_poisoning": 1.3, "misconfig": 1.2,
+    },
+    "cloud_native": {
+        "misconfig": 1.9, "secrets_exposure": 1.8, "ssrf": 1.7, "priv_esc": 1.6,
+        "rce": 1.3, "auth_bypass": 1.4, "jwt_weak": 1.3,
     },
 }
 

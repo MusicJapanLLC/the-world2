@@ -20,8 +20,10 @@ on:
       - company-society/RESEARCH_FREEDOM_DOCTRINE.md
 
 concurrency:
-  group: standment-whitehat-portfolio-cycle
-  cancel-in-progress: true
+  # Shared with Standment Security - Portfolio First R&D because both workflows
+  # persist autonomous research artifacts directly to the same branch.
+  group: standment-security-default-writer
+  cancel-in-progress: false
 
 permissions:
   contents: write
@@ -89,7 +91,27 @@ jobs:
           else
             git commit -m "rnd(security): preserve white-hat portfolio candidate"
             git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
-            git push origin "HEAD:${GITHUB_REF_NAME}"
+
+            pushed=0
+            for attempt in 1 2 3; do
+              git fetch origin "$GITHUB_REF_NAME"
+              if ! git rebase "origin/$GITHUB_REF_NAME"; then
+                git rebase --abort || true
+                echo "Concurrent writer produced a real content conflict; refusing unsafe overwrite."
+                exit 1
+              fi
+              if git push origin "HEAD:${GITHUB_REF_NAME}"; then
+                pushed=1
+                break
+              fi
+              echo "Branch advanced during white-hat push attempt ${attempt}; rebasing and retrying."
+              sleep $((attempt * 2))
+            done
+
+            if [[ "$pushed" -ne 1 ]]; then
+              echo "Could not persist white-hat evidence after three safe rebase attempts."
+              exit 1
+            fi
           fi
 
       - name: Preserve full white-hat R&D evidence

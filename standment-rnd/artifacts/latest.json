@@ -1,0 +1,385 @@
+{
+  "generated_at": "2026-08-30T11:17:12.951800+00:00",
+  "score": 94.0,
+  "intel_count": 40,
+  "audit": {
+    "controls": {
+      "security_policy": true,
+      "codeql": true,
+      "dependency_review": true,
+      "dependency_audit": true,
+      "self_heal": true,
+      "control_plane": true,
+      "realtime_kernel": true,
+      "gitignore": true,
+      "env_example": true
+    },
+    "workflow_count": 62,
+    "compile_ok": true,
+    "compile_note": "",
+    "secret_hygiene_findings": [],
+    "maturity_score": 100.0
+  },
+  "intel": [
+    {
+      "source": "CISA KEV",
+      "id": "CVE-2020-5849",
+      "vendor": "Unraid",
+      "product": "Unraid",
+      "date_added": "2021-11-03",
+      "action": "Apply updates per vendor instructions.",
+      "url": "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json"
+    },
+    {
+      "source": "CISA KEV",
+      "id": "CVE-2020-5847",
+      "vendor": "Unraid",
+      "product": "Unraid",
+      "date_added": "2021-11-03",
+      "action": "Apply updates per vendor instructions.",
+      "url": "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json"
+    },
+    {
+      "source": "CISA KEV",
+      "id": "CVE-2019-16759",
+      "vendor": "vBulletin",
+      "product": "vBulletin",
+      "date_added": "2021-11-03",
+      "action": "Apply updates per vendor instructions.",
+      "url": "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json"
+    },
+    {
+      "source": "CISA KEV",
+      "id": "CVE-2020-17496",
+      "vendor": "vBulletin",
+      "product": "vBulletin",
+      "date_added": "2021-11-03",
+      "action": "Apply updates per vendor instructions.",
+      "url": "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json"
+    },
+    {
+      "source": "CISA KEV",
+      "id": "CVE-2019-5544",
+      "vendor": "VMware",
+      "product": "VMware ESXi and Horizon DaaS",
+      "date_added": "2021-11-03",
+      "action": "Apply updates per vendor instructions.",
+      "url": "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json"
+    },
+    {
+      "source": "CISA KEV",
+      "id": "CVE-2020-3992",
+      "vendor": "VMware",
+      "product": "ESXi",
+      "date_added": "2021-11-03",
+      "action": "Apply updates per vendor instructions.",
+      "url": "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json"
+    },
+    {
+      "source": "CISA KEV",
+      "id": "CVE-2020-3950",
+      "vendor": "VMware",
+      "product": "Multiple Products",
+      "date_added": "2021-11-03",
+      "action": "Apply updates per vendor instructions.",
+      "url": "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json"
+    },
+    {
+      "source": "CISA KEV",
+      "id": "CVE-2021-22005",
+      "vendor": "VMware",
+      "product": "vCenter Server",
+      "date_added": "2021-11-03",
+      "action": "Apply updates per vendor instructions.",
+      "url": "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json"
+    },
+    {
+      "source": "CISA KEV",
+      "id": "CVE-2020-3952",
+      "vendor": "VMware",
+      "product": "vCenter Server",
+      "date_added": "2021-11-03",
+      "action": "Apply updates per vendor instructions.",
+      "url": "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json"
+    },
+    {
+      "source": "CISA KEV",
+      "id": "CVE-2021-21972",
+      "vendor": "VMware",
+      "product": "vCenter Server",
+      "date_added": "2021-11-03",
+      "action": "Apply updates per vendor instructions.",
+      "url": "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json"
+    },
+    {
+      "source": "CISA KEV",
+      "id": "CVE-2021-21985",
+      "vendor": "VMware",
+      "product": "vCenter Server",
+      "date_added": "2021-11-03",
+      "action": "Apply updates per vendor instructions.",
+      "url": "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json"
+    },
+    {
+      "source": "CISA KEV",
+      "id": "CVE-2020-4006",
+      "vendor": "VMware",
+      "product": "Multiple Products",
+      "date_added": "2021-11-03",
+      "action": "Apply updates per vendor instructions.",
+      "url": "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json"
+    },
+    {
+      "source": "CISA KEV",
+      "id": "CVE-2020-25213",
+      "vendor": "WordPress",
+      "product": "File Manager Plugin",
+      "date_added": "2021-11-03",
+      "action": "Apply updates per vendor instructions.",
+      "url": "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json"
+    },
+    {
+      "source": "CISA KEV",
+      "id": "CVE-2020-11738",
+      "vendor": "WordPress",
+      "product": "Snap Creek Duplicator Plugin",
+      "date_added": "2021-11-03",
+      "action": "Apply updates per vendor instructions.",
+      "url": "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json"
+    },
+    {
+      "source": "CISA KEV",
+      "id": "CVE-2019-9978",
+      "vendor": "WordPress",
+      "product": "Social Warfare Plugin",
+      "date_added": "2021-11-03",
+      "action": "Apply updates per vendor instructions.",
+      "url": "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json"
+    },
+    {
+      "source": "CISA KEV",
+      "id": "CVE-2021-27561",
+      "vendor": "Yealink",
+      "product": "Device Management",
+      "date_added": "2021-11-03",
+      "action": "Apply updates per vendor instructions.",
+      "url": "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json"
+    },
+    {
+      "source": "CISA KEV",
+      "id": "CVE-2021-40539",
+      "vendor": "Zoho",
+      "product": "ManageEngine",
+      "date_added": "2021-11-03",
+      "action": "Apply updates per vendor instructions.",
+      "url": "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json"
+    },
+    {
+      "source": "CISA KEV",
+      "id": "CVE-2020-10189",
+      "vendor": "Zoho",
+      "product": "ManageEngine",
+      "date_added": "2021-11-03",
+      "action": "Apply updates per vendor instructions.",
+      "url": "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json"
+    },
+    {
+      "source": "CISA KEV",
+      "id": "CVE-2019-8394",
+      "vendor": "Zoho",
+      "product": "ManageEngine",
+      "date_added": "2021-11-03",
+      "action": "Apply updates per vendor instructions.",
+      "url": "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json"
+    },
+    {
+      "source": "CISA KEV",
+      "id": "CVE-2020-29583",
+      "vendor": "Zyxel",
+      "product": "Multiple Products",
+      "date_added": "2021-11-03",
+      "action": "Apply updates per vendor instructions.",
+      "url": "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json"
+    },
+    {
+      "source": "GitHub Advisory Database",
+      "id": "GHSA-g5xc-5w98-jfvm",
+      "cve": "CVE-2026-55855",
+      "severity": "medium",
+      "published_at": "2026-08-28T22:53:12Z",
+      "summary": "MariaDB has  possible SQL injection in Buffer parameter escaping under big5/gbk/sjis/cp932/gb18030 client charsets",
+      "url": "https://github.com/advisories/GHSA-g5xc-5w98-jfvm"
+    },
+    {
+      "source": "GitHub Advisory Database",
+      "id": "GHSA-ffg3-p8fm-mjx2",
+      "cve": "CVE-2026-55830",
+      "severity": "high",
+      "published_at": "2026-08-28T22:51:35Z",
+      "summary": "RestrictedPython guard hooks can be shadowed via positional-only arguments",
+      "url": "https://github.com/advisories/GHSA-ffg3-p8fm-mjx2"
+    },
+    {
+      "source": "GitHub Advisory Database",
+      "id": "GHSA-c857-9x2m-cvh2",
+      "cve": "CVE-2026-55860",
+      "severity": "medium",
+      "published_at": "2026-08-28T22:50:56Z",
+      "summary": "org.mariadb:r2dbc-mariadb vulnerable to cleartext password disclosure to a man-in-the-middle server (clear-text auth plugins not gated on a secure transport)",
+      "url": "https://github.com/advisories/GHSA-c857-9x2m-cvh2"
+    },
+    {
+      "source": "GitHub Advisory Database",
+      "id": "GHSA-5rqc-86vf-g8r2",
+      "cve": "CVE-2026-55859",
+      "severity": "medium",
+      "published_at": "2026-08-28T22:49:03Z",
+      "summary": "org.mariadb:r2dbc-mariadb has Inappropriate Encoding for Output Context and Improper Encoding or Escaping of Output",
+      "url": "https://github.com/advisories/GHSA-5rqc-86vf-g8r2"
+    },
+    {
+      "source": "GitHub Advisory Database",
+      "id": "GHSA-xvr9-35cr-46v9",
+      "cve": "CVE-2026-55858",
+      "severity": "medium",
+      "published_at": "2026-08-28T22:47:19Z",
+      "summary": "org.mariadb.jdbc:mariadb-java-client has Inappropriate Encoding for Output Context",
+      "url": "https://github.com/advisories/GHSA-xvr9-35cr-46v9"
+    },
+    {
+      "source": "GitHub Advisory Database",
+      "id": "GHSA-qxvw-fvwx-5cp7",
+      "cve": "CVE-2026-55857",
+      "severity": "medium",
+      "published_at": "2026-08-28T22:45:01Z",
+      "summary": "org.mariadb.jdbc:mariadb-java-client has Cleartext Transmission of Sensitive Information and Insufficiently Protected Credentials",
+      "url": "https://github.com/advisories/GHSA-qxvw-fvwx-5cp7"
+    },
+    {
+      "source": "GitHub Advisory Database",
+      "id": "GHSA-g9jj-cgmh-9f38",
+      "cve": "CVE-2026-55856",
+      "severity": "medium",
+      "published_at": "2026-08-28T22:41:56Z",
+      "summary": "MariaDB has cleartext password disclosure to a MITM on the initial-handshake",
+      "url": "https://github.com/advisories/GHSA-g9jj-cgmh-9f38"
+    },
+    {
+      "source": "GitHub Advisory Database",
+      "id": "GHSA-j5g3-42wp-gqm3",
+      "cve": "CVE-2026-55843",
+      "severity": "high",
+      "published_at": "2026-08-28T22:37:24Z",
+      "summary": "Snipe-IT has an Improper Privilege Management issue",
+      "url": "https://github.com/advisories/GHSA-j5g3-42wp-gqm3"
+    },
+    {
+      "source": "GitHub Advisory Database",
+      "id": "GHSA-5v29-34h8-v68r",
+      "cve": "CVE-2026-55848",
+      "severity": "high",
+      "published_at": "2026-08-28T22:33:35Z",
+      "summary": "MapFish Print has XXE that allows reading arbitrary files of certain types",
+      "url": "https://github.com/advisories/GHSA-5v29-34h8-v68r"
+    },
+    {
+      "source": "GitHub Advisory Database",
+      "id": "GHSA-fp46-6vfw-gc9c",
+      "cve": "CVE-2026-55785",
+      "severity": "low",
+      "published_at": "2026-08-28T22:26:16Z",
+      "summary": "free5GC AUSF uses non-constant-time authentication comparisons and logs XRES* in 5G-AKA",
+      "url": "https://github.com/advisories/GHSA-fp46-6vfw-gc9c"
+    },
+    {
+      "source": "GitHub Advisory Database",
+      "id": "GHSA-334q-h5g3-fpxv",
+      "cve": "CVE-2026-55784",
+      "severity": "high",
+      "published_at": "2026-08-28T22:24:11Z",
+      "summary": "free5GC AUSF authentication contexts can be overwritten by concurrent requests for the same SUPI",
+      "url": "https://github.com/advisories/GHSA-334q-h5g3-fpxv"
+    },
+    {
+      "source": "GitHub Advisory Database",
+      "id": "GHSA-m4g4-86qc-v8w7",
+      "cve": "CVE-2026-55779",
+      "severity": "medium",
+      "published_at": "2026-08-28T22:19:32Z",
+      "summary": "silverstripe/versioned has XSS in archive admin restore",
+      "url": "https://github.com/advisories/GHSA-m4g4-86qc-v8w7"
+    },
+    {
+      "source": "GitHub Advisory Database",
+      "id": "GHSA-56wq-x3wv-3ff4",
+      "cve": "CVE-2026-55874",
+      "severity": "high",
+      "published_at": "2026-08-28T22:17:33Z",
+      "summary": "SeaweedFS: Path traversal in the S3 gateway X-Amz-Copy-Source header allows cross-bucket object read",
+      "url": "https://github.com/advisories/GHSA-56wq-x3wv-3ff4"
+    },
+    {
+      "source": "GitHub Advisory Database",
+      "id": "GHSA-hgpf-8634-g44c",
+      "cve": "CVE-2026-55873",
+      "severity": "medium",
+      "published_at": "2026-08-28T22:16:43Z",
+      "summary": "SeaweedFS: Improper authorization in the S3Tables / Iceberg REST management API lets a low-privileged S3 user enumerate administrator-owned table buckets",
+      "url": "https://github.com/advisories/GHSA-hgpf-8634-g44c"
+    },
+    {
+      "source": "GitHub Advisory Database",
+      "id": "GHSA-j769-9gv9-65gr",
+      "cve": "CVE-2026-55867",
+      "severity": "medium",
+      "published_at": "2026-08-28T22:15:41Z",
+      "summary": "Graylog token revocation endpoint allows authenticated users to delete other users’ access tokens",
+      "url": "https://github.com/advisories/GHSA-j769-9gv9-65gr"
+    },
+    {
+      "source": "GitHub Advisory Database",
+      "id": "GHSA-gqr6-r77p-c2pj",
+      "cve": "CVE-2026-55841",
+      "severity": "high",
+      "published_at": "2026-08-28T22:13:00Z",
+      "summary": "Fortigate syslog message parser can be exploited to modify or delete fields from the original message",
+      "url": "https://github.com/advisories/GHSA-gqr6-r77p-c2pj"
+    },
+    {
+      "source": "GitHub Advisory Database",
+      "id": "GHSA-mrpp-v6pg-p54x",
+      "cve": "CVE-2026-55764",
+      "severity": "high",
+      "published_at": "2026-08-28T22:08:56Z",
+      "summary": "klever-go: SFT add-quantity `int64` overflow bypasses a finite per-nonce MaxSupply",
+      "url": "https://github.com/advisories/GHSA-mrpp-v6pg-p54x"
+    },
+    {
+      "source": "GitHub Advisory Database",
+      "id": "GHSA-42r5-vhpq-m858",
+      "cve": "CVE-2026-55854",
+      "severity": "medium",
+      "published_at": "2026-08-28T22:04:53Z",
+      "summary": "MariaDB has Cleartext Transmission of Sensitive Information and Insufficiently Protected Credentials",
+      "url": "https://github.com/advisories/GHSA-42r5-vhpq-m858"
+    },
+    {
+      "source": "GitHub Advisory Database",
+      "id": "GHSA-p378-jp5r-gpgw",
+      "cve": "CVE-2026-55678",
+      "severity": "medium",
+      "published_at": "2026-08-28T20:32:57Z",
+      "summary": "arc has unauthenticated cluster node admission when `cluster.shared_secret` is unset",
+      "url": "https://github.com/advisories/GHSA-p378-jp5r-gpgw"
+    },
+    {
+      "source": "GitHub Advisory Database",
+      "id": "GHSA-x626-fcwx-f5pc",
+      "cve": "CVE-2026-55761",
+      "severity": "high",
+      "published_at": "2026-08-28T20:28:19Z",
+      "summary": "Portainer has Unauthenticated Restore Endpoint that Allows Admin Takeover on Uninitialized Instances",
+      "url": "https://github.com/advisories/GHSA-x626-fcwx-f5pc"
+    }
+  ]
+}

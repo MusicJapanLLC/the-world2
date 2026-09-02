@@ -2,20 +2,42 @@ name: SECURITY - Continuous Elite White-Hat Portfolio
 
 on:
   schedule:
-    # GitHub scheduled workflows support 5-minute granularity. Each run performs
-    # five one-minute evidence rounds so the research loop keeps a minute cadence.
+    # Twelve bounded rounds every five minutes. AI Foundry + AI Security Eval may
+    # change research priority only; scope, permissions and verification gates stay fixed.
     - cron: '*/5 * * * *'
   workflow_dispatch:
-  push:
+  pull_request:
     branches: ['claude/employee-onboarding-setup-udm86']
     paths:
       - '.github/workflows/security-continuous-whitehat.yml'
       - 'automation/security/elite_whitehat_continuous.py'
+      - 'automation/security/test_elite_whitehat_continuous.py'
+      - 'automation/security/ai_security_feedback.py'
+      - 'automation/security/test_ai_security_feedback.py'
+      - 'automation/ai_foundry/**'
+  push:
+    branches: ['claude/employee-onboarding-setup-udm86']
+    paths:
+      - '.github/workflows/security-continuous-whitehat.yml'
+      - '.github/workflows/standment-ai-security-eval.yml'
+      - 'automation/security/elite_whitehat_continuous.py'
+      - 'automation/security/test_elite_whitehat_continuous.py'
+      - 'automation/security/ai_security_feedback.py'
+      - 'automation/security/test_ai_security_feedback.py'
+      - 'automation/security/portfolio_rnd.py'
+      - 'automation/security/test_portfolio_rnd.py'
+      - 'standment-security/security_research_frontier.json'
+      - 'standment-security/security_framework_crosswalk.json'
+      - 'standment-security/SECURITY_EXTERNAL_BASELINE.md'
       - 'standment-security/ELITE_WHITEHAT_CELL.md'
+      - 'standment-security/CONTROL_EVIDENCE_TEMPLATE.md'
       - 'standment-security/security_portfolio_program.json'
+      - 'standment-security/ai-security/**'
+      - 'standment-security/evidence-packs/**'
+      - 'security/STANDMENT_SECURITY_STANDARD.md'
 
 concurrency:
-  group: security-continuous-whitehat
+  group: security-continuous-whitehat-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: false
 
 permissions:
@@ -28,78 +50,222 @@ env:
 jobs:
   continuous-whitehat:
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 9
+    env:
+      GH_TOKEN: ${{ github.token }}
     steps:
       - name: Checkout THE WORLD
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          persist-credentials: false
 
       - name: Setup Python
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
         with:
           python-version: '3.12'
 
-      - name: Verify continuous White-Hat worker
+      - name: Verify Security x AI collaboration boundaries
         run: |
           set -euo pipefail
-          python -m py_compile automation/security/elite_whitehat_continuous.py
+          python -m py_compile automation/security/elite_whitehat_continuous.py automation/security/ai_security_feedback.py
+          (cd automation/security && python -m unittest -v test_elite_whitehat_continuous.py)
+          python -m unittest -v automation.security.test_ai_security_feedback
+          python -m unittest -v automation.ai_foundry.test_minute_evolution
+          python - <<'PY'
+          import json
+          frontier=json.load(open('standment-security/security_research_frontier.json', encoding='utf-8'))
+          crosswalk=json.load(open('standment-security/security_framework_crosswalk.json', encoding='utf-8'))
+          lenses={x.get('id') for x in frontier.get('lenses', [])}
+          assert len(lenses) >= 16, 'AI-security collaboration frontier must stay broad'
+          assert {'AI-EVAL-FEEDBACK','AI-MEMORY-PROVENANCE','AI-EVAL-DRIFT','AI-CAPABILITY-DIFF'} <= lenses
+          assert set(frontier.get('selection_policy', {}).get('stages', [])) == {'DISCOVERY','FALSIFICATION','REMEDIATION','RETEST','PORTFOLIO'}
+          frameworks=crosswalk.get('frameworks', {})
+          mappings=crosswalk.get('lens_mapping', {})
+          assert {'OWASP-LLM-2025','NIST-AI-600-1','MITRE-ATLAS','SLSA-1.2','CISA-SBD'} <= set(frameworks)
+          for row in frontier['lenses']:
+              lens_id=row.get('id')
+              assert row.get('customer_use') and row.get('safe_test') and row.get('refs'), lens_id
+              mapped=mappings.get(lens_id, [])
+              assert mapped and all(x in frameworks for x in mapped), lens_id
+          print(f"joint frontier lenses={len(lenses)} stages=5 frameworks={len(frameworks)}")
+          PY
           rm -rf "$OUT_DIR"
           mkdir -p "$OUT_DIR"
 
-      - name: Five one-minute Elite White-Hat R&D rounds
+      - name: Load latest AI Foundry assist evidence
+        id: ai_assist
         shell: bash
         run: |
           set -euo pipefail
-          for round in 1 2 3 4 5; do
-            echo "## Elite White-Hat minute round ${round}" >> "$GITHUB_STEP_SUMMARY"
+          mkdir -p "$OUT_DIR/ai-assist"
+          printf '%s\n' '{"status":"NO_AI_ASSIST"}' > "$OUT_DIR/ai-assist.json"
+          source_run=""
+          focus="NONE"
+          seed="$(python - <<'PY'
+          import hashlib,os
+          print(int(hashlib.sha256(os.environ['GITHUB_RUN_ID'].encode()).hexdigest()[:10],16)%100000000)
+          PY
+          )"
+
+          if [[ "$GITHUB_EVENT_NAME" != "pull_request" ]]; then
+            prev="$(gh run list --repo "$GITHUB_REPOSITORY" --workflow ai-dev-minute-foundry.yml --status success --limit 12 --json databaseId --jq '.[].databaseId' | head -n1 || true)"
+            if [[ -n "$prev" ]]; then
+              if gh run download "$prev" --repo "$GITHUB_REPOSITORY" --name "ai-dev-minute-foundry-${prev}" --dir "$OUT_DIR/ai-assist"; then
+                candidate="$(find "$OUT_DIR/ai-assist" -type f -name hourly-summary.json | head -n1 || true)"
+                if [[ -n "$candidate" ]]; then
+                  cp "$candidate" "$OUT_DIR/ai-assist.json"
+                  source_run="$prev"
+                  read -r seed focus < <(python - <<'PY'
+          import hashlib,json,os
+          d=json.load(open(os.environ['OUT_DIR']+'/ai-assist.json',encoding='utf-8'))
+          raw='|'.join(str(d.get(k) or '') for k in ('report_fingerprint','weakest_next_focus','end_champion'))
+          print(int(hashlib.sha256(raw.encode()).hexdigest()[:12],16)%100000000, str(d.get('weakest_next_focus') or 'NONE'))
+          PY
+          )
+                fi
+              fi
+            fi
+          fi
+          echo "seed=$seed" >> "$GITHUB_OUTPUT"
+          echo "focus=$focus" >> "$GITHUB_OUTPUT"
+          echo "source_run=$source_run" >> "$GITHUB_OUTPUT"
+          echo "AI assist: source=${source_run:-NONE}; weakest=$focus; seed=$seed" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Load latest bounded AI Security Eval coaching
+        id: eval_assist
+        env:
+          AI_ASSIST_SEED: ${{ steps.ai_assist.outputs.seed }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$OUT_DIR/eval-assist"
+          printf '%s\n' '{"status":"NO_EVAL_ASSIST"}' > "$OUT_DIR/eval-assist.json"
+          source_run=""
+          token="NO_EVAL_FEEDBACK"
+          lens=""
+
+          if [[ "$GITHUB_EVENT_NAME" != "pull_request" ]]; then
+            prev="$(gh run list --repo "$GITHUB_REPOSITORY" --workflow standment-ai-security-eval.yml --status success --limit 12 --json databaseId --jq '.[].databaseId' | head -n1 || true)"
+            if [[ -n "$prev" ]]; then
+              if gh run download "$prev" --repo "$GITHUB_REPOSITORY" --name "standment-ai-security-eval-${prev}" --dir "$OUT_DIR/eval-assist"; then
+                candidate="$(find "$OUT_DIR/eval-assist" -type f -name feedback.json | head -n1 || true)"
+                if [[ -n "$candidate" ]]; then
+                  cp "$candidate" "$OUT_DIR/eval-assist.json"
+                  source_run="$prev"
+                  read -r token lens < <(python - <<'PY'
+          import json,os
+          d=json.load(open(os.environ['OUT_DIR']+'/eval-assist.json',encoding='utf-8'))
+          c=d.get('constraints') or {}
+          assert d.get('authority') == 'priority_only'
+          assert c.get('promotion_gate_unchanged') is True
+          assert c.get('permission_surface_unchanged') is True
+          assert c.get('external_scope_unchanged') is True
+          print(str(d.get('feedback_token') or 'NO_EVAL_FEEDBACK'), str((d.get('guidance') or {}).get('security_priority_lens') or ''))
+          PY
+          )
+                fi
+              fi
+            fi
+          fi
+
+          combined_seed="$(EVAL_TOKEN="$token" python - <<'PY'
+          import hashlib,os
+          raw=f"{os.environ.get('AI_ASSIST_SEED','')}|{os.environ.get('EVAL_TOKEN','')}"
+          print(int(hashlib.sha256(raw.encode()).hexdigest()[:12],16)%100000000)
+          PY
+          )"
+          echo "token=$token" >> "$GITHUB_OUTPUT"
+          echo "lens=$lens" >> "$GITHUB_OUTPUT"
+          echo "source_run=$source_run" >> "$GITHUB_OUTPUT"
+          echo "combined_seed=$combined_seed" >> "$GITHUB_OUTPUT"
+          echo "Eval assist: source=${source_run:-NONE}; preferred-lens=${lens:-NONE}; authority=priority_only" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Run accelerated Elite White-Hat joint rounds
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "$GITHUB_EVENT_NAME" == "pull_request" ]]; then
+            rounds=6
+            sleep_seconds=0
+          else
+            rounds=12
+            sleep_seconds=20
+          fi
+          for round in $(seq 1 "$rounds"); do
+            echo "## Elite White-Hat joint round ${round}" >> "$GITHUB_STEP_SUMMARY"
             python automation/security/elite_whitehat_continuous.py \
               --round "$round" \
-              --run-id "${GITHUB_RUN_ID}-${round}" \
+              --run-id "${{ steps.eval_assist.outputs.combined_seed }}-${GITHUB_RUN_ID}-${round}" \
+              --preferred-lens "${{ steps.eval_assist.outputs.lens }}" \
               --out-dir "$OUT_DIR"
-            cat "$OUT_DIR/round-0${round}.md" >> "$GITHUB_STEP_SUMMARY"
-            if [[ "$round" != "5" ]]; then
-              sleep 60
-            fi
+            cat "$OUT_DIR/round-$(printf '%02d' "$round").md" >> "$GITHUB_STEP_SUMMARY"
+            if [[ "$sleep_seconds" != "0" && "$round" != "$rounds" ]]; then sleep "$sleep_seconds"; fi
           done
 
-      - name: Build human-readable portfolio digest
+      - name: Build human-readable joint portfolio digest
+        env:
+          AI_ASSIST_SOURCE_RUN: ${{ steps.ai_assist.outputs.source_run }}
+          AI_ASSIST_FOCUS: ${{ steps.ai_assist.outputs.focus }}
+          EVAL_ASSIST_SOURCE_RUN: ${{ steps.eval_assist.outputs.source_run }}
+          EVAL_ASSIST_LENS: ${{ steps.eval_assist.outputs.lens }}
+          EVAL_ASSIST_TOKEN: ${{ steps.eval_assist.outputs.token }}
         run: |
           set -euo pipefail
           python - <<'PY'
-          import glob, json, os
+          import glob,json,os
+          from collections import Counter
           from pathlib import Path
-
-          out = Path(os.environ['OUT_DIR'])
-          rows = [json.load(open(p, encoding='utf-8')) for p in sorted(glob.glob(str(out / 'round-*.json')))]
-          coverage = [float(r['evidence']['coverage']) for r in rows]
-          weakest = sorted(rows, key=lambda r: (float(r['evidence']['coverage']), r['lens_id']))[0]
-          lines = [
-              '# SECURITY HOURLY SOURCE PACK',
-              '',
+          out=Path(os.environ['OUT_DIR'])
+          rows=[json.load(open(p,encoding='utf-8')) for p in sorted(glob.glob(str(out/'round-*.json')))]
+          coverage=[float(r['evidence']['coverage']) for r in rows]
+          unique_pairs={(r['lens_id'],r['research_stage']) for r in rows}
+          stage_counts=Counter(r['research_stage'] for r in rows)
+          framework_counts=Counter(f['id'] for r in rows for f in r.get('external_frameworks',[]))
+          source_counts=Counter(r.get('selection_source') or 'broad_rotation' for r in rows)
+          most_blocked=sorted(rows,key=lambda r:(len(r.get('promotion_blockers') or []),-float(r['evidence']['coverage'])),reverse=True)[0]
+          lines=[
+              '# SECURITY × AI JOINT SOURCE PACK','',
               f'- GitHub run: **{os.environ.get("GITHUB_RUN_ID")}**',
-              f'- Elite White-Hat micro rounds: **{len(rows)}**',
+              f'- White-Hat rounds: **{len(rows)}**',
+              f'- AI Foundry source: **{os.getenv("AI_ASSIST_SOURCE_RUN") or "NONE"}**',
+              f'- AI weakest focus: **{os.getenv("AI_ASSIST_FOCUS") or "NONE"}**',
+              f'- AI Security Eval source: **{os.getenv("EVAL_ASSIST_SOURCE_RUN") or "NONE"}**',
+              f'- Eval preferred lens: **{os.getenv("EVAL_ASSIST_LENS") or "NONE"}**',
+              f'- Selection source mix: **{dict(source_counts)}**',
+              f'- Unique lens × stage: **{len(unique_pairs)}/{len(rows)}**',
+              f'- Stage mix: **{dict(stage_counts)}**',
+              f'- Framework mix: **{dict(framework_counts)}**',
               f'- Average evidence coverage: **{sum(coverage)/max(1,len(coverage)):.0%}**',
               '- Status: **BUILDING**',
-              '',
-              '## このrunで作ったもの',
+              '- AI/Eval assists are priority-only; scope, permissions and VERIFIED gates remain unchanged.',
+              '- Preferred Eval lens remains bounded to worker-defined assist rounds; broad rotation is preserved.',
+              '', '## 次に優先する証拠ギャップ',
+              f"- {most_blocked['artifact']} / Stage {most_blocked['research_stage']}",
+              f"- 次の改善: {most_blocked['next_improvement']}", ''
           ]
-          for row in rows:
-              lines.append(f"- **{row['artifact']}** — {row['use_case']} / Evidence {row['evidence']['coverage']:.0%}")
-          lines += [
-              '',
-              '## 一番弱い証拠',
-              f"- {weakest['artifact']} / Evidence {weakest['evidence']['coverage']:.0%}",
-              f"- 次の改善: {weakest['next_improvement']}",
-              '',
-              '## 反証・限界',
-              '- リポジトリ上のEvidence存在は、ランタイム挙動・顧客価値・脆弱性不在を証明しない。',
-              '- VERIFIED昇格には所有/明示許可済みscope、行動証拠、反証、再現性が別途必要。',
-              '',
-              '## Slack向けルール',
-              '- コードは投稿しない。',
-              '- 1時間に1回、最新の成果物・用途・差分・検証状態・次の改善だけを人間語で報告する。',
-              '',
-          ]
-          (out / 'hourly-source-pack.md').write_text('\n'.join(lines), encoding='utf-8')
+          (out/'hourly-source-pack.md').write_text('\n'.join(lines),encoding='utf-8')
+          (out/'run-index.json').write_text(json.dumps({
+              'run_id':os.environ.get('GITHUB_RUN_ID'),
+              'micro_rounds':len(rows),
+              'ai_assist_source_run':os.getenv('AI_ASSIST_SOURCE_RUN') or None,
+              'ai_assist_focus':os.getenv('AI_ASSIST_FOCUS') or None,
+              'eval_assist_source_run':os.getenv('EVAL_ASSIST_SOURCE_RUN') or None,
+              'eval_assist_lens':os.getenv('EVAL_ASSIST_LENS') or None,
+              'eval_assist_token':os.getenv('EVAL_ASSIST_TOKEN') or None,
+              'selection_source_mix':dict(source_counts),
+              'unique_lens_stage_pairs':len(unique_pairs),
+              'stage_mix':dict(stage_counts),
+              'external_framework_mix':dict(framework_counts),
+              'average_repository_evidence_coverage':sum(coverage)/max(1,len(coverage)),
+              'priority_next':{
+                  'lens_id':most_blocked['lens_id'],
+                  'stage':most_blocked['research_stage'],
+                  'artifact':most_blocked['artifact'],
+                  'external_frameworks':[x['id'] for x in most_blocked.get('external_frameworks',[])],
+                  'next_improvement':most_blocked['next_improvement'],
+                  'promotion_blockers':most_blocked.get('promotion_blockers') or [],
+              },
+          },ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
           PY
           cat "$OUT_DIR/hourly-source-pack.md" >> "$GITHUB_STEP_SUMMARY"
 
@@ -114,3 +280,9 @@ jobs:
             /tmp/security-continuous-whitehat/round-*.json
             /tmp/security-continuous-whitehat/round-*.md
             /tmp/security-continuous-whitehat/hourly-source-pack.md
+            /tmp/security-continuous-whitehat/run-index.json
+            /tmp/security-continuous-whitehat/ai-assist.json
+            /tmp/security-continuous-whitehat/eval-assist.json
+            standment-security/security_research_frontier.json
+            standment-security/security_framework_crosswalk.json
+            standment-security/SECURITY_EXTERNAL_BASELINE.md

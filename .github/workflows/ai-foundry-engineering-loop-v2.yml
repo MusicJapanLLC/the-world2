@@ -1,0 +1,75 @@
+name: AI FOUNDRY - Engineering Loop V2 Canary
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - '.github/workflows/ai-foundry-engineering-loop-v2.yml'
+      - 'automation/ai_foundry/engineering_loop.py'
+      - 'tests/test_ai_foundry_engineering_loop_v2.py'
+      - 'tests/engineering_loop_fault_canary.py'
+  push:
+    branches: ['claude/employee-onboarding-setup-udm86']
+    paths:
+      - '.github/workflows/ai-foundry-engineering-loop-v2.yml'
+      - 'automation/ai_foundry/engineering_loop.py'
+      - 'tests/test_ai_foundry_engineering_loop_v2.py'
+      - 'tests/engineering_loop_fault_canary.py'
+
+permissions:
+  contents: read
+
+jobs:
+  boundary-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: '3.12'
+      - run: python -m unittest tests/test_ai_foundry_engineering_loop_v2.py -v
+
+  live-self-repair-canary:
+    if: github.event_name != 'pull_request'
+    needs: boundary-tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: '3.12'
+      - name: Build normal and forced-failure canaries
+        run: |
+          cat > /tmp/normal.json <<'JSON'
+          {"job":{"id":"engineering-v2-canary","request":{"request_text":"Build a dependency-free browser Pomodoro timer with Start, Pause, Reset, accessible controls and node syntax validation."}}}
+          JSON
+          cat > /tmp/repair.json <<'JSON'
+          {"job":{"id":"engineering-v2-repair-canary","request":{"request_text":"Build a dependency-free browser habit tracker with add, toggle, delete, local persistence and node syntax validation."}}}
+          JSON
+          rm -rf /tmp/foundry-normal /tmp/foundry-repair
+          python automation/ai_foundry/engineering_loop.py --payload /tmp/normal.json --out-root /tmp/foundry-normal --meta-out /tmp/normal-meta.json --repair-rounds 3
+          python tests/engineering_loop_fault_canary.py --payload /tmp/repair.json --out-root /tmp/foundry-repair --meta-out /tmp/repair-meta.json --repair-rounds 3
+          python - <<'PY'
+          import json
+          n=json.load(open('/tmp/normal-meta.json')); r=json.load(open('/tmp/repair-meta.json'))
+          assert n['verified'] is True
+          assert r['verified'] is True and r['repair_rounds_used'] >= 1
+          assert r['history'][0]['passed'] is False and r['history'][-1]['passed'] is True
+          print('REAL_SELF_REPAIR_VERIFIED')
+          PY
+      - name: Publish truthful evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: ai-foundry-engineering-loop-v2-${{ github.run_id }}
+          retention-days: 30
+          if-no-files-found: warn
+          path: |
+            /tmp/normal-meta.json
+            /tmp/repair-meta.json

@@ -59,6 +59,19 @@ jobs:
           if [[ "$rc" -ne 0 ]]; then
             echo '--- sanitized Copilot diagnostic ---' >&2
             cat tomoki-copilot-diagnostic.log >&2
+
+            # Known external-provider blockers (quota/entitlement) are not a
+            # SKEPTIC bug. Report them as a non-failing BLOCKED state instead
+            # of tripping the Evolution Watchdog's repeated-failure repair
+            # loop. Any other failure reason still fails the job as before.
+            if grep -qiE 'exceeded your monthly quota|monthly quota has been exceeded|insufficient quota|quota exceeded' tomoki-copilot-diagnostic.log; then
+              {
+                echo ''
+                echo '_SKEPTIC did not run: external Copilot quota/entitlement blocker. This is not a code failure._'
+              } >> tomoki-report.md
+              echo 'SKEPTIC external Copilot quota/entitlement blocker; not a code failure.' >> "$GITHUB_STEP_SUMMARY"
+              rc=0
+            fi
           fi
           exit "$rc"
       - name: Persist SKEPTIC evidence for Manager

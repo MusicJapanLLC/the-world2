@@ -19,6 +19,9 @@ concurrency:
 permissions:
   contents: read
   actions: read
+  issues: write
+  discussions: write
+  pull-requests: write
 
 env:
   GH_TOKEN: ${{ github.token }}
@@ -32,6 +35,8 @@ env:
   WORDPRESS_BASE_URL: ${{ secrets.WORDPRESS_BASE_URL }}
   WORDPRESS_USERNAME: ${{ secrets.WORDPRESS_USERNAME }}
   WORDPRESS_APP_PASSWORD: ${{ secrets.WORDPRESS_APP_PASSWORD }}
+  DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+  SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
 
 jobs:
   publish:

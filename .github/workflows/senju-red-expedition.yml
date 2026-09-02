@@ -1,0 +1,120 @@
+name: Senju - RED Autonomous Expedition
+
+on:
+  schedule:
+    - cron: "41 */3 * * *"
+  workflow_dispatch:
+  push:
+    branches:
+      - "claude/employee-onboarding-setup-udm86"
+      - "senju/red-expedition-autonomy-20260831"
+    paths:
+      - "senju/senju/red_expedition.py"
+      - "senju/senju/offense.py"
+      - "senju/senju/offense_intel.py"
+      - "senju/senju/external.py"
+      - "senju/tests/test_red_expedition.py"
+      - "senju/examples/red-expedition-scope.example.json"
+      - ".github/workflows/senju-red-expedition.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: senju-red-expedition-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  red-expedition:
+    name: RED choose -> contact -> discover -> learn -> attack research
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      SENJU_RED_EXPEDITION_SCOPE_JSON: ${{ secrets.SENJU_RED_EXPEDITION_SCOPE_JSON }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: "3.12"
+
+      - name: Verify RED expedition engine
+        working-directory: senju
+        env:
+          PIP_DISABLE_PIP_VERSION_CHECK: "1"
+          PIP_NO_INPUT: "1"
+        run: |
+          set -euo pipefail
+          python -m pip install pytest==9.1.1
+          python -m pytest tests/test_red_expedition.py tests/test_offense.py -q
+
+      - name: Build real external canary authority
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/senju-red-expedition
+          cat > /tmp/senju-red-expedition/canary-scope.json <<'JSON'
+          {
+            "schema": "senju-red-expedition-scope/v1",
+            "scope_id": "red-expedition-public-canary",
+            "allowed_hosts": ["example.com"],
+            "seed_urls": ["https://example.com/"],
+            "max_contacts": 4,
+            "discovery_depth": 1,
+            "max_links_per_response": 12,
+            "allow_http": false,
+            "retries": 1,
+            "timeout_seconds": 6
+          }
+          JSON
+
+      - name: Let RED autonomously attempt real external contact
+        working-directory: senju
+        run: |
+          set -euo pipefail
+          python -m senju.red_expedition \
+            --scope /tmp/senju-red-expedition/canary-scope.json \
+            --out /tmp/senju-red-expedition/canary-report.json \
+            --cycles 8 \
+            --seed 20260831
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          report = json.loads(Path('/tmp/senju-red-expedition/canary-report.json').read_text())
+          assert report['schema'] == 'senju-red-expedition/v1'
+          assert report['network_io'] is True
+          assert report['autonomous_route_selection'] is True
+          assert report['autonomous_same_authority_discovery'] is True
+          assert report['authority_self_expansion'] is False
+          assert 1 <= report['contact_count'] <= 4
+          assert all(set(item.get('contacted_hosts', [])) <= {'example.com'} for item in report['contacts'])
+          assert report['red_handoff']['doctrine'] == 'REAL_OBSERVATION_TO_RED_RESEARCH'
+          assert report['priority_next']
+          print('SENJU_RED_REAL_EXTERNAL_EXPEDITION_VERIFIED')
+          print('contacts=', report['contact_count'])
+          print('priorities=', ','.join(report['priority_next']))
+          PY
+
+      - name: Run enrolled owned-target expedition when configured
+        if: ${{ env.SENJU_RED_EXPEDITION_SCOPE_JSON != '' }}
+        working-directory: senju
+        run: |
+          set -euo pipefail
+          printf '%s' "$SENJU_RED_EXPEDITION_SCOPE_JSON" > /tmp/senju-red-expedition/owned-scope.json
+          python -m senju.red_expedition \
+            --scope /tmp/senju-red-expedition/owned-scope.json \
+            --out /tmp/senju-red-expedition/owned-report.json \
+            --cycles 16 \
+            --seed "${GITHUB_RUN_ID}"
+          echo "SENJU_RED_OWNED_TARGET_EXPEDITION_COMPLETED"
+
+      - name: Publish RED expedition evidence
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        with:
+          name: senju-red-expedition-${{ github.run_id }}
+          retention-days: 30
+          if-no-files-found: error
+          path: /tmp/senju-red-expedition/

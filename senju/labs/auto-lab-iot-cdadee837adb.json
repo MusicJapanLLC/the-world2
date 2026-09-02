@@ -1,0 +1,30 @@
+{
+  "archetype": "iot",
+  "coverage_gaps": [
+    "secrets_exposure",
+    "sqli",
+    "ssrf"
+  ],
+  "description": "Auto-generated local lab from bounded coverage/ELO evidence",
+  "fingerprint": "7d033df94c8483401e6f22c9881ed0d55d099a1b210664981b812bc5ac1c155f",
+  "host": null,
+  "name": "auto-lab-iot-cdadee837adb",
+  "schema": "senju-auto-lab/v3",
+  "surfaces": [
+    {
+      "difficulty": 0.511,
+      "name": "auto-lab-iot-cdadee837adb:secrets-exposure",
+      "vuln_class": "secrets_exposure"
+    },
+    {
+      "difficulty": 0.558,
+      "name": "auto-lab-iot-cdadee837adb:sqli",
+      "vuln_class": "sqli"
+    },
+    {
+      "difficulty": 0.572,
+      "name": "auto-lab-iot-cdadee837adb:ssrf",
+      "vuln_class": "ssrf"
+    }
+  ]
+}

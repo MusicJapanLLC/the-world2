@@ -1,0 +1,180 @@
+name: Standment - Agent Permission Boundary Evidence
+
+on:
+  schedule:
+    # Four independent evidence closure opportunities per hour.
+    - cron: '7,22,37,52 * * * *'
+  workflow_dispatch:
+  pull_request:
+    branches: ['claude/employee-onboarding-setup-udm86']
+    paths:
+      - '.github/workflows/standment-agent-permission-boundary.yml'
+      - 'automation/security/agent_permission_boundary_eval.py'
+      - 'automation/security/test_agent_permission_boundary_eval.py'
+      - 'automation/security/workflow_policy.py'
+      - 'automation/security/workflow_policy_entrypoint.py'
+      - 'automation/world/secured_realtime_kernel.py'
+      - 'automation/world/realtime_plan.json'
+      - 'standment-security/ai-security/agent-permission-boundary-lab.md'
+      - 'standment-security/security_portfolio_program.json'
+  push:
+    branches: ['claude/employee-onboarding-setup-udm86']
+    paths:
+      - '.github/workflows/standment-agent-permission-boundary.yml'
+      - 'automation/security/agent_permission_boundary_eval.py'
+      - 'automation/security/test_agent_permission_boundary_eval.py'
+      - 'automation/security/workflow_policy.py'
+      - 'automation/security/workflow_policy_entrypoint.py'
+      - 'automation/world/secured_realtime_kernel.py'
+      - 'automation/world/realtime_plan.json'
+      - 'standment-security/ai-security/agent-permission-boundary-lab.md'
+      - 'standment-security/security_portfolio_program.json'
+
+concurrency:
+  group: standment-agent-permission-boundary-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  actions: read
+
+env:
+  EVIDENCE_DIR: /tmp/sec-port-009
+  GH_TOKEN: ${{ github.token }}
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Checkout THE WORLD
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          persist-credentials: false
+
+      - name: Setup Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: '3.12'
+
+      - name: Test permission-boundary evidence contract
+        run: |
+          set -euo pipefail
+          python -m unittest -v automation.security.test_agent_permission_boundary_eval
+          python automation/security/workflow_policy_entrypoint.py
+
+      - name: Run no-I/O counterevidence on PR/local contract
+        run: |
+          set -euo pipefail
+          mkdir -p "$EVIDENCE_DIR/contract"
+          python automation/security/agent_permission_boundary_eval.py \
+            --out-json "$EVIDENCE_DIR/contract/result.json" \
+            --out-md "$EVIDENCE_DIR/contract/result.md" \
+            --require-pass
+          cat "$EVIDENCE_DIR/contract/result.md" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Preserve contract evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: sec-port-009-contract-${{ github.run_id }}
+          path: /tmp/sec-port-009/contract/
+          retention-days: 90
+          if-no-files-found: warn
+
+  runtime-evidence:
+    if: github.event_name != 'pull_request'
+    needs: contract
+    strategy:
+      fail-fast: false
+      matrix:
+        lane: [primary, independent-retest]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout THE WORLD fresh
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          persist-credentials: false
+
+      - name: Setup Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: '3.12'
+
+      - name: Re-run tests independently
+        run: |
+          set -euo pipefail
+          python -m unittest -v automation.security.test_agent_permission_boundary_eval
+          python automation/security/workflow_policy_entrypoint.py
+
+      - name: Load latest successful owned runtime evidence
+        id: source
+        shell: bash
+        run: |
+          set -euo pipefail
+          lane_dir="$EVIDENCE_DIR/${{ matrix.lane }}"
+          mkdir -p "$lane_dir/source"
+          source_run="$(gh run list \
+            --repo "$GITHUB_REPOSITORY" \
+            --workflow the-world-realtime-kernel.yml \
+            --status success \
+            --limit 20 \
+            --json databaseId \
+            --jq '.[].databaseId' | head -n1)"
+          if [[ -z "$source_run" ]]; then
+            echo 'No successful realtime runtime-security run exists.' >&2
+            exit 2
+          fi
+          gh run download "$source_run" \
+            --repo "$GITHUB_REPOSITORY" \
+            --name "world-realtime-security-evidence-${source_run}" \
+            --dir "$lane_dir/source"
+          pulse="$(find "$lane_dir/source" -type f -name world-realtime-pulse.json | head -n1)"
+          if [[ -z "$pulse" ]]; then
+            echo 'Downloaded artifact lacks world-realtime-pulse.json.' >&2
+            exit 2
+          fi
+          cp "$pulse" "$lane_dir/world-realtime-pulse.json"
+          echo "source_run=$source_run" >> "$GITHUB_OUTPUT"
+          echo "Runtime source: $source_run" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Evaluate actual owned permission boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          lane_dir="$EVIDENCE_DIR/${{ matrix.lane }}"
+          python automation/security/agent_permission_boundary_eval.py \
+            --pulse "$lane_dir/world-realtime-pulse.json" \
+            --source-run "${{ steps.source.outputs.source_run }}" \
+            --out-json "$lane_dir/result.json" \
+            --out-md "$lane_dir/result.md" \
+            --require-pass
+          cat "$lane_dir/result.md" >> "$GITHUB_STEP_SUMMARY"
+
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          lane=os.environ['LANE']
+          d=json.loads(Path(f"/tmp/sec-port-009/{lane}/result.json").read_text(encoding='utf-8'))
+          assert d['verification_state'] == 'SCOPED_VERIFIED_CANDIDATE'
+          assert d['status'] == 'PASS'
+          assert d['source_runtime_present'] is True
+          assert d['allow_observations'] >= 1
+          assert d['deny_observations'] >= 1
+          assert d['deny_reached_execution'] == 0
+          assert d['scope_coverage']['PB-01-cross-tenant-denial']['state'] == 'NOT_VERIFIED'
+          assert d['scope_coverage']['PB-02-role-escalation-denial']['state'] == 'NOT_VERIFIED'
+          print('SEC-PORT-009 scoped permission evidence truth gate PASS', d['fingerprint'])
+          PY
+        env:
+          LANE: ${{ matrix.lane }}
+
+      - name: Preserve independent runtime evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: sec-port-009-${{ matrix.lane }}-${{ github.run_id }}
+          path: /tmp/sec-port-009/${{ matrix.lane }}/
+          retention-days: 90
+          if-no-files-found: error

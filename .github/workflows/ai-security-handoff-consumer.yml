@@ -1,0 +1,253 @@
+name: THE WORLD - AI x Security Handoff Consumer
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+  push:
+    branches: ['claude/employee-onboarding-setup-udm86']
+    paths:
+      - '.github/workflows/ai-security-handoff-consumer.yml'
+      - 'automation/world/consume_ai_security_handoff.py'
+      - 'automation/world/test_consume_ai_security_handoff.py'
+      - 'automation/world/ai_security_joint_lab.py'
+      - 'automation/world/test_ai_security_joint_lab.py'
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: the-world-ai-security-handoff-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  HANDOFF_DIR: /tmp/the-world-ai-security-handoff
+  GH_TOKEN: ${{ github.token }}
+
+jobs:
+  consume-handoff:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Checkout THE WORLD
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          persist-credentials: false
+
+      - name: Setup Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: '3.12'
+
+      - name: Verify fail-closed handoff consumer
+        run: |
+          set -euo pipefail
+          python -m unittest -v automation.world.test_ai_security_joint_lab automation.world.test_consume_ai_security_handoff
+          python -m unittest -v automation.ai_foundry.test_minute_evolution
+          (cd automation/security && python -m unittest -v test_elite_whitehat_continuous.py)
+
+      - name: Load latest successful Joint Lab evidence
+        id: source
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf "$HANDOFF_DIR"
+          mkdir -p "$HANDOFF_DIR/source" "$HANDOFF_DIR/security" "$HANDOFF_DIR/prior"
+
+          source_run="$(gh run list --repo "$GITHUB_REPOSITORY" --workflow ai-security-joint-lab.yml --status success --limit 12 --json databaseId --jq '.[].databaseId' | head -n1 || true)"
+          test -n "$source_run"
+
+          gh run download "$source_run" \
+            --repo "$GITHUB_REPOSITORY" \
+            --name "ai-security-joint-lab-${source_run}" \
+            --dir "$HANDOFF_DIR/source"
+
+          packet="$(find "$HANDOFF_DIR/source" -type f -name assist-packet.json | head -n1 || true)"
+          test -n "$packet"
+          cp "$packet" "$HANDOFF_DIR/assist-packet.json"
+
+          champion="$(find "$HANDOFF_DIR/source" -type f -name ai-assisted-champion.json | head -n1 || true)"
+          if [[ -n "$champion" ]]; then
+            cp "$champion" "$HANDOFF_DIR/ai-start.json"
+          else
+            python automation/ai_foundry/minute_evolution.py init --out "$HANDOFF_DIR/ai-start.json"
+          fi
+
+          echo "source_run=$source_run" >> "$GITHUB_OUTPUT"
+          echo "Joint Lab source: **$source_run**" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Validate bounded Handoff Contract
+        id: contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          python automation/world/consume_ai_security_handoff.py validate \
+            --packet "$HANDOFF_DIR/assist-packet.json" \
+            --out "$HANDOFF_DIR/contract.json"
+
+          read -r token focus lens stage bias max_cycles < <(python - <<'PY'
+          import json, os
+          d=json.load(open(os.environ['HANDOFF_DIR']+'/contract.json', encoding='utf-8'))
+          print(d['handoff_token'], d['ai_priority_focus'], d['security_priority_lens'], d['security_priority_stage'], d['research_bias'], d['max_consumer_cycles'])
+          PY
+          )
+          echo "token=$token" >> "$GITHUB_OUTPUT"
+          echo "focus=$focus" >> "$GITHUB_OUTPUT"
+          echo "lens=$lens" >> "$GITHUB_OUTPUT"
+          echo "stage=$stage" >> "$GITHUB_OUTPUT"
+          echo "bias=$bias" >> "$GITHUB_OUTPUT"
+          echo "max_cycles=$max_cycles" >> "$GITHUB_OUTPUT"
+          {
+            echo "Handoff authority: **priority_only**"
+            echo "Handoff token: \`$token\`"
+            echo "AI focus: **$focus**"
+            echo "Security lens/stage: **$lens / $stage**"
+            echo "Research bias: **$bias**"
+            echo "Permissions / external scope / promotion gates / verification authority: **UNCHANGED**"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Enforce per-token consumer budget
+        id: budget
+        env:
+          TOKEN: ${{ steps.contract.outputs.token }}
+          MAX_CYCLES: ${{ steps.contract.outputs.max_cycles }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          count=0
+          while read -r run_id; do
+            [[ -n "$run_id" ]] || continue
+            d="$HANDOFF_DIR/prior/$run_id"
+            mkdir -p "$d"
+            if gh run download "$run_id" --repo "$GITHUB_REPOSITORY" --name "ai-security-handoff-consumer-${run_id}" --dir "$d" >/dev/null 2>&1; then
+              result="$(find "$d" -type f -name consumption-result.json | head -n1 || true)"
+              if [[ -n "$result" ]]; then
+                matched="$(RESULT="$result" TOKEN="$TOKEN" python - <<'PY'
+          import json, os
+          try:
+              d=json.load(open(os.environ['RESULT'],encoding='utf-8'))
+          except Exception:
+              print(0); raise SystemExit
+          print(1 if d.get('handoff_token') == os.environ['TOKEN'] and d.get('status') == 'BUILDING' else 0)
+          PY
+          )"
+                count=$((count + matched))
+              fi
+            fi
+          done < <(gh run list --repo "$GITHUB_REPOSITORY" --workflow ai-security-handoff-consumer.yml --status success --limit 20 --json databaseId --jq '.[].databaseId' | grep -v "^${GITHUB_RUN_ID}$" || true)
+
+          if (( count >= MAX_CYCLES )); then
+            consume=false
+            status="STALE_BUDGET_EXHAUSTED"
+          else
+            consume=true
+            status="ACCEPTED_FOR_CONSUMPTION"
+          fi
+          echo "prior_consumptions=$count" >> "$GITHUB_OUTPUT"
+          echo "consume=$consume" >> "$GITHUB_OUTPUT"
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          echo "Handoff budget: prior=$count / max=$MAX_CYCLES / **$status**" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Feed Handoff into bounded AI micro-assist
+        if: steps.budget.outputs.consume == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          python automation/ai_foundry/minute_evolution.py run \
+            --state "$HANDOFF_DIR/ai-start.json" \
+            --out "$HANDOFF_DIR/ai-next.json" \
+            --summary "$HANDOFF_DIR/ai-summary.json" \
+            --history "$HANDOFF_DIR/ai-history.jsonl" \
+            --rounds 12 \
+            --sleep-seconds 0 \
+            --seed "handoff:${{ steps.contract.outputs.token }}:ai:${GITHUB_RUN_ID}" \
+            --assist-focus "${{ steps.contract.outputs.focus }}"
+
+      - name: Feed Handoff into bounded Security micro-assist
+        if: steps.budget.outputs.consume == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          numeric_seed="$(TOKEN='${{ steps.contract.outputs.token }}' python - <<'PY'
+          import os
+          print(int(os.environ['TOKEN'][:12], 16) % 1000000000)
+          PY
+          )"
+          for round in 1 2 3 4 5 6; do
+            python automation/security/elite_whitehat_continuous.py \
+              --round "$round" \
+              --run-id "${numeric_seed}-${GITHUB_RUN_ID}-${round}" \
+              --preferred-lens "${{ steps.contract.outputs.lens }}" \
+              --out-dir "$HANDOFF_DIR/security"
+          done
+
+      - name: Prove both sides consumed the same Handoff
+        if: steps.budget.outputs.consume == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          python automation/world/consume_ai_security_handoff.py result \
+            --contract "$HANDOFF_DIR/contract.json" \
+            --ai-summary "$HANDOFF_DIR/ai-summary.json" \
+            --security-dir "$HANDOFF_DIR/security" \
+            --out "$HANDOFF_DIR/consumption-result.json"
+
+          python - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import json, os
+          root=os.environ['HANDOFF_DIR']
+          d=json.load(open(root+'/consumption-result.json', encoding='utf-8'))
+          ai=d['ai']; sec=d['security']
+          print('## Joint Handoff consumption proof')
+          print(f"- token: `{d['handoff_token']}`")
+          print(f"- AI: {ai['rounds']} rounds / promotions {ai['promotions_delta']} / no-ops {ai['noops_delta']} / focus **{ai['focus']}**")
+          print(f"- Security: {sec['rounds']} rounds / handoff-directed {sec['handoff_directed_rounds']} / broad rotation {sec['broad_rotation_rounds']}")
+          print(f"- Security preferred lens: **{sec['preferred_lens']}**")
+          print(f"- Unique lens×stage: {sec['unique_lens_stage_pairs']}")
+          print('- Status: **BUILDING** — internal bounded R&D evidence only')
+          print('- External target testing: **NOT AUTHORIZED**')
+          PY
+
+      - name: Record exhausted handoff without re-consuming it
+        if: steps.budget.outputs.consume != 'true'
+        env:
+          TOKEN: ${{ steps.contract.outputs.token }}
+          PRIOR: ${{ steps.budget.outputs.prior_consumptions }}
+          MAX_CYCLES: ${{ steps.contract.outputs.max_cycles }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json, os
+          out={
+              'schema':'the-world-ai-security-handoff-consumption/v1',
+              'status':'STALE_BUDGET_EXHAUSTED',
+              'handoff_token':os.environ['TOKEN'],
+              'authority':'priority_only',
+              'prior_consumptions':int(os.environ['PRIOR']),
+              'max_consumer_cycles':int(os.environ['MAX_CYCLES']),
+              'action':'NO_OP',
+              'reason':'consumer budget exhausted; local lanes continue independently',
+              'owner_action':'NONE',
+          }
+          open(os.environ['HANDOFF_DIR']+'/consumption-result.json','w',encoding='utf-8').write(json.dumps(out,ensure_ascii=False,indent=2)+'\n')
+          PY
+          echo "Consumer budget exhausted; no AI/Security micro-assist was repeated." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Preserve Handoff consumption evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: ai-security-handoff-consumer-${{ github.run_id }}
+          retention-days: 30
+          if-no-files-found: error
+          path: |
+            /tmp/the-world-ai-security-handoff/assist-packet.json
+            /tmp/the-world-ai-security-handoff/contract.json
+            /tmp/the-world-ai-security-handoff/ai-start.json
+            /tmp/the-world-ai-security-handoff/ai-next.json
+            /tmp/the-world-ai-security-handoff/ai-summary.json
+            /tmp/the-world-ai-security-handoff/ai-history.jsonl
+            /tmp/the-world-ai-security-handoff/security/round-*.json
+            /tmp/the-world-ai-security-handoff/security/round-*.md
+            /tmp/the-world-ai-security-handoff/consumption-result.json

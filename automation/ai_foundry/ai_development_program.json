@@ -1,0 +1,91 @@
+{
+  "schema": "the-world-ai-development-program/v1",
+  "mission": "Turn autonomous AI engineering research into reproducible code-level capability improvements without weakening security, correctness, permission boundaries, or evidence standards.",
+  "promotion_rule": "A strategy proxy or internal score is never sufficient. Promotion requires a bounded implementation, relevant tests, counterevidence, reproducible rerun evidence, and explicit limitations.",
+  "tracks": [
+    {
+      "id": "AI-DEV-001",
+      "title": "Behavioral Evaluation Harness",
+      "priority": 1000,
+      "hypothesis": "AI development improves faster when each candidate is judged by stable behavioral fixtures and holdout cases instead of strategy proxy alone.",
+      "deliverable": "machine-readable eval manifest plus deterministic regression and holdout evidence",
+      "evidence_files": [
+        "automation/ai_foundry/minute_evolution.py",
+        "automation/ai_foundry/test_minute_evolution.py",
+        "automation/world/ai_security_joint_lab.py"
+      ]
+    },
+    {
+      "id": "AI-DEV-002",
+      "title": "Persistent Failure and Learning Memory",
+      "priority": 950,
+      "hypothesis": "Preserving failed hypotheses and regression fingerprints across runs reduces repeated dead-end research and improves autonomous next-step selection.",
+      "deliverable": "bounded failure-memory contract with recurrence detection and expiry rules",
+      "evidence_files": [
+        "automation/ai_foundry/minute_evolution.py",
+        "automation/ai_foundry/test_minute_evolution.py",
+        "automation/world/research_fabric.py"
+      ]
+    },
+    {
+      "id": "AI-DEV-003",
+      "title": "Multi-Agent Specialist League",
+      "priority": 900,
+      "hypothesis": "Independent specialist proposals plus tournament adjudication produce more robust AI engineering changes than a single self-scored proposal stream.",
+      "deliverable": "specialist proposal league with diversity, counterevidence, independent scoring and one bounded champion",
+      "evidence_files": [
+        "automation/agent_factory/factory.py",
+        "automation/agent_factory/tournament.py",
+        "automation/ai_foundry/minute_evolution.py"
+      ]
+    },
+    {
+      "id": "AI-DEV-004",
+      "title": "Tool-Use Reliability and Permission Boundaries",
+      "priority": 850,
+      "hypothesis": "AI agents become more useful when tool invocation, retries, approvals and failure states are measurable while permissions remain least-privilege.",
+      "deliverable": "tool-use fixture pack with expected/observed results, retry/recovery evidence and permission-boundary checks",
+      "evidence_files": [
+        "automation/world/realtime_kernel.py",
+        "automation/world/ai_security_joint_lab.py",
+        "standment-security/ai-security/agent-permission-boundary-lab.md"
+      ]
+    },
+    {
+      "id": "AI-DEV-005",
+      "title": "Autonomous Recovery and Observability",
+      "priority": 800,
+      "hypothesis": "Self-monitoring, bounded retries and evidence-preserving recovery increase autonomous AI uptime without hiding failure.",
+      "deliverable": "failure injection and recovery evidence with stable fingerprints and escalation criteria",
+      "evidence_files": [
+        "automation/world/realtime_kernel.py",
+        "automation/ai_foundry/minute_evolution.py",
+        "automation/world/ai_security_joint_lab.py"
+      ]
+    },
+    {
+      "id": "AI-DEV-006",
+      "title": "AI Portfolio Proof Pack",
+      "priority": 750,
+      "hypothesis": "AI engineering becomes commercially legible when each improvement has a before/after artifact, reproducibility evidence, limitations and a customer-readable use case.",
+      "deliverable": "human-inspectable AI capability evidence card backed by code/test evidence",
+      "evidence_files": [
+        "automation/ai_foundry/README.md",
+        "automation/ai_foundry/minute_evolution.py",
+        "automation/world/ai_security_joint_lab.py"
+      ]
+    },
+    {
+      "id": "AI-DEV-007",
+      "title": "Security-Guarded Autonomous Development",
+      "priority": 700,
+      "hypothesis": "AI development can move faster when Security supplies priority-only adversarial feedback while regression, permission and external-scope gates remain independent and fail-closed.",
+      "deliverable": "AI-to-Security and Security-to-AI evidence contract with independent promotion gates",
+      "evidence_files": [
+        "automation/security/ai_security_feedback.py",
+        "automation/world/ai_security_joint_lab.py",
+        "automation/ai_foundry/minute_evolution.py"
+      ]
+    }
+  ]
+}

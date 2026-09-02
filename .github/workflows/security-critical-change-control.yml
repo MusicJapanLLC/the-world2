@@ -20,15 +20,28 @@ jobs:
         with:
           fetch-depth: 2
           persist-credentials: false
+
       - name: Detect critical paths
         id: critical
         shell: bash
         run: |
           set -euo pipefail
-          if git rev-parse HEAD^ >/dev/null 2>&1; then CHANGED="$(git diff --name-only HEAD^ HEAD)"; else CHANGED="$(git show --pretty='' --name-only HEAD)"; fi
+          if git rev-parse HEAD^ >/dev/null 2>&1; then
+            CHANGED="$(git diff --name-only HEAD^ HEAD)"
+          else
+            CHANGED="$(git show --pretty='' --name-only HEAD)"
+          fi
           CRITICAL="$(printf '%s\n' "$CHANGED" | grep -E '^(\.github/workflows/|\.github/CODEOWNERS$|\.github/dependabot\.yml$|SECURITY\.md$|security/|scripts/security/|baton/vercel\.json$)' || true)"
-          if [ -z "$CRITICAL" ]; then echo "has_critical=false" >> "$GITHUB_OUTPUT"; exit 0; fi
+          if [ -z "$CRITICAL" ]; then
+            echo "has_critical=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
           echo "has_critical=true" >> "$GITHUB_OUTPUT"
+          {
+            echo '### Security-critical paths'
+            printf '%s\n' "$CRITICAL" | sed 's/^/- `/' | sed 's/$/`/'
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - name: Verify commit is traceable to a pull request
         if: steps.critical.outputs.has_critical == 'true'
         env:
@@ -36,8 +49,31 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          PR_COUNT="$(gh api -H 'Accept: application/vnd.github+json' "repos/${GITHUB_REPOSITORY}/commits/${GITHUB_SHA}/pulls" --jq 'length')"
-          if [ "$PR_COUNT" -lt 1 ]; then
-            echo "::error::Security-critical controls were changed without an associated pull request."
-            exit 1
+
+          # Primary proof: GitHub's commit -> PR association API.
+          ASSOCIATED="$(gh api \
+            -H 'Accept: application/vnd.github+json' \
+            "repos/${GITHUB_REPOSITORY}/commits/${GITHUB_SHA}/pulls" \
+            --jq 'length')"
+
+          if [ "$ASSOCIATED" -ge 1 ]; then
+            echo "PR trace: PASS via commit association (${ASSOCIATED})" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
           fi
+
+          # Cross-check a fresh branch-head commit against the exact head SHA of an
+          # open PR. This keeps the gate fail-closed while avoiding API propagation
+          # false negatives from the commit-association endpoint.
+          OWNER="${GITHUB_REPOSITORY%%/*}"
+          HEAD_MATCH="$(gh api \
+            -H 'Accept: application/vnd.github+json' \
+            "repos/${GITHUB_REPOSITORY}/pulls?state=open&head=${OWNER}:${GITHUB_REF_NAME}&per_page=100" \
+            --jq "[.[] | select(.head.sha == \"${GITHUB_SHA}\")] | length")"
+
+          if [ "$HEAD_MATCH" -ge 1 ]; then
+            echo "PR trace: PASS via exact open-PR head SHA (${GITHUB_REF_NAME}@${GITHUB_SHA})" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          echo "::error::Security-critical controls changed without verifiable PR trace. commit_associations=${ASSOCIATED}, exact_open_pr_head_matches=${HEAD_MATCH}"
+          exit 1

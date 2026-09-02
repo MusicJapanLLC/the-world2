@@ -1,0 +1,103 @@
+name: Senju Federated Action Bus Canary
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - claude/employee-onboarding-setup-udm86
+      - senju/federation-action-bus-20260830
+    paths:
+      - "senju/senju/federation.py"
+      - "senju/tests/test_federation.py"
+      - "senju/examples/federation-readonly.json"
+      - ".github/workflows/senju-federation-canary.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: senju-federation-canary-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  federation:
+    name: Multi-agent intents -> Senju -> real API evidence
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: "3.12"
+
+      - name: Install Senju
+        env:
+          PIP_DISABLE_PIP_VERSION_CHECK: "1"
+          PIP_NO_INPUT: "1"
+        run: python -m pip install -e './senju[dev]'
+
+      - name: Verify federation and transport regression
+        working-directory: senju
+        run: |
+          set -euo pipefail
+          python -m pytest tests/test_federation.py tests/test_external_contact.py -q
+
+      - name: Execute real read-only multi-producer federation
+        working-directory: senju
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/senju-federation
+          python -m senju.federation \
+            --intent examples/federation-readonly.json \
+            --allow-host api.github.com \
+            --max-effect read \
+            --retries 1 \
+            --out-dir /tmp/senju-federation
+
+      - name: Verify chained external evidence
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          p = Path("/tmp/senju-federation/federation-run.json")
+          data = json.loads(p.read_text(encoding="utf-8"))
+
+          assert data["schema"] == "senju-federation-run/v1"
+          assert data["success"] is True
+          assert data["max_effect"] == "read"
+          assert data["producers"] == ["BOSS", "FOUNDRY", "RND"]
+          assert data["planned_steps"] == 3
+          assert data["executed_steps"] == 3
+          assert [x["id"] for x in data["steps"]] == ["repo", "latest_commit", "workflows"]
+          assert all(x["ok"] is True for x in data["steps"])
+          assert all(x["status"] == 200 for x in data["steps"])
+          assert all(x["receipt_schema"] == "senju-external-contact/v3" for x in data["steps"])
+
+          repo_url = data["steps"][0]["response_json"]["url"]
+          assert repo_url == "https://api.github.com/repos/MusicJapanLLC/test"
+          assert data["steps"][1]["requested_url"].startswith(repo_url + "/commits")
+          assert data["steps"][2]["requested_url"].startswith(repo_url + "/actions/workflows")
+
+          print("SENJU_FEDERATION_REAL_API_CHAIN_VERIFIED")
+          print(json.dumps({
+              "run_id": data["run_id"],
+              "producers": data["producers"],
+              "statuses": [x["status"] for x in data["steps"]],
+              "total_response_bytes": data["total_response_bytes"],
+          }, ensure_ascii=False))
+          PY
+
+      - name: Publish federation evidence
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: senju-federation-${{ github.run_id }}
+          retention-days: 30
+          if-no-files-found: error
+          path: /tmp/senju-federation/

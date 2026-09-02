@@ -2,18 +2,22 @@ name: THE WORLD - Agent Factory Tournament
 
 on:
   schedule:
-    # Every 4 hours. Research throughput comes from parallel experiments inside each run,
-    # not from a permanently growing population of agents.
-    - cron: '23 */4 * * *'
+    # Hourly bounded AI/Security R&D tournament. Concurrency prevents pile-up.
+    - cron: '23 * * * *'
   workflow_dispatch:
   push:
     branches: ['claude/employee-onboarding-setup-udm86']
     paths:
       - '.github/workflows/the-world-agent-factory.yml'
       - 'automation/agent_factory/**'
+      - 'automation/ai_foundry/**'
+      - 'automation/world/ai_security_joint_lab.py'
+      - 'automation/security/ai_security_feedback.py'
+      - 'value-lab/research_queue.json'
+      - 'standment-security/security_portfolio_program.json'
 
 concurrency:
-  group: the-world-agent-factory
+  group: the-world-agent-factory-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:
@@ -53,7 +57,7 @@ jobs:
         working-directory: automation/agent_factory
         run: |
           set -euo pipefail
-          python -m unittest -v test_agent_factory.py
+          python -m unittest discover -v -p 'test_*.py'
 
       - name: Generate mission-specific ephemeral swarm
         id: plan
@@ -69,10 +73,12 @@ jobs:
           print(f"count={int(d['agent_count'])}")
           print(f"parallel={int(d['max_parallel'])}")
           print(f"mission={d['mission']['research_id']}")
+          print(f"family={d.get('mission_family') or 'unknown'}")
+          print(f"track={(d.get('primary_track') or {}).get('id') or 'NONE'}")
           PY
           cat "$FACTORY_DIR/plan.json" >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Run ephemeral research swarm in parallel
+      - name: Run ephemeral research swarm with quota-independent fallback
         env:
           COPILOT_GITHUB_TOKEN: ${{ github.token }}
           GITHUB_TOKEN: ${{ github.token }}
@@ -91,8 +97,8 @@ jobs:
               --slot "$slot" \
               --out "$FACTORY_DIR/prompts/${slot}.md" >/dev/null
 
-            # Research workers are deliberately read-only. GitHub Copilot CLI read operations
-            # are allowed, while write/shell/url access is explicitly denied for these workers.
+            # Primary model worker is read-only. It cannot write, shell out, browse URLs,
+            # expand permissions or post externally.
             timeout 180s copilot \
               -p "$(cat "$FACTORY_DIR/prompts/${slot}.md")" \
               -s \
@@ -108,6 +114,23 @@ jobs:
               --slot "$slot" \
               --raw "$FACTORY_DIR/raw/${slot}.txt" \
               --out "$FACTORY_DIR/workers/${slot}.json" >/dev/null
+
+            eligible="$(python -c "import json; d=json.load(open(\"$FACTORY_DIR/workers/${slot}.json\")); print(\"true\" if d.get(\"eligible\") else \"false\")")"
+            if [[ "$eligible" != "true" ]]; then
+              # Graceful degradation: deterministic repository-evidence specialist takes
+              # over the SAME role. It gets no new authority and is graded by the same
+              # independent tournament. If fallback itself fails, original rejection stays.
+              if python automation/agent_factory/local_worker.py \
+                --plan "$FACTORY_DIR/plan.json" \
+                --slot "$slot" \
+                --out "$FACTORY_DIR/raw/${slot}.fallback.json" >/dev/null 2>&1; then
+                python automation/agent_factory/tournament.py normalize \
+                  --plan "$FACTORY_DIR/plan.json" \
+                  --slot "$slot" \
+                  --raw "$FACTORY_DIR/raw/${slot}.fallback.json" \
+                  --out "$FACTORY_DIR/workers/${slot}.json" >/dev/null
+              fi
+            fi
           ' _ {}
 
           echo "### Ephemeral workers" >> "$GITHUB_STEP_SUMMARY"
@@ -116,6 +139,8 @@ jobs:
           rows=[]
           for p in sorted(glob.glob(os.environ['FACTORY_DIR']+'/workers/*.json')):
               rows.append(json.load(open(p, encoding='utf-8')))
+          fallback_count=len(glob.glob(os.environ['FACTORY_DIR']+'/raw/*.fallback.json'))
+          print(f"- local fallback workers used: {fallback_count}")
           for r in rows:
               print(f"- {r.get('agent_id')} role={r.get('role')} stance={r.get('stance')} eligible={r.get('eligible')} score={r.get('score')}")
           PY
@@ -161,8 +186,8 @@ jobs:
           BASE_SHA=$(git rev-parse HEAD)
           echo "base_sha=$BASE_SHA" >> "$GITHUB_OUTPUT"
 
-          # Unlike research workers, only the single tournament champion gets write access.
-          # Shell and URL tools remain denied; GitHub Actions itself runs validation later.
+          # Only the single tournament champion gets bounded write access.
+          # Shell and URL tools remain denied; GitHub Actions validates afterward.
           timeout 420s copilot \
             -p "$(cat "$FACTORY_DIR/forge-prompt.md")" \
             -s \
@@ -173,13 +198,11 @@ jobs:
             --no-ask-user \
             > "$FACTORY_DIR/forge.log" 2>&1 || true
 
-          # Make newly created files under the allowlisted implementation zones visible to git diff
-          # without staging them for commit yet.
-          git add -N -- automation/world automation/security standment-security value-lab docs 2>/dev/null || true
+          git add -N -- automation/ai_foundry automation/world automation/security standment-security value-lab docs 2>/dev/null || true
 
           if git diff --quiet "$BASE_SHA" --; then
             echo "changed=false" >> "$GITHUB_OUTPUT"
-            echo "Champion produced no repository change." >> "$GITHUB_STEP_SUMMARY"
+            echo "Champion produced no repository change. Research evidence remains preserved; no fake implementation claim." >> "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
           echo "changed=true" >> "$GITHUB_OUTPUT"
@@ -208,7 +231,7 @@ jobs:
           git clean -fd
           echo "Champion change reverted by Agent Factory policy." >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Validate champion against existing R&D systems
+      - name: Validate champion against existing AI and Security R&D systems
         id: validate
         if: steps.forge.outputs.changed == 'true' && steps.policy.outputs.allowed == 'true'
         continue-on-error: true
@@ -216,8 +239,9 @@ jobs:
         run: |
           set -euo pipefail
           status=0
-          python -m compileall -q automation/world automation/security value-lab || status=1
-          (cd automation/agent_factory && python -m unittest -v test_agent_factory.py) || status=1
+          python -m compileall -q automation/ai_foundry automation/world automation/security value-lab || status=1
+          (cd automation/agent_factory && python -m unittest discover -v -p 'test_*.py') || status=1
+          python -m unittest discover -s automation/ai_foundry -p 'test_*.py' || status=1
           python -m unittest discover -s automation/world -p 'test_*.py' || status=1
           python -m unittest discover -s automation/security -p 'test_*.py' || status=1
           python -m unittest discover -s value-lab -p 'test_*.py' || status=1
@@ -247,20 +271,22 @@ jobs:
           CHAMPION: ${{ steps.tournament.outputs.champion }}
           SCORE: ${{ steps.tournament.outputs.score }}
           MISSION: ${{ steps.plan.outputs.mission }}
+          FAMILY: ${{ steps.plan.outputs.family }}
+          TRACK: ${{ steps.plan.outputs.track }}
         shell: bash
         run: |
           set -euo pipefail
           branch="agent-factory/run-${GITHUB_RUN_ID}"
           git reset
           git checkout -b "$branch"
-          git add -- automation/world automation/security standment-security value-lab docs
+          git add -- automation/ai_foundry automation/world automation/security standment-security value-lab docs
           if git diff --cached --quiet; then
             echo "created=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
           git config user.name "THE WORLD Agent Factory"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git commit -m "agent-factory: champion improvement run ${GITHUB_RUN_ID}"
+          git commit -m "agent-factory: ${FAMILY} champion run ${GITHUB_RUN_ID}"
           git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
           git push origin "$branch"
 
@@ -269,22 +295,24 @@ jobs:
           ## THE WORLD Agent Factory Champion
 
           - Mission: \`${MISSION}\`
+          - Family: \`${FAMILY}\`
+          - Primary track: \`${TRACK}\`
           - Champion: \`${CHAMPION}\`
           - Tournament score: **${SCORE}**
           - Generated workers: ${{ steps.plan.outputs.count }}
           - Eligible proposals: ${{ steps.tournament.outputs.eligible }}
           - Unique proposals: ${{ steps.tournament.outputs.unique }}
           - Agent Factory policy: PASS
-          - Existing R&D test suites: PASS
+          - AI + Security R&D test suites: PASS
 
-          This PR was generated autonomously from an ephemeral research swarm. It is **not auto-merged**. Internal tournament score is engineering evidence only; it is not customer validation or revenue evidence.
+          This PR was generated autonomously from an ephemeral research swarm. It is **not auto-merged**. Internal tournament score and AI strategy proxies are engineering evidence only; they are not model-training proof, customer validation or revenue evidence.
           EOF
 
           url=$(gh pr create \
             --repo "$GITHUB_REPOSITORY" \
             --base "$BASE_REF" \
             --head "$branch" \
-            --title "agent-factory: champion improvement run ${GITHUB_RUN_ID}" \
+            --title "agent-factory: ${FAMILY} champion run ${GITHUB_RUN_ID}" \
             --body-file "$body")
           echo "created=true" >> "$GITHUB_OUTPUT"
           echo "url=$url" >> "$GITHUB_OUTPUT"
@@ -315,6 +343,8 @@ jobs:
         run: |
           echo "### Agent Factory outcome" >> "$GITHUB_STEP_SUMMARY"
           echo "- mission: ${{ steps.plan.outputs.mission }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- family: ${{ steps.plan.outputs.family }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- primary track: ${{ steps.plan.outputs.track }}" >> "$GITHUB_STEP_SUMMARY"
           echo "- generated agents: ${{ steps.plan.outputs.count }}" >> "$GITHUB_STEP_SUMMARY"
           echo "- eligible proposals: ${{ steps.tournament.outputs.eligible }}" >> "$GITHUB_STEP_SUMMARY"
           echo "- unique proposals: ${{ steps.tournament.outputs.unique }}" >> "$GITHUB_STEP_SUMMARY"

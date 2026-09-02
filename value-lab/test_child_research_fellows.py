@@ -36,6 +36,46 @@ class ChildResearchFellowsTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             build_sparks(unsafe, QUEUE, {}, "seed-2")
 
+    def test_outside_world_abstract_focus_can_challenge_healthy_baseline(self):
+        outside = {
+            "schema": "outside-world-rnd-seed/v1",
+            "eligible": True,
+            "source_evidence": {
+                "title": "Tiny builders cut verification cost",
+                "url": "https://public.example.invalid/article",
+                "source_id": "feed-1",
+                "category": "builders",
+            },
+            "candidate_directive": {
+                "research_id": "OUTSIDE-1",
+                "focus": "efficiency",
+                "candidate_count": 3,
+                "hypothesis": "abstract transferable pattern only",
+            },
+        }
+        senju = {"shadow_champion": {"holdout": {
+            "worst_balance": 0.8, "worst_learning_signal": 1.0, "score_stdev": 5.0,
+        }}}
+        sparks = build_sparks(REGISTRY, QUEUE, senju, "seed-3", outside)
+        self.assertEqual(sparks["challenge_focus"], "efficiency")
+        text = str(sparks)
+        self.assertIn("Tiny builders cut verification cost", text)
+        self.assertNotIn("https://public.example.invalid/article", text)
+        self.assertNotIn("feed-1", text)
+
+    def test_measured_weakness_beats_outside_novelty(self):
+        outside = {
+            "schema": "outside-world-rnd-seed/v1",
+            "eligible": True,
+            "source_evidence": {"title": "Novel builder pattern", "url": "https://x.invalid", "category": "builders"},
+            "candidate_directive": {"focus": "efficiency"},
+        }
+        senju = {"shadow_champion": {"holdout": {
+            "worst_balance": 0.3, "worst_learning_signal": 1.0, "score_stdev": 2.0,
+        }}}
+        sparks = build_sparks(REGISTRY, QUEUE, senju, "seed-4", outside)
+        self.assertEqual(sparks["challenge_focus"], "balance")
+
 
 if __name__ == "__main__":
     unittest.main()

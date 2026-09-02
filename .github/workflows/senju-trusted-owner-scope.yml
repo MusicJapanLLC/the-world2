@@ -1,0 +1,161 @@
+name: Senju - Trusted Owner Scope
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_url:
+        description: "Target URL inside configured authorized federation scope"
+        required: true
+        type: string
+      method:
+        description: "HTTP method"
+        required: true
+        default: "GET"
+        type: choice
+        options:
+          - GET
+          - HEAD
+          - OPTIONS
+          - POST
+      body:
+        description: "Optional UTF-8 request body"
+        required: false
+        default: ""
+        type: string
+  push:
+    branches:
+      - chatgpt/trusted-owner-scope-20260831
+      - claude/employee-onboarding-setup-udm86
+    paths:
+      - "AUTHORIZED_TEST_TARGETS.json"
+      - "senju/config/authorized-test-range.json"
+      - "senju/config/authorized-test-federation.json"
+      - "senju/config/authorized-test-federation-broadcast.json"
+      - "automation/codegen/meta_state/authorized_test_federation.json"
+      - "senju/senju/safety.py"
+      - "senju/senju/trusted_scope.py"
+      - "senju/tests/test_safety.py"
+      - "senju/tests/test_trusted_scope.py"
+      - ".github/workflows/senju-trusted-owner-scope.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: senju-trusted-owner-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Verify authorized federation runtime
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: "3.12"
+
+      - name: Install Senju
+        env:
+          PIP_DISABLE_PIP_VERSION_CHECK: "1"
+          PIP_NO_INPUT: "1"
+        run: python -m pip install -e './senju[dev]'
+
+      - name: Run scope tests
+        working-directory: senju
+        run: python -m pytest tests/test_trusted_scope.py tests/test_safety.py -q
+
+      - name: Verify federation seed and non-member rejection
+        working-directory: senju
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          from senju.safety import ScopeGuard, default_lab_policy
+          from senju.trusted_scope import TrustedOwnerScope
+
+          scope = TrustedOwnerScope.load(Path('config/authorized-test-federation.json'))
+          urls = [
+              'https://kabeya-authorized-test-range.onrender.com/',
+              'https://kabeya-authorized-test-range.onrender.com/lab/index.html',
+              'https://kabeya-authorized-test-range.onrender.com/lab/nullharbor.html?role=admin#panel',
+          ]
+          guard = ScopeGuard(default_lab_policy())
+          for url in urls:
+              assert scope.allows_url(url)
+              guard.check(url)
+          assert not scope.allows_url('https://example.com/')
+          assert not guard.is_allowed('https://example.com/')
+          print('AUTHORIZED_TEST_FEDERATION_VERIFIED')
+          PY
+
+  execute:
+    name: Execute inside persistent authorized federation scope
+    if: github.event_name == 'workflow_dispatch'
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: "3.12"
+
+      - name: Install Senju
+        env:
+          PIP_DISABLE_PIP_VERSION_CHECK: "1"
+          PIP_NO_INPUT: "1"
+        run: python -m pip install -e ./senju
+
+      - name: Build trusted request plan
+        env:
+          TRUSTED_SCOPE_JSON: ${{ secrets.SENJU_TRUSTED_OWNER_SCOPE_JSON }}
+          TARGET_URL: ${{ inputs.target_url }}
+          METHOD: ${{ inputs.method }}
+          BODY: ${{ inputs.body }}
+        run: |
+          set -euo pipefail
+          if [ -n "${TRUSTED_SCOPE_JSON}" ]; then
+            printf '%s' "${TRUSTED_SCOPE_JSON}" > /tmp/senju-trusted-scope.json
+          else
+            cp senju/config/authorized-test-federation.json /tmp/senju-trusted-scope.json
+          fi
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          body = os.environ.get('BODY', '')
+          request = {'url': os.environ['TARGET_URL'], 'method': os.environ['METHOD']}
+          if body:
+              request['body'] = body
+          Path('/tmp/senju-trusted-requests.json').write_text(
+              json.dumps({'requests': [request]}, ensure_ascii=False), encoding='utf-8'
+          )
+          PY
+
+      - name: Execute trusted request
+        working-directory: senju
+        run: |
+          set -euo pipefail
+          python -m senju.trusted_scope \
+            /tmp/senju-trusted-scope.json \
+            /tmp/senju-trusted-requests.json \
+            --out /tmp/senju-trusted-report.json
+          cat /tmp/senju-trusted-report.json
+
+      - name: Publish sanitized receipt
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: senju-trusted-owner-${{ github.run_id }}
+          retention-days: 30
+          if-no-files-found: error
+          path: /tmp/senju-trusted-report.json

@@ -6,6 +6,7 @@ on:
     paths:
       - 'company-society/**'
       - 'tomoki-agents/prompts/**'
+      - '.github/agents/ai-factory-boss.agent.md'
       - '.github/workflows/the-covenant.yml'
       - '.github/workflows/covenant-autonomy-cycle.yml'
       - '.github/workflows/covenant-quality-gate.yml'
@@ -14,6 +15,7 @@ on:
     paths:
       - 'company-society/**'
       - 'tomoki-agents/prompts/**'
+      - '.github/agents/ai-factory-boss.agent.md'
       - '.github/workflows/the-covenant.yml'
       - '.github/workflows/covenant-autonomy-cycle.yml'
       - '.github/workflows/covenant-quality-gate.yml'

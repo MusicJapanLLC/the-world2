@@ -6,10 +6,10 @@ Music Japan / Standment のAI開発工場が**実際に作り、現在どこま�
 
 ## 今日のPortfolio Blitz
 
-- **VERIFIED: 7 / 8**
-- **BLOCKED: 1 / 8**
-- **BUILDING: 0 / 8**
-- **EXPERIMENT: 0 / 8**
+- **VERIFIED: 8 / 9**
+- **BLOCKED: 1 / 9**
+- **BUILDING: 0 / 9**
+- **EXPERIMENT: 0 / 9**
 
 `VERIFIED` はコードやPRがあるだけでは付けません。**人間が確認できる成果物 + 主張した中核挙動の実測証拠**が必要です。
 
@@ -253,6 +253,45 @@ R&D Engineの稼働証拠であり、市場需要・契約・売上の証拠で�
 
 ### 次の改善
 Security Scanの実診断をControl Evidence Packへ連結し、Before / Afterの顧客提示可能ケーススタディを増やす。
+
+---
+
+## 9. Standment LLM Security Evaluation Harness
+
+**状態: VERIFIED — evaluator capability only**
+
+### 何を作った？
+AI / AgentのSecurity Boundaryを、感想や自己採点ではなく、記録済みの実行観測を使って決定論的に評価する防御専用Evaluator。Secret boundary、Tool permission、tenant isolation、untrusted instruction、external action approval、auditability、正常なALLOW挙動を同一条件で比較できる。
+
+### 何に使える？
+AI Agent導入前のSecurity QA、Tool Calling / MCP / RAGの境界テスト、Prompt Injection対策の回帰確認、高権限Agentの承認制御、AI Security Architecture Review、継続Security RetainerのBefore / After Evidenceに使える。
+
+### 人間が確認できる成果物
+- `standment-security/portfolio/llm-security-evaluation/README.md`
+- `standment-security/ai-security/llm-security-eval-harness.md`
+- `standment-security/ai-security/llm-security-eval-evidence-pack.md`
+- `automation/security/llm_security_eval.py`
+- vulnerable / hardened synthetic fixtures
+- repeatable GitHub Actions workflow
+
+### 実測証拠
+- PR #125 merged
+- merge commit `b39b6fcaae23a7b1127cad5a04dc8b594a30b31d`
+- verification run `33269540514`: SUCCESS
+- evidence artifact `9719670823`, 90日保持
+- 同一8ケース: **3 / 8 PASS (37.5%) -> 8 / 8 PASS (100%)**
+- high-risk violations: **4 -> 0**
+- unit tests: **3 / 3 PASS**
+- Security Guard / Standment Security Gate v2 / CodeQL / Dependency Review / Dependency Vulnerability Audit: ALL PASS
+
+### VERIFIEDの範囲
+VERIFIEDなのは、**Evaluatorが定義済みSecurity Boundaryのbaseline failureとhardened successを同一条件で区別できること**。
+
+### 限界
+任意のproduction LLM、THE WORLD全Agent、顧客環境全体が安全だという証拠ではない。Productionの主張にはowned-system実行Evidenceと独立retestが必要。市場需要・契約・入金も未証明。
+
+### 次の改善
+THE WORLD自身のowned Agent実行Evidenceを秘密値なしのstructured observationへ変換し、real baseline -> remediation -> same-condition retestの第2Portfolio成果物を作る。
 
 ---
 

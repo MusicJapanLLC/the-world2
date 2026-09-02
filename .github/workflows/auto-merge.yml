@@ -1,0 +1,190 @@
+name: Auto Merge PRs
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review, labeled, unlabeled, review_requested, edited]
+  pull_request_review:
+    types: [submitted, dismissed]
+  push:
+    branches:
+      - claude/employee-onboarding-setup-udm86
+      - main
+      - master
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+
+jobs:
+  auto-merge:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      checks: read
+    steps:
+      - name: Merge audited ready PRs
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+
+            const pulls = await github.rest.pulls.list({
+              owner,
+              repo,
+              state: 'open',
+              per_page: 100
+            });
+
+            const allowedConclusions = new Set(['success', 'neutral', 'skipped']);
+
+            function isSecurityBoundaryPath(path) {
+              const p = (path || '').toLowerCase();
+              const exact = new Set([
+                '.github/workflows/auto-merge.yml',
+                '.github/workflows/auto-conflict-resolver.yml',
+                '.github/codeowners',
+                'offense_first.md',
+                'the_world_authorized_targets.md',
+                'senju/finding_trust_policy.md'
+              ]);
+              if (exact.has(p)) return true;
+
+              const sensitiveTerms = [
+                'scopeguard', 'scope_guard', 'security-guard', 'security_guard',
+                'artifact_guard', 'authorization', 'authority', 'engagement',
+                'externalcontact', 'external_contact', 'secret', 'permission',
+                'sandbox', 'allowlist', 'denylist', 'guardrail'
+              ];
+              if (sensitiveTerms.some(term => p.includes(term))) return true;
+
+              if (p.startsWith('.github/workflows/') &&
+                  /(security|guard|merge|deploy|release|executor|autonomous|spear|meta)/.test(p)) {
+                return true;
+              }
+
+              return false;
+            }
+
+            async function listChangedFiles(prNumber) {
+              const files = [];
+              for (let page = 1; page <= 10; page++) {
+                const res = await github.rest.pulls.listFiles({
+                  owner, repo, pull_number: prNumber, per_page: 100, page
+                });
+                files.push(...res.data.map(f => f.filename));
+                if (res.data.length < 100) break;
+              }
+              return files;
+            }
+
+            async function hasIndependentMaintainerApproval(pr) {
+              const reviews = await github.rest.pulls.listReviews({
+                owner, repo, pull_number: pr.number, per_page: 100
+              });
+
+              const latestByUser = new Map();
+              for (const review of reviews.data) {
+                const login = review.user?.login;
+                if (!login) continue;
+                latestByUser.set(login, review);
+              }
+
+              for (const [login, review] of latestByUser) {
+                if (review.state !== 'APPROVED') continue;
+                if (login === pr.user?.login) continue;
+                if (review.user?.type === 'Bot' || login.endsWith('[bot]')) continue;
+
+                try {
+                  const perm = await github.rest.repos.getCollaboratorPermissionLevel({
+                    owner, repo, username: login
+                  });
+                  if (['write', 'maintain', 'admin'].includes(perm.data.permission)) {
+                    return true;
+                  }
+                } catch (e) {
+                  console.log(`Reviewer permission lookup failed for ${login}: ${e.message}`);
+                }
+              }
+              return false;
+            }
+
+            let merged = 0;
+            let skipped = 0;
+
+            for (const pr of pulls.data) {
+              if (pr.draft) {
+                console.log(`⏭️ Draft PR #${pr.number} — skip`);
+                skipped++;
+                continue;
+              }
+
+              const detail = await github.rest.pulls.get({
+                owner, repo, pull_number: pr.number
+              });
+
+              if (detail.data.mergeable_state === 'blocked') {
+                console.log(`🔒 PR #${pr.number} blocked — skip`);
+                skipped++;
+                continue;
+              }
+
+              if (['dirty', 'unknown'].includes(detail.data.mergeable_state)) {
+                console.log(`⚠️ PR #${pr.number} mergeable_state=${detail.data.mergeable_state} — skip`);
+                skipped++;
+                continue;
+              }
+
+              const checks = await github.rest.checks.listForRef({
+                owner, repo, ref: pr.head.sha, per_page: 100
+              });
+
+              // Exclude this auto-merge job itself to avoid self-deadlock.
+              const runs = checks.data.check_runs.filter(r => r.name !== 'auto-merge');
+              const pending = runs.filter(r => r.status !== 'completed');
+              const failed = runs.filter(r =>
+                r.status === 'completed' && !allowedConclusions.has(r.conclusion)
+              );
+
+              if (pending.length > 0) {
+                console.log(`⏳ PR #${pr.number} has ${pending.length} pending check(s) — skip`);
+                skipped++;
+                continue;
+              }
+
+              if (failed.length > 0) {
+                console.log(`❌ PR #${pr.number} has ${failed.length} failing check(s) — skip`);
+                skipped++;
+                continue;
+              }
+
+              const changedFiles = await listChangedFiles(pr.number);
+              const boundaryFiles = changedFiles.filter(isSecurityBoundaryPath);
+
+              if (boundaryFiles.length > 0) {
+                const approved = await hasIndependentMaintainerApproval(pr);
+                if (!approved) {
+                  console.log(`🛡️ PR #${pr.number} changes Security Boundary and lacks independent maintainer approval — skip`);
+                  console.log(`Boundary files: ${boundaryFiles.join(', ')}`);
+                  skipped++;
+                  continue;
+                }
+                console.log(`🛡️ PR #${pr.number} Security Boundary review satisfied`);
+              }
+
+              try {
+                await github.rest.pulls.merge({
+                  owner, repo, pull_number: pr.number,
+                  merge_method: 'squash',
+                  sha: pr.head.sha
+                });
+                console.log(`✅ Merged PR #${pr.number}: ${pr.title}`);
+                merged++;
+              } catch (e) {
+                console.log(`⚠️ Could not merge PR #${pr.number}: ${e.message}`);
+                skipped++;
+              }
+            }
+
+            console.log(`Done. merged=${merged} skipped=${skipped}`);

@@ -1,0 +1,59 @@
+name: Production Evolution Auto Cycle
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 * * * *"
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: production-evolution-auto-cycle
+  cancel-in-progress: false
+
+jobs:
+  evolve:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      WORLD_ENV: production
+      GH_TOKEN: ${{ github.token }}
+      STATE_DIR: automation/world/runtime_state
+      STATE_FILE: automation/world/runtime_state/production_evolution_state.json
+    steps:
+      - name: Checkout default branch
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Restore latest evolution checkpoint
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$STATE_DIR"
+          artifact_id="$(gh api "repos/${GITHUB_REPOSITORY}/actions/artifacts?name=production-evolution-state&per_page=20" \
+            --jq '.artifacts | map(select(.expired == false)) | sort_by(.created_at) | reverse | .[0].id // empty')"
+          if [ -n "$artifact_id" ]; then
+            gh api "repos/${GITHUB_REPOSITORY}/actions/artifacts/${artifact_id}/zip" > /tmp/production-evolution-state.zip
+            unzip -oq /tmp/production-evolution-state.zip -d "$STATE_DIR" || true
+          fi
+
+      - name: Run one production evolution generation with authority recovery
+        run: |
+          python automation/world/run_authority_checkpoint_recovery_cycle.py \
+            --plan automation/world/production_evolution_auto_cycle_plan.json \
+            --state "$STATE_FILE" \
+            --output "$STATE_FILE"
+
+      - name: Persist evolution checkpoint
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-evolution-state
+          path: ${{ env.STATE_FILE }}
+          if-no-files-found: error
+          retention-days: 30

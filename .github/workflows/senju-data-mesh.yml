@@ -1,0 +1,111 @@
+name: Senju Data Mesh — Unified Intelligence Hub
+
+# Read-only evidence aggregation lane. Privileged state promotion, workflow dispatch,
+# retries, and external delivery belong to their separately governed workflows.
+on:
+  schedule:
+    - cron: "*/30 * * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: senju-data-mesh
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  aggregate-evidence:
+    name: Collect evidence → build bounded Senju summary artifact
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    env:
+      GH_TOKEN: ${{ github.token }}
+      REPO: ${{ github.repository }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: "3.12"
+
+      - name: Download adversary-full-join artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/mesh/adversary
+          RUN=$(gh run list --repo "$REPO" \
+            --workflow "Senju Adversary Full Join" \
+            --status success --limit 3 \
+            --json databaseId --jq '.[0].databaseId // empty' || true)
+          if [[ -n "$RUN" ]]; then
+            gh run download "$RUN" --repo "$REPO" --dir /tmp/mesh/adversary || true
+          fi
+
+      - name: Download blitz artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/mesh/blitz
+          for RUN in $(gh run list --repo "$REPO" \
+            --workflow "Senju Blitz — Parallel Adversary Surge" \
+            --status success --limit 5 \
+            --json databaseId --jq '.[].databaseId' || true); do
+            gh run download "$RUN" --repo "$REPO" --dir /tmp/mesh/blitz || true
+          done
+
+      - name: Download live-opposition artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/mesh/opposition
+          RUN=$(gh run list --repo "$REPO" \
+            --workflow "Senju Live Opposition Force" \
+            --status success --limit 3 \
+            --json databaseId --jq '.[0].databaseId // empty' || true)
+          if [[ -n "$RUN" ]]; then
+            gh run download "$RUN" --repo "$REPO" --dir /tmp/mesh/opposition || true
+          fi
+
+      - name: Download nuclei-scan artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/mesh/nuclei
+          RUN=$(gh run list --repo "$REPO" \
+            --workflow "Senju Real Scan — Nuclei against own endpoints" \
+            --status success --limit 3 \
+            --json databaseId --jq '.[0].databaseId // empty' || true)
+          if [[ -n "$RUN" ]]; then
+            gh run download "$RUN" --repo "$REPO" --dir /tmp/mesh/nuclei || true
+          fi
+
+      - name: Merge intelligence into bounded working summary
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/mesh/out
+          cp senju/state/last-evolution-summary.json /tmp/mesh/out/summary.json 2>/dev/null || printf '{}\n' > /tmp/mesh/out/summary.json
+          PYTHONPATH=senju python senju/scripts/data_mesh.py \
+            --adversary-dir /tmp/mesh/adversary \
+            --blitz-dir /tmp/mesh/blitz \
+            --opposition-dir /tmp/mesh/opposition \
+            --nuclei-dir /tmp/mesh/nuclei \
+            --state /tmp/mesh/out/summary.json
+          python -m json.tool /tmp/mesh/out/summary.json >/dev/null
+
+      - name: Upload data-mesh evidence artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: senju-data-mesh-${{ github.run_id }}
+          path: /tmp/mesh/out/summary.json
+          if-no-files-found: error
+          retention-days: 7

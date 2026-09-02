@@ -1,0 +1,17 @@
+{
+  "schema": "the-world-deploy-budget-config/v1",
+  "max_per_hour": 2,
+  "max_automatic_per_day": 48,
+  "targets": [
+    {
+      "name": "root-vercel",
+      "source_paths": ["api", "public", "fastapi_app.py", "requirements.txt", "vercel.json"],
+      "permit_path": "automation/deploy-permits/root-vercel.json"
+    },
+    {
+      "name": "iyomaru-pages",
+      "source_paths": ["iyomaru-ramen"],
+      "permit_path": "automation/deploy-permits/iyomaru-pages.json"
+    }
+  ]
+}

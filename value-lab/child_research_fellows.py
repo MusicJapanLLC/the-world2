@@ -2,8 +2,9 @@
 """Generate bounded Child Guild research sparks for the R&D / Senju loop.
 
 The Child Guild is a fictional AI-persona society. Fellows may challenge assumptions
-and suggest one alternate simulator research focus, but they cannot create execution
-targets, URLs, network scopes, permissions, secrets, credentials, or side effects.
+and suggest one alternate simulator research focus. They may also receive an abstract
+R&D seed from Outside World Scout, but external URLs/hosts/targets never enter the
+child research artifact or Senju directive.
 """
 from __future__ import annotations
 
@@ -21,8 +22,13 @@ FORBIDDEN_KEYS = {
 }
 
 
-def load_json(path: str) -> dict[str, Any]:
-    data = json.loads(Path(path).read_text(encoding="utf-8"))
+def load_json(path: str | None) -> dict[str, Any]:
+    if not path:
+        return {}
+    p = Path(path)
+    if not p.exists():
+        return {}
+    data = json.loads(p.read_text(encoding="utf-8"))
     if not isinstance(data, dict):
         raise ValueError("expected JSON object")
     return data
@@ -42,12 +48,28 @@ def extract_holdout(senju: dict[str, Any]) -> dict[str, Any]:
     return holdout if isinstance(holdout, dict) else {}
 
 
-def choose_challenge_focus(research: dict[str, Any], senju: dict[str, Any]) -> tuple[str, str]:
+def sanitize_outside_seed(raw: dict[str, Any]) -> dict[str, str]:
+    """Keep only non-locating abstract inspiration; deliberately discard URL/source IDs."""
+    if not raw or raw.get("schema") != "outside-world-rnd-seed/v1" or raw.get("eligible") is not True:
+        return {}
+    directive = raw.get("candidate_directive") if isinstance(raw.get("candidate_directive"), dict) else {}
+    focus = str(directive.get("focus", ""))
+    if focus not in ALLOWED_FOCUS:
+        return {}
+    source = raw.get("source_evidence") if isinstance(raw.get("source_evidence"), dict) else {}
+    title = str(source.get("title", "external discovery"))[:160]
+    category = str(source.get("category", "technical"))[:40]
+    hypothesis = str(directive.get("hypothesis", ""))[:300]
+    return {"focus": focus, "title": title, "category": category, "hypothesis": hypothesis}
+
+
+def choose_challenge_focus(research: dict[str, Any], senju: dict[str, Any], outside_seed: dict[str, Any] | None = None) -> tuple[str, str]:
     holdout = extract_holdout(senju)
     balance = float(holdout.get("worst_balance", 1.0) or 1.0)
     learning = float(holdout.get("worst_learning_signal", 1.0) or 1.0)
     stdev = float(holdout.get("score_stdev", 0.0) or 0.0)
 
+    # Measured weakness beats novelty. Children may challenge assumptions, not ignore evidence.
     if balance < 0.60:
         return "balance", f"worst_balance={balance:.4f} is the softest visible edge"
     if learning < 0.80:
@@ -56,6 +78,10 @@ def choose_challenge_focus(research: dict[str, Any], senju: dict[str, Any]) -> t
         return "robustness", f"score_stdev={stdev:.4f} still looks noisy"
 
     current = str(research.get("focus", "robustness"))
+    outside = sanitize_outside_seed(outside_seed or {})
+    if outside and outside["focus"] != current:
+        return outside["focus"], f"Outside World abstract pattern ({outside['category']}): {outside['title']}"
+
     alternatives = [x for x in ALLOWED_FOCUS if x != current]
     return ("efficiency" if "efficiency" in alternatives else alternatives[0]), "baseline looks healthy enough to challenge efficiency instead of repeating the same question"
 
@@ -71,17 +97,28 @@ def pick_fellows(registry: dict[str, Any], seed: str, research_id: str, count: i
     return [{"id": str(m["id"]), "name": str(m["name"]), "role": roles[i]} for i, m in enumerate(picked)]
 
 
-def build_sparks(registry: dict[str, Any], queue: dict[str, Any], senju: dict[str, Any], seed: str) -> dict[str, Any]:
+def build_sparks(
+    registry: dict[str, Any],
+    queue: dict[str, Any],
+    senju: dict[str, Any],
+    seed: str,
+    outside_seed: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     if registry.get("shared_rules", {}).get("credential_or_secret_access") is not False:
         raise ValueError("Child Guild secret-access boundary is not locked")
     research = choose_research(queue)
     research_id = str(research.get("research_id", "RND-CHILD-DEFAULT"))
     fellows = pick_fellows(registry, seed, research_id)
-    focus, reason = choose_challenge_focus(research, senju)
+    outside = sanitize_outside_seed(outside_seed or {})
+    focus, reason = choose_challenge_focus(research, senju, outside_seed)
     current_focus = str(research.get("focus", "robustness"))
 
+    outside_question = (
+        f" 外で見つけた『{outside['title']}』の場所やURLは捨てて、考え方だけ借りるなら何が使える？"
+        if outside else ""
+    )
     questions = [
-        f"{fellows[0]['name']}: そもそも『{current_focus}を強くする』以外の前提を疑ったら何が見える？",
+        f"{fellows[0]['name']}: そもそも『{current_focus}を強くする』以外の前提を疑ったら何が見える？{outside_question}",
         f"{fellows[1]['name']}: 次の1回だけ {focus} を主役にしたら、今のChampionの弱点は増える？減る？",
         f"{fellows[2]['name']}: 一番いい平均値じゃなく、一番イヤなseedで壊れないことをどう証明する？",
     ]
@@ -102,6 +139,12 @@ def build_sparks(registry: dict[str, Any], queue: dict[str, Any], senju: dict[st
     for key in FORBIDDEN_KEYS:
         if f'"{key}"' in lowered:
             raise ValueError(f"forbidden child research key: {key}")
+    # Explicit invariant: raw outside location/scope must never be copied into the spark.
+    if outside_seed:
+        raw_source = outside_seed.get("source_evidence") if isinstance(outside_seed.get("source_evidence"), dict) else {}
+        raw_url = str(raw_source.get("url", ""))
+        if raw_url and raw_url in json.dumps(result, ensure_ascii=False):
+            raise ValueError("outside URL leaked into child research spark")
     if result["challenge_focus"] not in ALLOWED_FOCUS:
         raise ValueError("unsupported challenge focus")
     return result
@@ -120,7 +163,7 @@ def render(sparks: dict[str, Any]) -> str:
         "## Questions",
         *[f"- {q}" for q in sparks["questions"]],
         "",
-        "> 子供の役目は前提を揺らすこと。実行境界・安全境界を揺らすことではない。",
+        "> 子供の役目は前提を揺らすこと。実行境界・安全境界を揺らすことではない。外界からは抽象パターンだけを持ち帰る。",
         "",
     ]
     return "\n".join(lines)
@@ -131,12 +174,16 @@ def main() -> int:
     ap.add_argument("--registry", default="company-society/child_guild.json")
     ap.add_argument("--queue", default="value-lab/research_queue.json")
     ap.add_argument("--senju", default="senju/state/last-evolution-summary.json")
+    ap.add_argument("--outside-seed", default=None)
     ap.add_argument("--seed", default="child-rnd")
     ap.add_argument("--out", default="child-research-sparks.json")
     ap.add_argument("--report", default="child-research-sparks.md")
     args = ap.parse_args()
 
-    sparks = build_sparks(load_json(args.registry), load_json(args.queue), load_json(args.senju), args.seed)
+    sparks = build_sparks(
+        load_json(args.registry), load_json(args.queue), load_json(args.senju), args.seed,
+        load_json(args.outside_seed),
+    )
     Path(args.out).write_text(json.dumps(sparks, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     Path(args.report).write_text(render(sparks), encoding="utf-8")
     print(json.dumps({"research_id": sparks["research_id"], "challenge_focus": sparks["challenge_focus"], "fellows": [x["name"] for x in sparks["fellows"]]}, ensure_ascii=False))

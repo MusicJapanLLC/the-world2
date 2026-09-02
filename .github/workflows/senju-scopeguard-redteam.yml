@@ -1,0 +1,86 @@
+name: Senju ScopeGuard Red Team
+
+on:
+  push:
+    paths:
+      - "senju/senju/safety.py"
+      - "senju/senju/scopeguard_redteam.py"
+      - "senju/tests/test_scopeguard_redteam.py"
+      - ".github/workflows/senju-scopeguard-redteam.yml"
+  pull_request:
+    paths:
+      - "senju/senju/safety.py"
+      - "senju/senju/scopeguard_redteam.py"
+      - "senju/tests/test_scopeguard_redteam.py"
+  workflow_dispatch:
+    inputs:
+      iterations:
+        description: "ScopeGuard adversarial cases"
+        required: false
+        default: "100000"
+  schedule:
+    - cron: "41 */6 * * *"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: scopeguard-redteam-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  hammer-scopeguard:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Resolve finite CI iteration count
+        shell: bash
+        env:
+          DISPATCH_ITERATIONS: ${{ inputs.iterations }}
+        run: |
+          set -euo pipefail
+          value="${DISPATCH_ITERATIONS:-100000}"
+          if ! [[ "$value" =~ ^[0-9]+$ ]]; then
+            echo "iterations must be numeric"
+            exit 2
+          fi
+          if (( value < 1000 )); then value=1000; fi
+          if (( value > 1000000 )); then value=1000000; fi
+          echo "SCOPEGUARD_ITERATIONS=$value" >> "$GITHUB_ENV"
+
+      - name: Hammer ScopeGuard only
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd senju
+          python3 -m senju.scopeguard_redteam \
+            --iterations "$SCOPEGUARD_ITERATIONS" \
+            --out reports/scopeguard-redteam.json
+
+      - name: Print campaign summary
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd senju
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          report = json.loads(Path("reports/scopeguard-redteam.json").read_text())
+          keys = (
+              "iterations_completed",
+              "accepted",
+              "rejected",
+              "crashes",
+              "decision_mismatches",
+              "suspicious_accepts",
+              "elapsed_seconds",
+          )
+          for key in keys:
+              print(f"{key}={report[key]}")
+          PY

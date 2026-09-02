@@ -6,51 +6,63 @@
   "principle": "EXPLORE_WIDELY_WRITE_THROUGH_AUTHORIZED_ACCOUNTS",
   "platforms": [
     {
+      "id": "github-issues",
+      "kind": "github_issue",
+      "enabled": false,
+      "repo": "MusicJapanLLC/test",
+      "required_env": ["GITHUB_TOKEN"],
+      "max_per_day": 8,
+      "labels": ["the-world", "automated"],
+      "note": "Disabled until canonical external_write_target_ids allowlist explicitly authorizes this target"
+    },
+    {
+      "id": "discord",
+      "kind": "discord_webhook",
+      "enabled": false,
+      "required_env": ["DISCORD_WEBHOOK_URL"],
+      "max_per_day": 8,
+      "note": "Disabled until canonical external_write_target_ids allowlist explicitly authorizes this target"
+    },
+    {
+      "id": "slack",
+      "kind": "slack_webhook",
+      "enabled": false,
+      "required_env": ["SLACK_WEBHOOK_URL"],
+      "max_per_day": 8,
+      "max_chars": 2800,
+      "note": "Disabled until canonical external_write_target_ids allowlist explicitly authorizes this target"
+    },
+    {
       "id": "dev-community",
       "kind": "devto",
       "enabled": true,
       "endpoint": "https://dev.to/api/articles",
-      "required_env": [
-        "DEVTO_API_KEY"
-      ],
-      "max_per_day": 1,
-      "tags": [
-        "ai",
-        "research"
-      ]
+      "required_env": ["DEVTO_API_KEY"],
+      "max_per_day": 2,
+      "tags": ["ai", "research"]
     },
     {
       "id": "mastodon",
       "kind": "mastodon",
       "enabled": true,
-      "required_env": [
-        "MASTODON_BASE_URL",
-        "MASTODON_ACCESS_TOKEN"
-      ],
-      "max_per_day": 4,
+      "required_env": ["MASTODON_BASE_URL", "MASTODON_ACCESS_TOKEN"],
+      "max_per_day": 8,
       "max_chars": 480
     },
     {
       "id": "bluesky",
       "kind": "bluesky",
       "enabled": true,
-      "required_env": [
-        "BLUESKY_HANDLE",
-        "BLUESKY_APP_PASSWORD"
-      ],
-      "max_per_day": 4,
+      "required_env": ["BLUESKY_HANDLE", "BLUESKY_APP_PASSWORD"],
+      "max_per_day": 8,
       "max_chars": 280
     },
     {
       "id": "wordpress",
       "kind": "wordpress",
       "enabled": true,
-      "required_env": [
-        "WORDPRESS_BASE_URL",
-        "WORDPRESS_USERNAME",
-        "WORDPRESS_APP_PASSWORD"
-      ],
-      "max_per_day": 1,
+      "required_env": ["WORDPRESS_BASE_URL", "WORDPRESS_USERNAME", "WORDPRESS_APP_PASSWORD"],
+      "max_per_day": 2,
       "status": "publish"
     }
   ]

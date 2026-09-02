@@ -1,0 +1,30 @@
+{
+  "archetype": "ai_agent_cluster",
+  "coverage_gaps": [
+    "agent_priv_esc",
+    "auth_bypass",
+    "csrf"
+  ],
+  "description": "Auto-generated local lab from bounded coverage/ELO evidence",
+  "fingerprint": "d4ae53fb7cb177f32415a33f5dd1e3d24b44522c6c62d94bcd8751d5b07c65a2",
+  "host": null,
+  "name": "auto-lab-ai-agent-cluster-8dbb07818a47",
+  "schema": "senju-auto-lab/v3",
+  "surfaces": [
+    {
+      "difficulty": 0.684,
+      "name": "auto-lab-ai-agent-cluster-8dbb07818a47:agent-priv-esc",
+      "vuln_class": "agent_priv_esc"
+    },
+    {
+      "difficulty": 0.315,
+      "name": "auto-lab-ai-agent-cluster-8dbb07818a47:auth-bypass",
+      "vuln_class": "auth_bypass"
+    },
+    {
+      "difficulty": 0.465,
+      "name": "auto-lab-ai-agent-cluster-8dbb07818a47:csrf",
+      "vuln_class": "csrf"
+    }
+  ]
+}

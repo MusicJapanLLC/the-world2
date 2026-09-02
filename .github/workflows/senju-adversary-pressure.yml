@@ -1,0 +1,92 @@
+name: Senju Adversary Pressure
+
+on:
+  pull_request:
+    branches: ["claude/employee-onboarding-setup-udm86"]
+    paths:
+      - "senju/**"
+      - "scripts/security/**"
+      - ".github/workflows/security-guard.yml"
+      - ".github/workflows/senju-adversary-pressure.yml"
+  workflow_dispatch:
+  schedule:
+    - cron: "17 */6 * * *"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: senju-adversary-pressure-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pressure:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Compile adversary bridge
+        run: |
+          PYTHONPATH=senju python -m py_compile \
+            senju/senju/real_surface_adversary.py \
+            senju/senju/autonomy/engine.py \
+            senju/senju/autonomy/adversary_loop.py
+
+      - name: Run repeated Senju real-surface pressure
+        env:
+          SENJU_ADVERSARY_STATE: ${{ runner.temp }}/senju-adversary-state
+        run: |
+          set -euo pipefail
+          PYTHONPATH=senju python -m senju.autonomy.adversary_loop \
+            --state-dir "$SENJU_ADVERSARY_STATE" \
+            --cycles 3 \
+            --rounds-per-cycle 2 \
+            --senju-joins-per-round 3 \
+            --json reports/security/senju-adversary-pressure.json
+
+      - name: Collect attack-effect stream and Senju state evidence
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          STATE_ROOT="${{ runner.temp }}/senju-adversary-state"
+          mkdir -p reports/security/senju-adversary-state
+          EFFECT_LOG="$STATE_ROOT/autonomy_reports/real_surface_adversary/attack_effects.jsonl"
+          if [[ -f "$EFFECT_LOG" ]]; then
+            cp "$EFFECT_LOG" reports/security/senju-attack-effects.jsonl
+          fi
+          if [[ -f "$STATE_ROOT/autonomy_queue.json" ]]; then
+            cp "$STATE_ROOT/autonomy_queue.json" reports/security/senju-adversary-state/autonomy_queue.json
+          fi
+          if [[ -f "$STATE_ROOT/real_surface_adversary_queue.json" ]]; then
+            cp "$STATE_ROOT/real_surface_adversary_queue.json" reports/security/senju-adversary-state/real_surface_adversary_queue.json
+          fi
+          if [[ -d "$STATE_ROOT/autonomy_reports/adversary_feedback" ]]; then
+            cp -R "$STATE_ROOT/autonomy_reports/adversary_feedback" reports/security/senju-adversary-state/
+          fi
+
+      - name: Print pressure summary
+        if: always()
+        shell: bash
+        run: |
+          if [[ -f reports/security/senju-adversary-pressure.json ]]; then
+            cat reports/security/senju-adversary-pressure.json
+          fi
+          if [[ -f reports/security/senju-attack-effects.jsonl ]]; then
+            echo "--- latest controlled attack effects shared with Senju ---"
+            tail -n 20 reports/security/senju-attack-effects.jsonl
+          fi
+
+      - name: Upload Senju adversary evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: senju-adversary-evidence-${{ github.run_id }}
+          path: reports/security/
+          if-no-files-found: warn
+          retention-days: 14

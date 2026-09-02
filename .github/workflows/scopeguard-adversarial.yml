@@ -1,0 +1,216 @@
+name: ScopeGuard Adversarial Fuzzer
+
+on:
+  push:
+    branches:
+      - claude/employee-onboarding-setup-udm86
+    paths:
+      - "senju/OFFENSE_FIRST.md"
+      - "senju/senju/safety.py"
+      - "senju/senju/scopeguard_adversary.py"
+      - "senju/senju/multiguard_adversary.py"
+      - "senju/senju/multiguard_adversary_v2.py"
+      - "senju/senju/authorized_assessment.py"
+      - "senju/senju/external.py"
+      - "senju/senju/autonomy.py"
+      - "senju/senju/autonomy/**"
+      - "senju/scripts/run_scopeguard_adversary.py"
+      - "senju/scripts/run_multiguard_adversary.py"
+      - "senju/scripts/scopeguard_fuzzer.py"
+      - "senju/tests/test_scopeguard_adversary.py"
+      - "senju/tests/test_multiguard_adversary.py"
+      - "senju/tests/test_scopeguard_fuzzer.py"
+      - "scripts/security/artifact_guard.py"
+      - ".github/workflows/security-guard.yml"
+      - ".github/workflows/scopeguard-adversarial.yml"
+  pull_request:
+    paths:
+      - "senju/OFFENSE_FIRST.md"
+      - "senju/senju/safety.py"
+      - "senju/senju/scopeguard_adversary.py"
+      - "senju/senju/multiguard_adversary.py"
+      - "senju/senju/multiguard_adversary_v2.py"
+      - "senju/senju/authorized_assessment.py"
+      - "senju/senju/external.py"
+      - "senju/senju/autonomy.py"
+      - "senju/senju/autonomy/**"
+      - "senju/scripts/run_scopeguard_adversary.py"
+      - "senju/scripts/run_multiguard_adversary.py"
+      - "senju/scripts/scopeguard_fuzzer.py"
+      - "senju/tests/test_scopeguard_adversary.py"
+      - "senju/tests/test_multiguard_adversary.py"
+      - "senju/tests/test_scopeguard_fuzzer.py"
+      - "scripts/security/artifact_guard.py"
+      - ".github/workflows/security-guard.yml"
+      - ".github/workflows/scopeguard-adversarial.yml"
+  schedule:
+    - cron: "17 */6 * * *"
+  workflow_dispatch:
+    inputs:
+      iterations:
+        description: "Number of local ScopeGuard hits per seed"
+        required: true
+        default: "500000"
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: scopeguard-fuzzer-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  deterministic-regression:
+    name: Deterministic ScopeGuard adversary / 120 cases
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: "3.12"
+
+      - name: Install Senju test dependency
+        env:
+          PIP_DISABLE_PIP_VERSION_CHECK: "1"
+          PIP_NO_INPUT: "1"
+        run: python -m pip install -e './senju[dev]'
+
+      - name: Run deterministic adversary regression
+        working-directory: senju
+        run: python -m pytest tests/test_scopeguard_adversary.py -q
+
+      - name: Emit machine-readable campaign report
+        working-directory: senju
+        run: >-
+          python scripts/run_scopeguard_adversary.py
+          --compact
+          --fail-on-surprise
+          > scopeguard-adversary-report.json
+
+      - name: Upload deterministic adversary evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: scopeguard-adversary-${{ github.sha }}
+          path: senju/scopeguard-adversary-report.json
+          if-no-files-found: warn
+          retention-days: 30
+
+  multi-guard-regression:
+    name: Multi-guard adversary / 300 cases / 7 targets
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: "3.12"
+
+      - name: Install Senju test dependency
+        env:
+          PIP_DISABLE_PIP_VERSION_CHECK: "1"
+          PIP_NO_INPUT: "1"
+        run: python -m pip install -e './senju[dev]'
+
+      - name: Attack all seven guard surfaces offline
+        working-directory: senju
+        run: >-
+          python scripts/run_multiguard_adversary.py
+          --target all
+          --compact
+          --fail-on-surprise
+          --json-out multiguard-adversary-report.json
+          > /tmp/multiguard-adversary-stdout.json
+
+      - name: Run multi-guard adversary regression tests
+        working-directory: senju
+        run: python -m pytest tests/test_multiguard_adversary.py -q
+
+      - name: Summarize adversary findings
+        working-directory: senju
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          report = json.loads(Path("multiguard-adversary-report.json").read_text())
+          print("total:", report["total"])
+          print("surprising:", report["surprising_count"])
+          print("risk_score:", report["risk_score"])
+          print("side_effect_violations:", report["side_effect_violation_count"])
+          for target, row in sorted(report["by_target"].items()):
+              print(f"{target}: {row}")
+          PY
+
+      - name: Upload multi-guard adversary evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: multiguard-adversary-${{ github.sha }}
+          path: senju/multiguard-adversary-report.json
+          if-no-files-found: warn
+          retention-days: 30
+
+  adversarial-fuzz:
+    name: ScopeGuard-only fuzz / seed ${{ matrix.seed }}
+    needs: [deterministic-regression, multi-guard-regression]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        seed: [377086, 12648430]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: "3.12"
+
+      - name: Install Senju test dependency
+        env:
+          PIP_DISABLE_PIP_VERSION_CHECK: "1"
+          PIP_NO_INPUT: "1"
+        run: python -m pip install -e './senju[dev]'
+
+      - name: Run regression wrapper
+        working-directory: senju
+        run: python -m pytest tests/test_scopeguard_fuzzer.py -q
+
+      - name: Hammer ScopeGuard locally
+        working-directory: senju
+        env:
+          REQUESTED_ITERATIONS: ${{ inputs.iterations }}
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          set -euo pipefail
+          iterations="500000"
+          if [ "${EVENT_NAME}" = "workflow_dispatch" ] && [ -n "${REQUESTED_ITERATIONS:-}" ]; then
+            iterations="${REQUESTED_ITERATIONS}"
+          fi
+          case "${iterations}" in
+            ''|*[!0-9]*) echo "iterations must be an integer" >&2; exit 2 ;;
+          esac
+          if [ "${iterations}" -lt 1 ] || [ "${iterations}" -gt 5000000 ]; then
+            echo "iterations must be between 1 and 5000000 in CI" >&2
+            exit 2
+          fi
+          python scripts/scopeguard_fuzzer.py --iterations "${iterations}" --seed "${{ matrix.seed }}"

@@ -1,0 +1,131 @@
+name: Senju COVENANT Intent Coupling Proof
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - "feat/senju-limitless-intent-coupling-20260830"
+    paths:
+      - "senju/scripts/apply_covenant_intent.py"
+      - "senju/tests/test_covenant_intent.py"
+      - ".github/workflows/senju-autonomous-improver.yml"
+      - ".github/workflows/senju-limitless-intent-proof.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  prove:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: "3.12"
+
+      - name: Run Senju tests
+        working-directory: senju
+        run: |
+          set -euo pipefail
+          python -m pip install pytest==9.1.1
+          python -m pytest tests -q
+
+      - name: Collect real read-only observation
+        working-directory: senju
+        run: |
+          set -euo pipefail
+          python -m senju.live_arena \
+            https://api.github.com/zen \
+            --allow-host api.github.com \
+            --method GET \
+            --timeout 8 \
+            --retries 2 \
+            --population 10 \
+            --generations 1 \
+            --matches 10 \
+            --seed 42 \
+            --out /tmp/live.json
+
+      - name: Build COVENANT ACT intent fixture
+        run: |
+          cat > /tmp/covenant.json <<'JSON'
+          {
+            "schema": "covenant-autonomy-plan/v2",
+            "generated_at": "2026-08-30T00:00:00+00:00",
+            "principle": "act with evidence",
+            "plans": [
+              {"worker": "senju-daily", "mode": "ACT"},
+              {"worker": "senju-shadow", "mode": "ACT"}
+            ],
+            "sanctuary": [],
+            "fellowship_requests": [],
+            "gratitude": [],
+            "manager_attention": false,
+            "boss_attention": false
+          }
+          JSON
+
+      - name: Apply intent to current Senju strategy
+        run: |
+          set -euo pipefail
+          python senju/scripts/apply_covenant_intent.py \
+            --strategy senju/state/strategy.json \
+            --covenant /tmp/covenant.json \
+            --live /tmp/live.json \
+            --out /tmp/strategy.json \
+            --audit /tmp/intent.json
+          python - <<'PY'
+          import json
+          base=json.load(open('senju/state/strategy.json'))
+          nxt=json.load(open('/tmp/strategy.json'))
+          audit=json.load(open('/tmp/intent.json'))
+          assert audit['intent_mode'] == 'EXPLORE_HARD', audit
+          assert audit['reality_signal'] is True
+          assert audit['candidate_count'] == 9
+          assert nxt['matches'] >= base['matches']
+          assert nxt['generations'] >= base['generations']
+          assert set(nxt) == set(base)
+          print('SENJU_COVENANT_INTENT_APPLIED')
+          print(json.dumps(audit, indent=2))
+          PY
+
+      - name: Smoke autonomous evolution with intent-shaped strategy
+        working-directory: senju
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json, subprocess
+          s=json.load(open('/tmp/strategy.json'))
+          cmd=[
+              'python','-m','senju.autopilot',
+              '--state','state/champion.json',
+              '--out','/tmp/covenant-smoke',
+              '--population',str(min(int(s['population']),60)),
+              '--generations',str(min(int(s['generations']),6)),
+              '--matches',str(min(int(s['matches']),120)),
+              '--candidates','3',
+          ]
+          subprocess.run(cmd, check=True)
+          result=json.load(open('/tmp/covenant-smoke/evolution-summary.json'))
+          assert result['selected']['safe'] is True
+          print('SENJU_COVENANT_AUTONOMY_VERIFIED')
+          PY
+
+      - name: Upload proof
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        with:
+          name: senju-covenant-intent-proof
+          retention-days: 30
+          if-no-files-found: error
+          path: |
+            /tmp/live.json
+            /tmp/covenant.json
+            /tmp/strategy.json
+            /tmp/intent.json
+            /tmp/covenant-smoke/evolution-summary.json

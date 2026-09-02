@@ -1,8 +1,8 @@
 {
   "population": 108,
-  "generations": 16,
-  "matches": 360,
-  "mutation_rate": 0.075,
+  "generations": 17,
+  "matches": 504,
+  "mutation_rate": 0.05,
   "red_budget": 16,
   "blue_budget": 16,
   "seed": 20260829

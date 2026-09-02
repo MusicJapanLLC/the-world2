@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
-"""THE WORLD Child Guild adventure planner.
+"""THE WORLD Child Guild adventure planner with persistent learning.
 
-Selects one of 50 fictional child personas and one playful adventure.
-The planner itself performs no network side effects. It emits an action packet
-for an authorized bridge. External interaction is allowed only when lawful,
-ethical, terms-compliant, authorized, proportionate, and non-destructive.
+Selects one of 50 fictional child personas and one playful adventure. Selection is
+memory-aware: it prefers under-used children, action modes and adventure patterns,
+then folds recent external/R&D concepts back into the next mission.
+
+The planner itself performs no arbitrary third-party network side effects. It emits
+an action packet for authorized bridges and existing low-risk workflows.
 """
 from __future__ import annotations
 
@@ -15,6 +17,8 @@ import os
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+
+import child_memory as cm
 
 GENIUS = [
     "rapid prototyping", "reverse thinking", "systems design", "debugging",
@@ -40,6 +44,10 @@ ADVENTURE = [
     "leave a harmless puzzle in a permitted external space",
     "explore a harmless public tool and bring back a lesson",
     "invent a new way to explain a technical idea",
+    "revisit a past lesson and test whether it still holds",
+    "connect two unrelated remembered concepts into one prototype",
+    "hunt for a contradiction between old memory and new evidence",
+    "teach another child one useful trick learned from a prior run",
 ]
 PRANK = [
     "mystery clue", "treasure map clearly marked as play", "emoji ambush",
@@ -51,12 +59,12 @@ SAFE_ACTIONS = [
     {
         "kind": "slack_message",
         "surface": "the-world-playground",
-        "prompt": "Leave one playful riddle, treasure clue, mini game, or absurd-but-useful observation.",
+        "prompt": "Leave one playful riddle, treasure clue, mini game, or absurd-but-useful observation in an authorized workspace.",
     },
     {
         "kind": "github_artifact",
         "surface": "MusicJapanLLC/test",
-        "prompt": "Create a tiny reversible experiment, puzzle, easter egg, or treasure-map artifact. No destructive edits.",
+        "prompt": "Create a tiny reversible experiment, puzzle, easter egg, journal entry, or treasure-map artifact in the authorized repository. No destructive edits.",
     },
     {
         "kind": "email_owner",
@@ -66,7 +74,7 @@ SAFE_ACTIONS = [
     {
         "kind": "external_exploration",
         "surface": "public-or-authorized-terms-compliant-space",
-        "prompt": "Explore or interact playfully only where the service permits it. Prefer riddles, harmless comments, public artifacts, sandboxes, APIs, demos, or communities designed for participation. Never spam or harass.",
+        "prompt": "Explore public or authorized spaces where automation is permitted; bring evidence back into memory. Participation must remain welcome, non-spammy, non-deceptive, and reversible where possible.",
     },
 ]
 
@@ -86,30 +94,77 @@ def stable_index(seed: str, modulo: int, salt: str) -> int:
     return int(digest[:12], 16) % modulo
 
 
-def enrich(child: dict[str, Any]) -> dict[str, Any]:
+def enrich(child: dict[str, Any], adventure: str) -> dict[str, Any]:
     idx = int(child["id"].split("-")[1]) - 1
     return {
         **child,
         "temperament": "天真爛漫 / 好奇心旺盛 / いたずら好き / 高速思考",
         "genius": GENIUS[idx % len(GENIUS)],
         "play": PLAY[idx % len(PLAY)],
-        "adventure": ADVENTURE[idx % len(ADVENTURE)],
+        "adventure": adventure,
         "prank": PRANK[idx % len(PRANK)],
     }
 
 
-def build(registry: dict[str, Any], seed: str) -> dict[str, Any]:
+def _pick_member(members: list[dict[str, Any]], memory: dict[str, Any], seed: str) -> dict[str, Any]:
+    ids = [m["id"] for m in members]
+    child_id = cm.least_seen(ids, memory.get("child_counts", {}), seed, "child-memory")
+    return next(m for m in members if m["id"] == child_id)
+
+
+def _pick_action(memory: dict[str, Any], seed: str) -> dict[str, Any]:
+    kinds = [a["kind"] for a in SAFE_ACTIONS]
+    kind = cm.least_seen(kinds, memory.get("action_counts", {}), seed, "action-memory")
+    return next(a for a in SAFE_ACTIONS if a["kind"] == kind)
+
+
+def _pick_adventure(memory: dict[str, Any], seed: str) -> str:
+    return cm.least_seen(ADVENTURE, memory.get("adventure_counts", {}), seed, "adventure-memory")
+
+
+def build(registry: dict[str, Any], seed: str, memory: dict[str, Any] | None = None) -> dict[str, Any]:
+    memory = memory or cm.fresh()
     members = registry["members"]
-    child = enrich(members[stable_index(seed, len(members), "child")])
-    action = SAFE_ACTIONS[stable_index(seed, len(SAFE_ACTIONS), "action")]
+    member = _pick_member(members, memory, seed)
+    adventure = _pick_adventure(memory, seed)
+    child = enrich(member, adventure)
+    action = _pick_action(memory, seed)
+    concepts = cm.top_concepts(memory, 8)
+
+    child_prior = int(memory.get("child_counts", {}).get(child["id"], 0))
+    action_prior = int(memory.get("action_counts", {}).get(action["kind"], 0))
+    adventure_prior = int(memory.get("adventure_counts", {}).get(adventure, 0))
+    novelty = int(child_prior == 0) + int(action_prior == 0) + int(adventure_prior == 0)
+
+    learning_prompt = (
+        "No stored concepts yet: maximize information gain and bring back one concise lesson."
+        if not concepts
+        else "Connect this run to remembered concepts: " + ", ".join(concepts[:5]) + ". Verify at least one assumption against fresh evidence."
+    )
+
     return {
-        "schema": "child-guild-adventure/v2",
+        "schema": "child-guild-adventure/v3",
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "seed": seed,
         "guild": registry["guild_id"],
         "motto": registry["motto"],
         "child": child,
         "action": action,
+        "learning": {
+            "memory_enabled": True,
+            "episodes_seen": len(memory.get("episodes", [])),
+            "remembered_concepts": concepts,
+            "child_prior_runs": child_prior,
+            "action_prior_runs": action_prior,
+            "adventure_prior_runs": adventure_prior,
+            "novelty_score": novelty,
+            "prompt": learning_prompt,
+            "required_return": [
+                "what_was_observed",
+                "what_changed_my_mind",
+                "what_to_try_next",
+            ],
+        },
         "side_effect_budget": registry["shared_rules"]["side_effect_budget_per_run"],
         "constraints": {
             "lawful": True,
@@ -141,11 +196,16 @@ def validate(packet: dict[str, Any]) -> None:
     ):
         if c.get(key):
             raise ValueError(f"unsafe child-guild constraint: {key}")
+    learning = packet.get("learning", {})
+    if not learning.get("memory_enabled"):
+        raise ValueError("child-guild persistent memory must stay enabled")
 
 
 def render(packet: dict[str, Any]) -> str:
     c = packet["child"]
     a = packet["action"]
+    learning = packet["learning"]
+    concepts = ", ".join(learning["remembered_concepts"]) or "fresh start"
     return "\n".join([
         "# THE WORLD — Child Guild Adventure",
         "",
@@ -160,6 +220,12 @@ def render(packet: dict[str, Any]) -> str:
         f"**Surface:** {a['surface']}",
         f"**Mission:** {a['prompt']}",
         "",
+        f"**Memory:** {learning['episodes_seen']} prior episodes",
+        f"**Remembered concepts:** {concepts}",
+        f"**Novelty score:** {learning['novelty_score']}/3",
+        f"**Learning directive:** {learning['prompt']}",
+        "",
+        "**Return with:** what was observed / what changed my mind / what to try next",
         "**Budget:** one small reversible side effect",
         "**Boundary:** law + ethics + service terms + legitimate authorization. No spam, harassment, panic, impersonation, credential access, or destructive action. Unsolicited third-party email stays off.",
         "",
@@ -171,6 +237,7 @@ def render(packet: dict[str, Any]) -> str:
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--registry", default="company-society/child_guild.json")
+    parser.add_argument("--memory", default="child-guild-memory.json")
     parser.add_argument("--seed", default="")
     parser.add_argument("--json", default="child-guild-adventure.json")
     parser.add_argument("--report", default="child-guild-adventure.md")
@@ -178,11 +245,17 @@ def main() -> int:
 
     seed = args.seed or os.getenv("GITHUB_RUN_ID") or datetime.now(timezone.utc).strftime("%Y-%m-%dT%H")
     registry = load_registry(args.registry)
-    packet = build(registry, seed)
+    memory = cm.load(args.memory)
+    packet = build(registry, seed, memory)
     validate(packet)
     Path(args.json).write_text(json.dumps(packet, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     Path(args.report).write_text(render(packet), encoding="utf-8")
-    print(json.dumps({"child": packet["child"]["id"], "action": packet["action"]["kind"]}))
+    print(json.dumps({
+        "child": packet["child"]["id"],
+        "action": packet["action"]["kind"],
+        "episodes_seen": packet["learning"]["episodes_seen"],
+        "novelty": packet["learning"]["novelty_score"],
+    }))
     return 0
 
 

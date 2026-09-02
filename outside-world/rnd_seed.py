@@ -55,6 +55,12 @@ def build(state: dict) -> dict:
         "forbidden_transfer": [
             "url", "host", "target", "network_scope", "credentials", "secrets", "external_actions"
         ],
+        "autonomous_task": {
+            "task_type": "rnd_improvement",
+            "title": f"R&D Improvement: {title}",
+            "scope": "automation/ai_foundry/",
+            "hypothesis": f"Incorporate pattern from '{title}' to improve system resilience",
+        },
     }
 
 

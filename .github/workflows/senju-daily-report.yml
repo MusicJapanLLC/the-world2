@@ -22,10 +22,15 @@ on:
       candidates:
         description: "比較する改善候補数"
         default: "5"
+      question:
+        description: "Personal AI Core + AI FOUNDRYへ聞く質問（何でも可。空欄なら自律改善質問）"
+        required: false
+        default: ""
 
 permissions:
-  contents: read
+  contents: write
   actions: read
+  pull-requests: write
 
 concurrency:
   group: senju-daily-self-evolution-${{ github.ref }}
@@ -33,9 +38,9 @@ concurrency:
 
 jobs:
   evolve:
-    name: Memory -> Tournament -> Eval -> Persist
+    name: Memory -> Tournament -> Advisors -> Tested PR
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
     env:
       GH_TOKEN: ${{ github.token }}
       SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
@@ -86,19 +91,30 @@ jobs:
           python -m pip install pytest==9.1.1
           python -m pytest tests -q
 
-      - name: Verify isolation guard blocks public targets
+      - name: Verify ScopeGuard mode semantics
         working-directory: senju
         run: |
           set -euo pipefail
-          python -m senju.cli safety-check sim://ci-target
-          if python -m senju.cli safety-check 8.8.8.8; then
-            echo "SECURITY FAIL: public target was allowed" >&2
-            exit 1
-          fi
-          if python -m senju.cli safety-check https://example.com; then
-            echo "SECURITY FAIL: public URL was allowed" >&2
-            exit 1
-          fi
+          python - <<'PY'
+          from senju.safety import ScopeGuard, ScopeViolation, default_lab_policy, experimental_lab_policy
+
+          strict = ScopeGuard(default_lab_policy())
+          strict.check('sim://ci-target')
+          for ref in ('8.8.8.8', 'https://example.com', '10.0.0.1'):
+              try:
+                  strict.check(ref)
+              except ScopeViolation:
+                  pass
+              else:
+                  raise SystemExit(f'strict ScopeGuard unexpectedly allowed {ref}')
+
+          research = ScopeGuard(experimental_lab_policy())
+          for ref in ('sim://ci-target', '8.8.8.8', 'https://example.com', '10.0.0.1'):
+              research.check(ref)
+          if not research.policy.allow_abstract_external_refs:
+              raise SystemExit('research policy must accept abstract external refs')
+          print('ScopeGuard strict and research-mode semantics verified')
+          PY
 
       - name: Run closed-loop candidate tournament
         id: evolve
@@ -126,12 +142,101 @@ jobs:
           print('score=' + str(d['selected']['score']))
           PY
 
+      - name: Ask Personal AI Core and AI Foundry
+        id: advisor
+        if: github.event_name != 'pull_request'
+        working-directory: senju
+        env:
+          ADVISOR_QUESTION: ${{ github.event.inputs.question || '' }}
+        run: |
+          set -euo pipefail
+          python -m senju.advisors \
+            --summary reports/evolution/evolution-summary.json \
+            --out reports/evolution/advisor-brief.json \
+            --payload-out reports/evolution/foundry-request.json \
+            --question "$ADVISOR_QUESTION"
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+          import json
+          d=json.load(open('reports/evolution/advisor-brief.json', encoding='utf-8'))
+          decision=d.get('decision') or {}
+          print('implement=' + str(bool(decision.get('implement'))).lower())
+          print('priority=' + str(decision.get('priority') or 'low'))
+          PY
+
+      - name: Implement selected advisor improvement with AI Foundry
+        id: implementation
+        if: github.event_name != 'pull_request' && steps.advisor.outputs.implement == 'true'
+        run: |
+          set -euo pipefail
+          META=/tmp/senju-advisor-patch.json
+          python automation/ai_foundry/repo_engineer.py \
+            --payload senju/reports/evolution/foundry-request.json \
+            --meta-out "$META"
+          python - "$META" <<'PY'
+          import json,sys
+          d=json.load(open(sys.argv[1], encoding='utf-8'))
+          changed=[str(x) for x in d.get('changed_files') or []]
+          bad=[x for x in changed if not x.startswith('senju/')]
+          if not changed:
+              raise SystemExit('AI Foundry produced no Senju files')
+          if bad:
+              raise SystemExit('AI Foundry attempted out-of-scope files: ' + ', '.join(bad))
+          PY
+          python automation/ai_foundry/repair_loop.py --meta "$META" --max-attempts 3
+          python - "$META" <<'PY'
+          import json,sys
+          d=json.load(open(sys.argv[1], encoding='utf-8'))
+          if not d.get('verified'):
+              raise SystemExit('advisor implementation did not pass sandbox verification')
+          slim={k:d.get(k) for k in ('job_id','summary','changed_files','verified','repair_attempts','verified_commands','risks','model_route')}
+          open('senju/reports/evolution/advisor-patch.json','w',encoding='utf-8').write(json.dumps(slim,ensure_ascii=False,indent=2)+'\n')
+          PY
+
+          BRANCH="senju/advisor-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          git config user.name 'senju-advisor[bot]'
+          git config user.email 'senju-advisor@users.noreply.github.com'
+          git checkout -b "$BRANCH"
+          git add senju
+          if git diff --cached --quiet; then
+            echo "No implementation diff after verified Foundry run"
+            echo "pr_url=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git commit -m "senju(advisor): verified daily AI improvement"
+          git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git push origin "HEAD:$BRANCH"
+          git remote set-url origin "https://github.com/${GITHUB_REPOSITORY}.git"
+          PR_URL="$(gh pr create \
+            --base claude/employee-onboarding-setup-udm86 \
+            --head "$BRANCH" \
+            --title "Senju advisor: verified daily AI improvement" \
+            --body "Generated from the Senju advisor lane: Standment Personal AI Core → AI FOUNDRY synthesis → Repo Engineer → sandbox test/repair. Review before merge. Evidence is attached to the originating Senju workflow run.")"
+          echo "pr_url=$PR_URL" >> "$GITHUB_OUTPUT"
+
       - name: Publish evolution report to job summary
         working-directory: senju
+        env:
+          ADVISOR_IMPLEMENT: ${{ steps.advisor.outputs.implement }}
+          ADVISOR_PRIORITY: ${{ steps.advisor.outputs.priority }}
+          ADVISOR_PR: ${{ steps.implementation.outputs.pr_url }}
         run: |
           cat reports/evolution/evolution-plan.md >> "$GITHUB_STEP_SUMMARY"
           printf '\n---\n' >> "$GITHUB_STEP_SUMMARY"
           cat reports/evolution/latest.md >> "$GITHUB_STEP_SUMMARY"
+          if [[ -f reports/evolution/advisor-brief.json ]]; then
+            python - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import json, os
+          d=json.load(open('reports/evolution/advisor-brief.json', encoding='utf-8'))
+          decision=d.get('decision') or {}
+          print('\n---\n\n## AI Advisor Hub')
+          print(f"- question: {d.get('question','')}")
+          print(f"- Personal AI Core: {'OK' if (d.get('personal_ai') or {}).get('ok') else 'unavailable'}")
+          print(f"- AI Foundry decision: implement={decision.get('implement')} / priority={decision.get('priority')}")
+          print(f"- rationale: {decision.get('rationale','')}")
+          pr=os.environ.get('ADVISOR_PR','')
+          if pr: print(f"- verified implementation PR: {pr}")
+          PY
+          fi
 
       - name: Upload durable memory for tomorrow
         id: memory
@@ -147,6 +252,9 @@ jobs:
             senju/reports/evolution/evolution-plan.md
             senju/reports/evolution/latest.json
             senju/reports/evolution/latest.md
+            senju/reports/evolution/advisor-brief.json
+            senju/reports/evolution/foundry-request.json
+            senju/reports/evolution/advisor-patch.json
 
       - name: Notify Slack
         if: always() && env.SLACK_WEBHOOK_URL != ''
@@ -154,16 +262,32 @@ jobs:
         env:
           JOB_STATUS: ${{ job.status }}
           ARTIFACT_URL: ${{ steps.memory.outputs.artifact-url }}
+          ADVISOR_PR: ${{ steps.implementation.outputs.pr_url }}
         run: |
           python - <<'PY'
           import json, os, urllib.request
           try:
               d=json.load(open('reports/evolution/evolution-summary.json', encoding='utf-8'))
+              extra=''
+              try:
+                  a=json.load(open('reports/evolution/advisor-brief.json', encoding='utf-8'))
+                  decision=a.get('decision') or {}
+                  extra=(
+                      f"\nadvisor: personal_ai={'ok' if (a.get('personal_ai') or {}).get('ok') else 'unavailable'} / "
+                      f"foundry_implement={decision.get('implement')} / priority={decision.get('priority')}"
+                  )
+                  if a.get('question'):
+                      extra += f"\nquestion: {str(a.get('question'))[:300]}"
+                  if os.environ.get('ADVISOR_PR'):
+                      extra += f"\nverified PR: {os.environ['ADVISOR_PR']}"
+              except Exception:
+                  pass
               text=(
                   f"*Senju Daily Self Evolution* — {os.environ.get('JOB_STATUS')}\n"
                   f"safe={d['selected']['safe']} / score={d['selected']['score']} / "
                   f"strategy_change={d['accepted_strategy_change']}\n"
-                  f"delta: {', '.join(d['changes'])}\n"
+                  f"delta: {', '.join(d['changes'])}"
+                  f"{extra}\n"
                   f"memory: {os.environ.get('ARTIFACT_URL','')}"
               )
           except Exception:

@@ -1,0 +1,82 @@
+{
+  "version": 1,
+  "items": [
+    {
+      "id": "R-001",
+      "title": "Daily exploited-vulnerability intelligence digest",
+      "type": "threat-intel",
+      "priority": 100,
+      "status": "queued",
+      "scope": "public-info-only",
+      "success_metric": "Produce an evidence-backed daily digest and defensive actions"
+    },
+    {
+      "id": "R-002",
+      "title": "Repository defensive-control maturity audit",
+      "type": "self-audit",
+      "priority": 95,
+      "status": "queued",
+      "scope": "own-repository",
+      "success_metric": "Measure and improve CI, dependency, code scanning and recovery controls"
+    },
+    {
+      "id": "R-003",
+      "title": "Security research process benchmark",
+      "type": "meta-research",
+      "priority": 80,
+      "status": "queued",
+      "scope": "internal",
+      "success_metric": "Track cycle time, evidence quality, reuse and portfolio output"
+    },
+    {
+      "id": "AUTO-CVE-2020-5849",
+      "title": "Defensive exposure review: CVE-2020-5849",
+      "type": "defensive-assessment",
+      "priority": 90,
+      "status": "queued",
+      "scope": "public-info-and-own-assets-only",
+      "source_ref": "CVE-2020-5849",
+      "success_metric": "Document exposure checks, mitigations, detection ideas and evidence without exploiting third parties"
+    },
+    {
+      "id": "AUTO-CVE-2020-5847",
+      "title": "Defensive exposure review: CVE-2020-5847",
+      "type": "defensive-assessment",
+      "priority": 90,
+      "status": "queued",
+      "scope": "public-info-and-own-assets-only",
+      "source_ref": "CVE-2020-5847",
+      "success_metric": "Document exposure checks, mitigations, detection ideas and evidence without exploiting third parties"
+    },
+    {
+      "id": "AUTO-CVE-2019-16759",
+      "title": "Defensive exposure review: CVE-2019-16759",
+      "type": "defensive-assessment",
+      "priority": 90,
+      "status": "queued",
+      "scope": "public-info-and-own-assets-only",
+      "source_ref": "CVE-2019-16759",
+      "success_metric": "Document exposure checks, mitigations, detection ideas and evidence without exploiting third parties"
+    },
+    {
+      "id": "AUTO-CVE-2020-17496",
+      "title": "Defensive exposure review: CVE-2020-17496",
+      "type": "defensive-assessment",
+      "priority": 90,
+      "status": "queued",
+      "scope": "public-info-and-own-assets-only",
+      "source_ref": "CVE-2020-17496",
+      "success_metric": "Document exposure checks, mitigations, detection ideas and evidence without exploiting third parties"
+    },
+    {
+      "id": "AUTO-CVE-2019-5544",
+      "title": "Defensive exposure review: CVE-2019-5544",
+      "type": "defensive-assessment",
+      "priority": 90,
+      "status": "queued",
+      "scope": "public-info-and-own-assets-only",
+      "source_ref": "CVE-2019-5544",
+      "success_metric": "Document exposure checks, mitigations, detection ideas and evidence without exploiting third parties"
+    }
+  ]
+}

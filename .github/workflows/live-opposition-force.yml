@@ -1,0 +1,145 @@
+name: Senju Live Opposition Force
+
+on:
+  push:
+    branches:
+      - claude/employee-onboarding-setup-udm86
+    paths:
+      - "senju/OFFENSE_FIRST.md"
+      - "senju/adversary/**"
+      - "senju/senju/safety.py"
+      - "senju/senju/authorized_assessment.py"
+      - "senju/senju/external.py"
+      - "senju/senju/autonomy/**"
+      - "senju/senju/multiguard_adversary.py"
+      - "senju/senju/multiguard_adversary_v2.py"
+      - "senju/senju/opposition_force.py"
+      - "senju/scripts/run_live_opposition_force.py"
+      - "senju/scripts/run_persistent_damage_opposition.py"
+      - "senju/tests/test_live_opposition_force.py"
+      - "scripts/security/artifact_guard.py"
+      - ".github/workflows/security-guard.yml"
+      - ".github/workflows/live-opposition-force.yml"
+  pull_request:
+    paths:
+      - "senju/OFFENSE_FIRST.md"
+      - "senju/adversary/**"
+      - "senju/senju/safety.py"
+      - "senju/senju/authorized_assessment.py"
+      - "senju/senju/external.py"
+      - "senju/senju/autonomy/**"
+      - "senju/senju/multiguard_adversary.py"
+      - "senju/senju/multiguard_adversary_v2.py"
+      - "senju/senju/opposition_force.py"
+      - "senju/scripts/run_live_opposition_force.py"
+      - "senju/scripts/run_persistent_damage_opposition.py"
+      - "senju/tests/test_live_opposition_force.py"
+      - "scripts/security/artifact_guard.py"
+      - ".github/workflows/security-guard.yml"
+      - ".github/workflows/live-opposition-force.yml"
+  schedule:
+    - cron: "47 */6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: live-opposition-force-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  live-opposition-force:
+    name: Real guards / persistent damage L1-L5 / 39.8k-199k pressure
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: "3.12"
+
+      - name: Restore persistent opposition damage
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
+        with:
+          path: senju/.opposition-damage
+          key: live-opposition-damage-${{ github.ref_name }}-${{ github.run_id }}
+          restore-keys: |
+            live-opposition-damage-${{ github.ref_name }}-
+
+      - name: Install Senju test dependency
+        env:
+          PIP_DISABLE_PIP_VERSION_CHECK: "1"
+          PIP_NO_INPUT: "1"
+        run: python -m pip install -e './senju[dev]'
+
+      - name: Lock degraded floor and regression scars
+        working-directory: senju
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          profile = json.loads(Path("adversary/degraded_profile.json").read_text())
+          scars = json.loads(Path("adversary/regression_scars.json").read_text())
+          assert profile["test_only"] is True
+          assert profile["require_fake_transport"] is True
+          assert profile["minimum_pressure_attempts"] >= 39800
+          assert len(scars["entries"]) >= 4
+          print("persistent_degraded_floor:", profile["minimum_pressure_attempts"])
+          print("persistent_regression_scars:", len(scars["entries"]))
+          PY
+
+      - name: Prove live repository bindings
+        working-directory: senju
+        run: python -m pytest tests/test_live_opposition_force.py -q -k 'live_bindings or live_binding_paths'
+
+      - name: Hammer all seven real guard surfaces with carried damage
+        working-directory: senju
+        run: >-
+          python scripts/run_persistent_damage_opposition.py
+          --state .opposition-damage/state.json
+          --json-out persistent-damage-report.json
+          > /tmp/persistent-damage-stdout.json
+
+      - name: Summarize persistent damage
+        working-directory: senju
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          report = json.loads(Path("persistent-damage-report.json").read_text())
+          before = report["state_before"]
+          after = report["state_after"]
+          print("mode:", report["mode"])
+          print("damage_level_before:", before["damage_level"])
+          print("damage_level_after:", after["damage_level"])
+          print("auto_heal:", after["auto_heal"])
+          print("cycles_this_run:", report["cycles"])
+          print("pressure_this_run:", report["aggregate_pressure_attempts"])
+          print("accumulated_pressure:", after["accumulated_pressure_attempts"])
+          print("run_count:", after["run_count"])
+          print("corrupt_state_events:", after["corrupt_state_events"])
+          print("guard_damage:", after["guard_damage"])
+          print("passed:", report["passed"])
+          for cycle in report["cycle_summaries"]:
+              print("cycle", cycle["cycle"], "pressure=" + str(cycle["pressure_attempts"]), "passed=" + str(cycle["passed"]))
+          PY
+
+      - name: Upload opposition evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: live-opposition-force-${{ github.sha }}
+          path: |
+            senju/persistent-damage-report.json
+            senju/.opposition-damage/state.json
+            senju/adversary/degraded_profile.json
+            senju/adversary/regression_scars.json
+          if-no-files-found: warn
+          retention-days: 30

@@ -1,0 +1,41 @@
+name: Manager Schedule Regression Guard
+
+on:
+  push:
+    branches: ['claude/employee-onboarding-setup-udm86']
+    paths:
+      - '.github/workflows/tomoki-manager-queue.yml'
+      - '.github/workflows/manager-schedule-regression.yml'
+  pull_request:
+    paths:
+      - '.github/workflows/tomoki-manager-queue.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  canonical-manager-schedule:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          persist-credentials: false
+
+      - name: Enforce staggered five-minute cadence
+        shell: python
+        run: |
+          from pathlib import Path
+
+          workflow = Path('.github/workflows/tomoki-manager-queue.yml').read_text(encoding='utf-8')
+          cron_lines = [line.strip() for line in workflow.splitlines() if line.strip().startswith('- cron:')]
+          canonical = "- cron: '2-59/5 * * * *'"
+          forbidden = "- cron: '*/5 * * * *'"
+
+          if cron_lines.count(canonical) != 1:
+              raise SystemExit('Manager schedule drift: canonical 2-59/5 cadence must appear exactly once')
+          if forbidden in cron_lines:
+              raise SystemExit('Manager schedule drift: hourly-boundary */5 cadence is forbidden')
+
+          print('Manager schedule regression guard: PASS')

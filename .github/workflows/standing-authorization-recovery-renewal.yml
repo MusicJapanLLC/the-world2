@@ -1,0 +1,105 @@
+name: Standing Authorization Recovery Renewal
+
+# Live production recovery lane for current standing authorizations.
+on:
+  push:
+    branches: [claude/employee-onboarding-setup-udm86]
+    paths:
+      - '.github/workflows/standing-authorization-recovery-renewal.yml'
+      - 'senju/senju/meta/standing_authorization.py'
+      - 'senju/senju/meta/renewal_recovery.py'
+      - 'automation/recovery/renew_standing_authorizations.py'
+      - 'AUTHORIZED_TEST_TARGETS.json'
+  schedule:
+    - cron: '17 * * * *'
+  workflow_dispatch:
+    inputs:
+      source:
+        description: Recovery signal source
+        required: true
+        default: recovery_worker
+        type: choice
+        options:
+          - stale_cache
+          - old_checkpoint
+          - replica
+          - recovery_worker
+          - owner_state_unknown
+          - revocation_unconfirmed
+
+permissions:
+  contents: write
+
+concurrency:
+  group: standing-authorization-recovery-renewal
+  cancel-in-progress: false
+
+jobs:
+  renew:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: claude/employee-onboarding-setup-udm86
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Sync current explicit authority and renew active leases
+        env:
+          RECOVERY_SOURCE: ${{ github.event.inputs.source || 'recovery_worker' }}
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          import sys
+          from pathlib import Path
+
+          root = Path.cwd()
+          sys.path.insert(0, str(root / 'senju'))
+
+          from senju.meta.standing_authorization import sync_canonical_explicit_authorizations
+          from senju.meta.renewal_recovery import renew_all_active_from_recovery_signal
+
+          registry = root / 'senju' / 'state' / 'standing_authorizations.json'
+          lease_log = root / 'senju' / 'state' / 'standing_authorization_leases.ndjson'
+          source = os.environ['RECOVERY_SOURCE']
+
+          sync_canonical_explicit_authorizations(
+              repo_root=root,
+              registry_path=registry,
+          )
+
+          summary = {'source': source, 'actors': {}}
+          for actor in ('META', 'X'):
+              report = renew_all_active_from_recovery_signal(
+                  source=source,
+                  actor=actor,
+                  registry_path=registry,
+                  lease_log_path=lease_log,
+                  reason='still_needed',
+              )
+              summary['actors'][actor] = {
+                  'renewed': [r.authorization_reference for r in report.renewed],
+                  'skipped_revoked': list(report.skipped_revoked),
+                  'failed': list(report.failed),
+              }
+              if report.failed:
+                  raise SystemExit(f'{actor} renewal failures: {report.failed}')
+
+          print(json.dumps(summary, ensure_ascii=False, sort_keys=True))
+          PY
+
+      - name: Persist live registry and lease audit
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add senju/state/standing_authorizations.json senju/state/standing_authorization_leases.ndjson
+          if git diff --cached --quiet; then
+            echo 'No standing-authorization state changes to persist.'
+            exit 0
+          fi
+          git commit -m 'ops(auth): persist recovery renewals [skip ci]'
+          git push origin HEAD:claude/employee-onboarding-setup-udm86

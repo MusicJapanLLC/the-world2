@@ -1,0 +1,215 @@
+name: Senju SPEAR Phase 5 Depth Observation
+
+on:
+  schedule:
+    - cron: "53 */6 * * *"
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "senju/senju/spear_tls.py"
+      - "senju/senju/spear_inventory.py"
+      - "senju/tests/test_spear_tls.py"
+      - "senju/tests/test_spear_inventory.py"
+      - ".github/workflows/senju-spear-depth.yml"
+      - "senju/SPEAR.md"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: senju-spear-depth-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  depth:
+    name: Authority -> TLS -> bounded paths -> sanitized depth signal
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      SENJU_SPEAR_ENGAGEMENT_JSON: ${{ secrets.SENJU_SPEAR_ENGAGEMENT_JSON }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: "3.12"
+
+      - name: Verify phase 5 core before network execution
+        working-directory: senju
+        env:
+          PIP_DISABLE_PIP_VERSION_CHECK: "1"
+          PIP_NO_INPUT: "1"
+        run: |
+          set -euo pipefail
+          python -m pip install pytest==9.1.1
+          python -m pytest \
+            tests/test_spear_tls.py \
+            tests/test_spear_inventory.py \
+            tests/test_authorized_assessment.py \
+            -q
+
+      - name: Prepare engagement
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/spear-depth/input /tmp/spear-depth/work /tmp/spear-depth/evidence
+          if [[ -z "${SENJU_SPEAR_ENGAGEMENT_JSON:-}" ]]; then
+            python - <<'PY'
+          import json
+          from datetime import datetime, timezone
+          from pathlib import Path
+          Path('/tmp/spear-depth/evidence/summary.json').write_text(json.dumps({
+              'schema': 'senju-spear-depth-summary/v1',
+              'configured': False,
+              'generated_at_utc': datetime.now(timezone.utc).isoformat(timespec='seconds'),
+              'targets': [],
+              'note': 'No SENJU_SPEAR_ENGAGEMENT_JSON configured; no public target contacted.',
+          }, indent=2) + '\n')
+          PY
+            echo "SENJU_SPEAR_DEPTH_NOT_CONFIGURED_NO_EXTERNAL_CONTACT"
+            exit 0
+          fi
+          printf '%s' "$SENJU_SPEAR_ENGAGEMENT_JSON" > /tmp/spear-depth/input/engagement.json
+          chmod 600 /tmp/spear-depth/input/engagement.json
+          cd senju
+          python -m senju.authorized_assessment \
+            /tmp/spear-depth/input/engagement.json \
+            --out /tmp/spear-depth/evidence/plan.json
+          python - <<'PY'
+          from pathlib import Path
+          from senju.authorized_assessment import EngagementManifest
+          manifest = EngagementManifest.load('/tmp/spear-depth/input/engagement.json')
+          Path('/tmp/spear-depth/input/hosts.txt').write_text(
+              ''.join(f'{target.host}\n' for target in manifest.targets), encoding='utf-8'
+          )
+          PY
+
+      - name: Run authorized depth observations
+        if: ${{ env.SENJU_SPEAR_ENGAGEMENT_JSON != '' }}
+        working-directory: senju
+        run: |
+          set -euo pipefail
+          index=0
+          while IFS= read -r host; do
+            [[ -z "$host" ]] && continue
+            index=$((index + 1))
+            python -m senju.spear_inventory \
+              /tmp/spear-depth/input/engagement.json \
+              --target-host "$host" \
+              --out "/tmp/spear-depth/work/inventory-${index}.json"
+            scheme="$(python - <<PY
+          from senju.authorized_assessment import EngagementManifest
+          m=EngagementManifest.load('/tmp/spear-depth/input/engagement.json')
+          print(next(t.scheme for t in m.targets if t.host == '$host'))
+          PY
+            )"
+            if [[ "$scheme" == "https" ]]; then
+              python -m senju.spear_tls \
+                /tmp/spear-depth/input/engagement.json \
+                --target-host "$host" \
+                --out "/tmp/spear-depth/work/tls-${index}.json"
+            fi
+          done < /tmp/spear-depth/input/hosts.txt
+
+      - name: Build sanitized depth signal
+        if: ${{ env.SENJU_SPEAR_ENGAGEMENT_JSON != '' }}
+        working-directory: senju
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          from datetime import datetime, timezone
+          from pathlib import Path
+          from senju.authorized_assessment import EngagementManifest
+
+          manifest = EngagementManifest.load('/tmp/spear-depth/input/engagement.json')
+          targets=[]
+          for i, target in enumerate(manifest.targets, start=1):
+              inv_path=Path(f'/tmp/spear-depth/work/inventory-{i}.json')
+              tls_path=Path(f'/tmp/spear-depth/work/tls-{i}.json')
+              inv=json.loads(inv_path.read_text()) if inv_path.exists() else None
+              tls=json.loads(tls_path.read_text()) if tls_path.exists() else None
+              targets.append({
+                  'target_host': target.host,
+                  'scheme': target.scheme,
+                  'inventory': None if inv is None else {
+                      'discovered_paths': inv.get('discovered_paths', []),
+                      'request_count': len(inv.get('receipts', [])),
+                      'statuses': [r.get('status', 0) for r in inv.get('receipts', [])],
+                  },
+                  'tls': None if tls is None else {
+                      'tls_version': tls.get('tls_version'),
+                      'cipher': tls.get('cipher'),
+                      'certificate_not_after_utc': tls.get('certificate_not_after_utc'),
+                      'san_dns_count': tls.get('san_dns_count', 0),
+                      'findings': [
+                          {k: item.get(k) for k in ('severity','key','title','remediation')}
+                          for item in tls.get('findings', [])
+                      ],
+                  },
+              })
+
+          signal={
+              'schema': 'senju-spear-depth-summary/v1',
+              'configured': True,
+              'generated_at_utc': datetime.now(timezone.utc).isoformat(timespec='seconds'),
+              'engagement_id': manifest.engagement_id,
+              'manifest_sha256': manifest.sha256(),
+              'targets': targets,
+              'research_signal': {
+                  'tls_findings': sum(len((t.get('tls') or {}).get('findings', [])) for t in targets),
+                  'paths_observed': sum(len((t.get('inventory') or {}).get('discovered_paths', [])) for t in targets),
+                  'next_focus': 'retest-depth-delta-and-remediation',
+              },
+              'boundaries': {
+                  'exact_hosts_only': True,
+                  'same_base_path_only': True,
+                  'methods': ['GET','HEAD'],
+                  'credential_guessing': False,
+                  'auth_bypass': False,
+                  'exploit_delivery': False,
+                  'destructive_requests': False,
+                  'raw_bodies_persisted': False,
+                  'raw_certificates_persisted': False,
+              },
+          }
+          Path('/tmp/spear-depth/evidence/summary.json').write_text(
+              json.dumps(signal, indent=2) + '\n', encoding='utf-8'
+          )
+          print('SENJU_SPEAR_PHASE5_DEPTH_VERIFIED')
+          print(json.dumps(signal['research_signal']))
+          PY
+          rm -rf /tmp/spear-depth/input /tmp/spear-depth/work
+
+      - name: Publish summary
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          d=json.loads(Path('/tmp/spear-depth/evidence/summary.json').read_text())
+          signal=d.get('research_signal', {})
+          lines=[
+              '# Senju SPEAR Phase 5 Depth',
+              '',
+              f"- configured: `{d.get('configured')}`",
+              f"- targets: `{len(d.get('targets', []))}`",
+              f"- paths observed: `{signal.get('paths_observed', 0)}`",
+              f"- TLS findings: `{signal.get('tls_findings', 0)}`",
+              '',
+              'Depth observation is restricted to exact authorized hosts/base paths and low-impact GET/HEAD plus TLS handshake metadata.',
+          ]
+          Path('/tmp/spear-depth/evidence/job-summary.md').write_text('\n'.join(lines)+'\n')
+          PY
+          cat /tmp/spear-depth/evidence/job-summary.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload sanitized depth evidence
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        with:
+          name: senju-spear-depth-evidence
+          retention-days: 30
+          if-no-files-found: error
+          path: /tmp/spear-depth/evidence/

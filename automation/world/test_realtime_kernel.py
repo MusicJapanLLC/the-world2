@@ -11,7 +11,7 @@ from automation.world.realtime_kernel import (
 from automation.world.core_director import validate_plan
 from automation.world.self_heal_engine import _excerpt, _extract_source_locations, select_incident
 
-NOW = datetime(2026, 8, 29, 12, 0, tzinfo=timezone.utc)
+NOW = datetime.now(timezone.utc)
 
 
 class RealtimeKernelTests(unittest.TestCase):

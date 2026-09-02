@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -27,6 +28,23 @@ PORTFOLIO_MARKERS = {
     "SEC-PORT-006": "## Standment Incident Readiness & Recovery Evidence Pack",
     "SEC-PORT-007": "## Standment Continuous Security Retainer Scorecard",
     "SEC-PORT-008": "## Standment Security Architecture Review Pack",
+    "SEC-PORT-009": "## AI Agent Permission Boundary Lab",
+    "SEC-PORT-010": "## LLM Security Evaluation Harness",
+    "SEC-PORT-011": "## Standment Security Evidence Dashboard",
+}
+
+ARTIFACT_STATUS_FILES = {
+    "SEC-PORT-001": "standment-security/case-studies/security-scan-before-after/README.md",
+    "SEC-PORT-002": "standment-security/evidence-packs/customer-security/README.md",
+    "SEC-PORT-003": "standment-security/evidence-packs/supply-chain/README.md",
+    "SEC-PORT-004": "standment-security/evidence-packs/auth-tenant-rls/README.md",
+    "SEC-PORT-005": "standment-security/evidence-packs/agent-auditability/README.md",
+    "SEC-PORT-006": "standment-security/evidence-packs/incident-readiness/README.md",
+    "SEC-PORT-007": "standment-security/evidence-packs/continuous-retainer/README.md",
+    "SEC-PORT-008": "standment-security/evidence-packs/architecture-review/README.md",
+    "SEC-PORT-009": "standment-security/ai-security/agent-permission-boundary-lab.md",
+    "SEC-PORT-010": "standment-security/ai-security/llm-security-eval-harness.md",
+    "SEC-PORT-011": "standment-security/ai-security/security-evidence-dashboard.md",
 }
 
 STATUS_LEVEL = {
@@ -35,8 +53,14 @@ STATUS_LEVEL = {
     "VISIBLE": 1,
     "BUILDING": 2,
     "BLOCKED": 2,
-    "VERIFIED": 3,
+    "PROMOTION_READY": 3,
+    "VERIFIED": 4,
 }
+
+STATUS_RE = re.compile(
+    r"(?:状態|Status)\s*:\s*\*\*?\s*(ABSENT|EXPERIMENT|VISIBLE|BUILDING|BLOCKED|PROMOTION_READY|VERIFIED)",
+    re.I,
+)
 
 
 def load_json(path: Path) -> dict[str, Any]:
@@ -63,10 +87,23 @@ def section_status(portfolio: str, marker: str) -> str:
     section_end = len(portfolio) if next_h2 < 0 else next_h2
     section = portfolio[section_start:section_end]
 
-    for status in ("VERIFIED", "BUILDING", "EXPERIMENT", "BLOCKED"):
+    for status in ("VERIFIED", "PROMOTION_READY", "BUILDING", "EXPERIMENT", "BLOCKED"):
         if f"状態: {status}" in section or f"**状態: {status}**" in section:
             return status
     return "VISIBLE"
+
+
+def artifact_status(root: Path, track_id: str) -> str:
+    """Read maturity from the customer-inspectable track artifact when present."""
+    rel = ARTIFACT_STATUS_FILES.get(track_id)
+    if not rel:
+        return "ABSENT"
+    path = root / rel
+    if not path.exists():
+        return "ABSENT"
+    text = path.read_text(encoding="utf-8", errors="replace")[:16000]
+    match = STATUS_RE.search(text)
+    return match.group(1).upper() if match else "VISIBLE"
 
 
 def inspect_track(root: Path, portfolio: str, track: dict[str, Any]) -> dict[str, Any]:
@@ -80,7 +117,12 @@ def inspect_track(root: Path, portfolio: str, track: dict[str, Any]) -> dict[str
     missing = [p for p in evidence_files if not (root / p).exists()]
     ratio = (len(present) / len(evidence_files)) if evidence_files else 0.0
     marker = PORTFOLIO_MARKERS.get(track_id, str(track.get("title", "")))
-    status = section_status(portfolio, marker)
+    portfolio_status = section_status(portfolio, marker)
+    direct_artifact_status = artifact_status(root, track_id)
+    status = max(
+        (portfolio_status, direct_artifact_status),
+        key=lambda candidate: STATUS_LEVEL.get(candidate, 0),
+    )
 
     status_gap = {
         "ABSENT": 180,
@@ -88,6 +130,7 @@ def inspect_track(root: Path, portfolio: str, track: dict[str, Any]) -> dict[str
         "BUILDING": 100,
         "BLOCKED": 130,
         "VISIBLE": 90,
+        "PROMOTION_READY": 55,
         "VERIFIED": 20,
     }.get(status, 100)
     evidence_gap = round((1.0 - ratio) * 120)
@@ -100,6 +143,8 @@ def inspect_track(root: Path, portfolio: str, track: dict[str, Any]) -> dict[str
         "priority": priority,
         "research_score": research_score,
         "portfolio_status": status,
+        "portfolio_index_status": portfolio_status,
+        "artifact_status": direct_artifact_status,
         "evidence_ratio": round(ratio, 3),
         "evidence_present": present,
         "evidence_missing": missing,
@@ -331,7 +376,7 @@ def build_report(
         )
 
     return {
-        "schema": "standment-security-portfolio-rnd-report/v3",
+        "schema": "standment-security-portfolio-rnd-report/v4",
         "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "mission": program.get("mission"),
         "reporting_contract": program.get("reporting_contract", "standment-security/REPORTING_CONTRACT.md"),
@@ -400,6 +445,7 @@ def render(report: dict[str, Any]) -> str:
         f"{s['deliverable']}\n\n"
         "*検証結果*\n"
         f"Portfolio promotion gate: {promotion} / Senju bounded focus: {s['senju_focus']} / Missing evidence: {missing}\n"
+        f"Status source: index={s.get('portfolio_index_status')} / artifact={s.get('artifact_status')} / resolved={s.get('portfolio_status')}\n"
         f"Stagnation streak: {report['stagnation_streak']} day(s)\n\n"
         "*North Star*\n"
         f"Security tracks: {ns['tracks_total']} / inspectable={ns['tracks_inspectable']} / verified={ns['tracks_verified']} / "

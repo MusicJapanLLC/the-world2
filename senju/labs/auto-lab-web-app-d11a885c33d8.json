@@ -1,0 +1,30 @@
+{
+  "archetype": "web_app",
+  "coverage_gaps": [
+    "ssti",
+    "tool_misuse",
+    "xss"
+  ],
+  "description": "Auto-generated local lab from bounded coverage/ELO evidence",
+  "fingerprint": "4c5727658a810ef63979cece3b798216f5eb24dd144058b72795700f41acb111",
+  "host": null,
+  "name": "auto-lab-web-app-d11a885c33d8",
+  "schema": "senju-auto-lab/v3",
+  "surfaces": [
+    {
+      "difficulty": 0.629,
+      "name": "auto-lab-web-app-d11a885c33d8:ssti",
+      "vuln_class": "ssti"
+    },
+    {
+      "difficulty": 0.379,
+      "name": "auto-lab-web-app-d11a885c33d8:tool-misuse",
+      "vuln_class": "tool_misuse"
+    },
+    {
+      "difficulty": 0.727,
+      "name": "auto-lab-web-app-d11a885c33d8:xss",
+      "vuln_class": "xss"
+    }
+  ]
+}

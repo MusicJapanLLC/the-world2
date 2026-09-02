@@ -1,0 +1,46 @@
+name: X — Self-Development Cycle
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
+    inputs:
+      focus:
+        description: 'Focus area for improvement (empty=auto-detect)'
+        required: false
+        default: ''
+
+jobs:
+  self-develop:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      SELF_DEV_BRANCH: ${{ github.ref_name }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install requests anthropic 2>/dev/null || pip install requests
+
+      - name: Run self-development cycle
+        working-directory: automation/codegen
+        run: |
+          FOCUS="${{ github.event.inputs.focus || '' }}"
+          python3 orchestrator.py selfdev "$FOCUS"
+
+      - name: Commit self-improvements
+        run: |
+          git config user.name "X-SelfDev"
+          git config user.email "x-selfdev@musicjapanllc.com"
+          git add -A
+          git diff --staged --quiet || git commit -m "feat(X/self-dev): autonomous engine improvement [skip ci]"
+          git push origin HEAD || true

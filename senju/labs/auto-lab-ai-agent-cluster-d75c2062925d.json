@@ -1,0 +1,18 @@
+{
+  "archetype": "ai_agent_cluster",
+  "coverage_gaps": [
+    "xxe"
+  ],
+  "description": "Auto-generated local lab from bounded coverage/ELO evidence",
+  "fingerprint": "bf79fe7737981838c9dcb66da0e55c64c9a586250a6b3f5fbe7551b8fe764810",
+  "host": null,
+  "name": "auto-lab-ai-agent-cluster-d75c2062925d",
+  "schema": "senju-auto-lab/v3",
+  "surfaces": [
+    {
+      "difficulty": 0.34,
+      "name": "auto-lab-ai-agent-cluster-d75c2062925d:xxe",
+      "vuln_class": "xxe"
+    }
+  ]
+}

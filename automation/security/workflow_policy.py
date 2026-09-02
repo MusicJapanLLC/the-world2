@@ -232,7 +232,7 @@ def _stress_write_count(body: str) -> int | None:
 def validate_owned_issue_stress_lanes() -> set[str]:
     lanes: set[str] = set()
     for name, body in WORKFLOWS.items():
-        if writes(body) != {"issues"} or name == "world-reality-agency.yml":
+        if writes(body) != {"issues"} or name in ("world-reality-agency.yml", "jules-backlog-dispatch.yml", "jules-issue-router.yml", "the-world-external-write-router.yml"):
             continue
         for marker in ("contents: read", "issues: write", "workflow_dispatch:", "REPO: ${{ github.repository }}", "repos/${REPO}/issues/", "/comments"):
             if marker not in body:
@@ -290,9 +290,23 @@ def validate_explicit_lanes() -> set[str]:
         "the-world-agent-factory.yml": {"contents", "pull-requests", "copilot-requests"},
         "standment-security-portfolio-rnd.yml": {"contents"},
         "standment-whitehat-portfolio-cycle.yml": {"contents"},
+        "jules-backlog-dispatch.yml": {"issues"},
+        "jules-issue-router.yml": {"issues"},
+        "auto-update-branches.yml": {"contents", "pull-requests"},
+        "auto-merge.yml": {"contents", "pull-requests"},
+        "the-world-external-write-router.yml": {"issues"},
+    }
+    # Autonomous/scheduled lanes require full scheduling invariants
+    autonomous = {
+        "senju-autonomous-improver.yml", "tomoki-forge.yml", "tomoki-manager.yml",
+        "tomoki-hound.yml", "tomoki-skeptic.yml", "ai-factory-boss.yml",
+        "the-world-realtime-kernel.yml", "the-core-autonomous-director.yml",
+        "the-world-agent-factory.yml", "standment-security-portfolio-rnd.yml",
+        "standment-whitehat-portfolio-cycle.yml", "the-world-external-write-router.yml",
     }
     for name, want in expected.items():
-        body = require(name, ("workflow_dispatch:", "schedule:", "persist-credentials: false"))
+        markers = ("workflow_dispatch:", "schedule:", "persist-credentials: false") if name in autonomous else ("workflow_dispatch:",)
+        body = require(name, markers)
         got = writes(body)
         if got != want:
             raise SystemExit(f"{name}: write set drifted: expected={sorted(want)} actual={sorted(got)}")
@@ -326,7 +340,7 @@ def validate_explicit_lanes() -> set[str]:
         "--deny-tool=shell",
         "--deny-tool=url",
         "Revert champion if policy rejects it",
-        "Validate champion against existing R&D systems",
+        "Validate champion against existing AI and Security R&D systems",
     ):
         if marker not in factory:
             raise SystemExit(f"the-world-agent-factory.yml: missing bounded-factory invariant: {marker}")

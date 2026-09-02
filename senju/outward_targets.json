@@ -1,0 +1,15 @@
+{
+  "schema": "senju-outward-targets/v1",
+  "targets": [
+    {
+      "name": "iyomaru-production",
+      "root": "iyomaru-ramen.vercel.app",
+      "base_url": "https://iyomaru-ramen.vercel.app/"
+    },
+    {
+      "name": "musicjapan-pages",
+      "root": "musicjapanllc.github.io",
+      "base_url": "https://musicjapanllc.github.io/test/"
+    }
+  ]
+}

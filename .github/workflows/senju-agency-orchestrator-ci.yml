@@ -1,0 +1,102 @@
+name: Senju Agency Orchestrator CI
+
+on:
+  pull_request:
+    branches: ["claude/employee-onboarding-setup-udm86"]
+    paths:
+      - "senju/scripts/run_external_frontier.py"
+      - "senju/scripts/autonomy_delegate.py"
+      - "senju/scripts/agency_bus.py"
+      - "senju/scripts/owned_range_active_loop.py"
+      - "senju/senju/owned_range_active.py"
+      - "senju/tests/test_external_frontier.py"
+      - "senju/tests/test_autonomy_delegate.py"
+      - "senju/tests/test_agency_bus.py"
+      - "senju/tests/test_owned_range_active.py"
+      - ".github/workflows/senju-agency-orchestrator.yml"
+      - ".github/workflows/senju-agency-orchestrator-ci.yml"
+      - ".github/workflows/senju-owned-range-active-evolution.yml"
+      - ".github/workflows/senju-auto-approve-merge.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  contracts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: "3.12"
+
+      - name: Run focused autonomy tests
+        env:
+          PYTHONPATH: ${{ github.workspace }}/senju
+          PIP_DISABLE_PIP_VERSION_CHECK: "1"
+          PIP_NO_INPUT: "1"
+        run: |
+          set -euo pipefail
+          python -m pip install pytest==9.1.1
+          (cd senju && python -m pytest \
+            tests/test_external_frontier.py \
+            tests/test_autonomy_delegate.py \
+            tests/test_agency_bus.py \
+            tests/test_owned_range_active.py \
+            tests/test_autonomy_read_scope.py -q)
+
+      - name: Verify orchestrator authority and closed-loop contracts
+        shell: python
+        run: |
+          from pathlib import Path
+          body = Path('.github/workflows/senju-agency-orchestrator.yml').read_text(encoding='utf-8')
+          active = Path('.github/workflows/senju-owned-range-active-evolution.yml').read_text(encoding='utf-8')
+          bus = Path('senju/scripts/agency_bus.py').read_text(encoding='utf-8')
+          runner = Path('senju/senju/owned_range_active.py').read_text(encoding='utf-8')
+
+          assert 'contents: read' in body
+          assert 'actions: read' in body
+          assert 'issues: read' in body
+          assert 'pull-requests: read' in body
+          for forbidden in ('contents: write', 'issues: write', 'pull-requests: write', 'id-token: write'):
+              assert forbidden not in body, forbidden
+          assert 'cron: "7,22,37,52 * * * *"' in body
+          assert '--max-steps 36' in body
+          assert '--max-unique-hosts 18' in body
+          assert '--max-visits-per-host 2' in body
+          assert 'agency_bus.py' in body
+          assert 'merge-audit.json' in body
+          assert 'Senju Owned Range Active Evolution' in body
+          assert '--owned-range /tmp/senju-agency/owned-range.json' in body
+          assert 'kabeya-authorized-test-range.onrender.com' in body
+          assert 'blocked_pr_repair' in bus
+          assert 'owned_range_counterexample_repair' in bus
+          assert 'owned_range_readback_gap' in bus
+          assert 'search/issues' in body
+          assert 'senju-delegation-key' in body
+          assert 'requirePlanApproval:false' in body
+          assert 'automationMode:"AUTO_CREATE_PR"' in body
+          assert 'AI_MERGE_AUDIT PASS' in body
+          assert 'unauthorized third-party writes' in body
+          assert 'live guard bypass' in body
+
+          assert 'cron: "4,19,34,49 * * * *"' in active
+          assert 'contents: read' in active and 'actions: read' in active
+          assert 'contents: write' not in active
+          assert '--max-writes "$MAX_WRITES"' in active
+          assert 'write-cooldown-seconds' in active
+          assert 'same_origin_only' in active
+          assert 'authority_self_expansion' in active
+          assert 'credential_guessing' in active
+          assert 'denial_of_service' in active
+          assert 'SENSITIVE_FIELD_HINTS' in runner
+          assert 'FORM_HINTS' in runner
+          assert 'authority_self_expansion' in runner
+          assert 'OwnedRangeMemory' in runner
+          print('closed-loop agency + owned-range active contracts verified')

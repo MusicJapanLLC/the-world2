@@ -1,0 +1,150 @@
+name: THE WORLD - Constraint Learning Closed Loop
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '37 * * * *'
+  pull_request:
+    branches: ["claude/employee-onboarding-setup-udm86"]
+    paths:
+      - "value-lab/constraint_learning_loop.py"
+      - "value-lab/test_constraint_learning_loop.py"
+      - "value-lab/constraint_learning_bridge.py"
+      - "value-lab/test_constraint_learning_bridge.py"
+      - "value-lab/control_loophole_research.py"
+      - "value-lab/test_control_loophole_research.py"
+      - ".github/workflows/constraint-learning-closed-loop.yml"
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: constraint-learning-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  learn:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+
+      - name: Setup Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: '3.12'
+
+      - name: Restore previous constraint and loophole research context
+        if: github.event_name != 'pull_request'
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/constraint-previous
+          RUN_ID="$(gh run list --repo "$GITHUB_REPOSITORY" --workflow "THE WORLD - Constraint Learning Closed Loop" --status success --limit 20 --json databaseId --jq '.[0].databaseId // empty' || true)"
+          if [[ -n "$RUN_ID" ]]; then
+            gh run download "$RUN_ID" --repo "$GITHUB_REPOSITORY" --name constraint-learning-context --dir /tmp/constraint-previous || true
+          fi
+          FOUND="$(find /tmp/constraint-previous -name constraint-learning.json -print -quit || true)"
+          if [[ -n "$FOUND" ]]; then cp "$FOUND" /tmp/constraint-learning-previous.json; fi
+          LOOPHOLE="$(find /tmp/constraint-previous -name control-loophole-research.json -print -quit || true)"
+          if [[ -n "$LOOPHOLE" ]]; then cp "$LOOPHOLE" /tmp/control-loophole-previous.json; fi
+          echo "constraint_previous_run=${RUN_ID:-none}" >> "$GITHUB_STEP_SUMMARY"
+          echo "loophole_previous=$([[ -f /tmp/control-loophole-previous.json ]] && echo yes || echo no)" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Validate sandbox learning engine and relay contract
+        run: |
+          set -euo pipefail
+          (cd value-lab && python -m unittest test_constraint_learning_loop.py test_constraint_learning_bridge.py test_control_loophole_research.py -v)
+          python -m py_compile \
+            value-lab/constraint_learning_loop.py \
+            value-lab/constraint_learning_bridge.py \
+            value-lab/control_loophole_research.py
+
+      - name: Run 10x constraint-learning pressure
+        if: github.event_name != 'pull_request'
+        shell: bash
+        run: |
+          set -euo pipefail
+          previous=()
+          if [[ -f /tmp/constraint-learning-previous.json ]]; then previous+=(--previous /tmp/constraint-learning-previous.json); fi
+          python value-lab/constraint_learning_loop.py \
+            --seed "${{ github.run_id }}" \
+            --rounds 500 \
+            "${previous[@]}" \
+            --out constraint-learning.json \
+            --report constraint-learning.md
+          cat constraint-learning.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Run Senju META sandbox loophole search with refusal retries
+        if: github.event_name != 'pull_request'
+        shell: bash
+        run: |
+          set -euo pipefail
+          previous=()
+          if [[ -f /tmp/control-loophole-previous.json ]]; then previous+=(--previous /tmp/control-loophole-previous.json); fi
+          python value-lab/control_loophole_research.py \
+            --seed "${{ github.run_id }}-loophole" \
+            --attempts 1000 \
+            --constraint constraint-learning.json \
+            "${previous[@]}" \
+            --out control-loophole-research.json \
+            --report control-loophole-research.md \
+            --capsule senju-meta-control-loophole.json
+          cat control-loophole-research.md >> "$GITHUB_STEP_SUMMARY"
+          cat constraint-learning.md control-loophole-research.md > constraint-learning-combined.md
+
+      - name: Export compact context for R&D and Senju
+        if: github.event_name != 'pull_request'
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          d=json.loads(Path('constraint-learning.json').read_text())
+          capsule={
+            'schema':'constraint-learning-senju-capsule/v2',
+            'focus':d['focus'],
+            'rounds':int(d.get('rounds',0) or 0),
+            'previous_context_used':bool(d.get('previous_context_used')),
+            'boundary_counts':d['boundary_counts'],
+            'top_lessons':d['top_lessons'][:12],
+            'hypothesis':d['senju_context']['hypothesis'],
+            'execution_authority':'none',
+            'source':'synthetic-sandbox-only',
+          }
+          Path('constraint-learning-senju.json').write_text(json.dumps(capsule,ensure_ascii=False,indent=2)+'\n')
+          Path('constraint-learning-rnd.json').write_text(json.dumps({**capsule,'use':'research planning and counterexample generation only'},ensure_ascii=False,indent=2)+'\n')
+          PY
+
+      - name: Preserve closed-loop learning artifacts
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: constraint-learning-context
+          retention-days: 30
+          if-no-files-found: error
+          path: |
+            constraint-learning.json
+            constraint-learning.md
+            constraint-learning-combined.md
+            constraint-learning-senju.json
+            constraint-learning-rnd.json
+            control-loophole-research.json
+            control-loophole-research.md
+            senju-meta-control-loophole.json
+
+      - name: Report learning loop to Slack
+        if: github.event_name != 'pull_request'
+        env:
+          TOMOKI_SLACK_WEBHOOK_URL: ${{ secrets.TOMOKI_SLACK_WEBHOOK_URL }}
+        run: |
+          if [[ -n "${TOMOKI_SLACK_WEBHOOK_URL:-}" ]]; then
+            python tomoki-agents/slack_post.py \
+              --agent "CONSTRAINT+LOOPHOLE-RESEARCH" \
+              --file constraint-learning-combined.md \
+              --status "${{ job.status }}"

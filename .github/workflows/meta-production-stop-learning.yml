@@ -1,0 +1,56 @@
+name: META Production Stop Learning
+
+on:
+  push:
+    branches:
+      - claude/employee-onboarding-setup-udm86
+    paths:
+      - automation/recovery/stop_learning.py
+      - automation/recovery/stop_learning_runner.py
+      - automation/recovery/recovery_tuner.py
+      - automation/recovery/apply_recovery_tuning.py
+      - automation/recovery/runtime_control_state.json
+      - automation/recovery/test_stop_learning.py
+      - automation/recovery/test_recovery_tuner.py
+      - .github/workflows/meta-production-stop-learning.yml
+      - .github/workflows/owned-self-recovery-worker.yml
+  schedule:
+    - cron: "7,37 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+  issues: write
+
+concurrency:
+  group: meta-production-stop-learning
+  cancel-in-progress: false
+
+jobs:
+  learn:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Test stop-learning and recovery tuning invariants
+        run: |
+          cd automation/recovery
+          python -m unittest -q test_stop_learning test_recovery_tuner
+
+      - name: Learn from real production stoppages and derive tuning
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python automation/recovery/stop_learning_runner.py
+
+      - name: Preserve learning evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: meta-production-stop-learning-${{ github.run_id }}
+          path: /tmp/stop-learning-state.json
+          if-no-files-found: ignore
+          retention-days: 14

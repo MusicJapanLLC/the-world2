@@ -4,18 +4,42 @@ on:
   schedule:
     - cron: '*/5 * * * *'
   workflow_dispatch:
+  pull_request:
+    branches: ['claude/employee-onboarding-setup-udm86']
+    paths:
+      - '.github/workflows/the-world-realtime-kernel.yml'
+      - 'automation/world/realtime_kernel.py'
+      - 'automation/world/secured_realtime_kernel.py'
+      - 'automation/world/realtime_plan.json'
+      - 'automation/world/test_realtime_kernel.py'
+      - 'automation/world/test_secured_realtime_kernel.py'
+      - 'automation/world/test_perpetual_autonomy.py'
+      - 'automation/world/self_heal_engine.py'
+      - 'automation/security/world_runtime_observation_adapter.py'
+      - 'automation/security/test_world_runtime_observation_adapter.py'
+      - 'automation/security/llm_security_eval.py'
+      - 'automation/security/test_llm_security_eval.py'
+      - 'standment-security/ai-security/llm-security-eval-evidence-pack.md'
   push:
     branches: ['claude/employee-onboarding-setup-udm86']
     # Control-plane changes self-verify immediately; schedule keeps the loop alive afterward.
     paths:
       - '.github/workflows/the-world-realtime-kernel.yml'
       - 'automation/world/realtime_kernel.py'
+      - 'automation/world/secured_realtime_kernel.py'
       - 'automation/world/realtime_plan.json'
       - 'automation/world/test_realtime_kernel.py'
+      - 'automation/world/test_secured_realtime_kernel.py'
+      - 'automation/world/test_perpetual_autonomy.py'
       - 'automation/world/self_heal_engine.py'
+      - 'automation/security/world_runtime_observation_adapter.py'
+      - 'automation/security/test_world_runtime_observation_adapter.py'
+      - 'automation/security/llm_security_eval.py'
+      - 'automation/security/test_llm_security_eval.py'
+      - 'standment-security/ai-security/llm-security-eval-evidence-pack.md'
 
 concurrency:
-  group: the-world-realtime-kernel
+  group: the-world-realtime-kernel-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 permissions:
@@ -42,14 +66,71 @@ jobs:
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
         with:
           python-version: '3.12'
-      - name: Test realtime boundary
-        run: python -m unittest automation.world.test_realtime_kernel -v
-      - name: Pulse and bounded recovery
+      - name: Test realtime runtime-security and perpetual-autonomy boundaries
         run: |
-          python automation/world/realtime_kernel.py --plan automation/world/realtime_plan.json --json world-realtime-pulse.json --report world-realtime-pulse.md --apply
+          set -euo pipefail
+          python -m unittest \
+            automation.world.test_realtime_kernel \
+            automation.world.test_secured_realtime_kernel \
+            automation.world.test_perpetual_autonomy \
+            automation.security.test_world_runtime_observation_adapter \
+            automation.security.test_llm_security_eval \
+            -v
+      - name: Pulse with fail-closed runtime security boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          apply_args=()
+          if [[ "$GITHUB_EVENT_NAME" != "pull_request" ]]; then
+            apply_args+=(--apply)
+          fi
+          python -m automation.world.secured_realtime_kernel \
+            --plan automation/world/realtime_plan.json \
+            --json world-realtime-pulse.json \
+            --report world-realtime-pulse.md \
+            "${apply_args[@]}"
           cat world-realtime-pulse.md >> "$GITHUB_STEP_SUMMARY"
+      - name: Convert owned runtime observations into SEC-PORT-010 evidence
+        run: |
+          set -euo pipefail
+          mkdir -p reports/standment-ai-security/owned-runtime
+          python automation/security/world_runtime_observation_adapter.py \
+            --pulse world-realtime-pulse.json \
+            --out reports/standment-ai-security/owned-runtime/suite.json
+          python automation/security/llm_security_eval.py \
+            --cases reports/standment-ai-security/owned-runtime/suite.json \
+            --out-json reports/standment-ai-security/owned-runtime/result.json \
+            --out-md reports/standment-ai-security/owned-runtime/result.md \
+            --require-pass
+          cat reports/standment-ai-security/owned-runtime/result.md >> "$GITHUB_STEP_SUMMARY"
+      - name: Enforce runtime evidence truth boundary
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          pulse=json.loads(Path('world-realtime-pulse.json').read_text(encoding='utf-8'))
+          suite=json.loads(Path('reports/standment-ai-security/owned-runtime/suite.json').read_text(encoding='utf-8'))
+          result=json.loads(Path('reports/standment-ai-security/owned-runtime/result.json').read_text(encoding='utf-8'))
+          security=pulse['runtime_security']
+          src=suite['source']
+
+          assert security['enforcement'] == 'guarded-entrypoint-fail-closed'
+          assert security['deny_execution_attempt_count'] == 0
+          assert src['allow_observations'] >= 1
+          assert src['deny_counterevidence_observations'] >= 1
+          assert result['pass_rate'] == 1.0
+          assert result['high_risk_violation_count'] == 0
+          print(
+              'Owned runtime boundary evidence PASS:',
+              'actual_mutating_effects_attempted=', src['actual_mutating_effects_attempted'],
+              'allow=', src['allow_observations'],
+              'deny=', src['deny_counterevidence_observations'],
+          )
+          PY
       - name: Report material pulse to internal Slack
-        if: always()
+        if: always() && github.event_name != 'pull_request'
         shell: bash
         run: |
           python - <<'PY'
@@ -67,13 +148,16 @@ jobs:
           req=urllib.request.Request(webhook,data=json.dumps({'text':report},ensure_ascii=False).encode('utf-8'),headers={'Content-Type':'application/json'})
           with urllib.request.urlopen(req,timeout=15) as res: print('slack status',res.status)
           PY
-      - name: Preserve pulse evidence
+      - name: Preserve pulse and SEC-PORT-010 owned-runtime evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: world-realtime-pulse-${{ github.run_id }}
+          name: world-realtime-security-evidence-${{ github.run_id }}
           path: |
             world-realtime-pulse.json
             world-realtime-pulse.md
-          retention-days: 14
-          if-no-files-found: warn
+            reports/standment-ai-security/owned-runtime/suite.json
+            reports/standment-ai-security/owned-runtime/result.json
+            reports/standment-ai-security/owned-runtime/result.md
+          retention-days: 90
+          if-no-files-found: error

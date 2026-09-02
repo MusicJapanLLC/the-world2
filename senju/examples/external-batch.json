@@ -1,0 +1,13 @@
+{
+  "requests": [
+    {
+      "method": "GET",
+      "url": "https://example.com/",
+      "headers": {"Accept": "text/html"}
+    },
+    {
+      "method": "HEAD",
+      "url": "https://example.com/"
+    }
+  ]
+}

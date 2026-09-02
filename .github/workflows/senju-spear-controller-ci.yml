@@ -1,0 +1,64 @@
+name: Senju SPEAR Controller CI
+
+on:
+  pull_request:
+    paths:
+      - "senju/senju/authorized_assessment.py"
+      - "senju/senju/spear_web.py"
+      - "senju/tests/test_authorized_assessment.py"
+      - "senju/tests/test_spear_web.py"
+      - "senju/examples/spear-engagement.example.json"
+      - "senju/SPEAR.md"
+      - ".github/workflows/senju-spear-controller-ci.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  controller:
+    name: Engagement authority -> plan -> web posture -> guarded fake execution
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: "3.12"
+
+      - name: Run SPEAR controller and posture tests
+        working-directory: senju
+        env:
+          PIP_DISABLE_PIP_VERSION_CHECK: "1"
+          PIP_NO_INPUT: "1"
+        run: |
+          set -euo pipefail
+          python -m pip install pytest==9.1.1
+          python -m pytest \
+            tests/test_authorized_assessment.py \
+            tests/test_spear_web.py \
+            tests/test_external_contact.py \
+            -q
+
+      - name: Prove example manifest dry-run stays network-free
+        working-directory: senju
+        run: |
+          set -euo pipefail
+          python -m senju.authorized_assessment \
+            examples/spear-engagement.example.json \
+            --out /tmp/spear-plan.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          plan = json.loads(Path('/tmp/spear-plan.json').read_text())
+          assert plan['schema'] == 'senju-authorized-assessment-plan/v1'
+          assert plan['destructive'] is False
+          assert all(item['method'] in {'GET', 'HEAD', 'OPTIONS'} for item in plan['plan'])
+          assert plan['exact_hosts'] == ['your-owned-site.example.invalid']
+          print('SENJU_SPEAR_CONTROLLER_VERIFIED')
+          PY

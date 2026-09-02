@@ -27,6 +27,17 @@ The research mind is intentionally broad. Execution remains inside owned or expl
 - propose the smallest defensive remediation
 - define independent retest and residual-risk criteria
 
+### White-Hat Lab Evidence Layer
+
+- convert the elite white-hat output into a structured defensive finding set
+- create a **plan-only falsification map with zero network requests**
+- prove active validation remains hard-limited to loopback/private/link-local targets
+- cap active lab validation to a maximum of 12 requests using bounded methods
+- forbid credential guessing, authentication bypass, exploit execution, destructive mutation, path fuzzing and phishing delivery
+- preserve the falsification plan and local-lab receipts as evidence inputs
+- never treat the generic local harness as proof that a candidate vulnerability exists
+- use the real next step to map the highest-impact hypothesis to owned source/config or an authorized local fixture, then produce same-condition Before/After proof
+
 ### Senju
 
 - challenge research quality, reproducibility and learning efficiency
@@ -59,6 +70,8 @@ Every daily white-hat portfolio cycle must produce at least one of the following
 3. new counterevidence that invalidates or narrows a candidate
 4. a verified before/after defensive delta ready for portfolio promotion
 5. a documented blocker with an exact next experiment
+
+The cycle should also preserve a falsification plan. When active validation is relevant, a local/owned lab receipt should be attached before any stronger claim is considered.
 
 Activity without one of these outputs does not count as portfolio progress.
 
@@ -95,7 +108,7 @@ Promotion to `VERIFIED` requires human-inspectable evidence for:
 - residual risk / limitations
 - rollback or recovery behavior
 
-Internal tournament scores, code existence, agent confidence and prose alone do not satisfy the promotion gate.
+Internal tournament scores, code existence, agent confidence, plan-only hypotheses, generic local-lab harness results and prose alone do not satisfy the promotion gate.
 
 ## Reporting to CEO / Slack
 
@@ -105,10 +118,11 @@ Reports must answer, in this order:
 2. **WHY IT MATTERS** — what risk or uncertainty was reduced
 3. **PORTFOLIO DELTA** — what became more customer-inspectable
 4. **WHITE-HAT FINDING** — what boundary/hypothesis was challenged
-5. **RETEST STATUS** — passed / failed / not-run, with evidence
-6. **REAL-WORLD VALUE** — what buyer/operator can now understand or trust better
-7. **TRUTH / LIMITATION** — what is still unverified
-8. **NEXT MOVE** — the next bounded experiment or portfolio promotion step
+5. **FALSIFICATION PLAN** — how the claim can be disproven and whether the plan used zero network requests
+6. **RETEST STATUS** — passed / failed / not-run, with evidence
+7. **REAL-WORLD VALUE** — what buyer/operator can now understand or trust better
+8. **TRUTH / LIMITATION** — what is still unverified
+9. **NEXT MOVE** — the next bounded experiment or portfolio promotion step
 
 Do not report raw activity volume as progress.
 

@@ -1,0 +1,27 @@
+{
+  "institution_id": "RND_CORE",
+  "display_name": "THE CORE — R&D / Security Society",
+  "model_version": "v1",
+  "observed_at": "2026-08-29T21:27:00+09:00",
+  "formula": "0.25 workforce + 0.20 research + 0.20 coordination + 0.15 prestige + 0.10 security + 0.10 legitimacy",
+  "legacy_named_roster": 13,
+  "base_agents": 100,
+  "child_ceiling": 500,
+  "treasury_reference_wld": 248059.75,
+  "recommended_research_reserve_ratio": 0.10,
+  "recommended_research_reserve_wld": 24805.98,
+  "reserve_is_planning_only": true,
+  "scenarios": [
+    {"name":"CURRENT_2026-08-29","kind":"OBSERVED","children":1,"total_identities":101,"human_inspectable_portfolios":1,"verified_portfolios":0,"workforce":72.28,"research":88,"coordination":94,"prestige":28,"security":92,"legitimacy":96,"operational_power":77.47},
+    {"name":"30_PERCENT_CHILD_LOAD","kind":"PROJECTION","children":150,"total_identities":250,"human_inspectable_portfolios":5,"verified_portfolios":3,"workforce":86.35,"research":91,"coordination":95,"prestige":45,"security":94,"legitimacy":96,"operational_power":84.54},
+    {"name":"60_PERCENT_CHILD_LOAD","kind":"PROJECTION","children":300,"total_identities":400,"human_inspectable_portfolios":12,"verified_portfolios":8,"workforce":93.68,"research":94,"coordination":96,"prestige":70,"security":96,"legitimacy":97,"operational_power":91.22},
+    {"name":"FULL_BOUNDED_CAPACITY","kind":"PROJECTION","children":500,"total_identities":600,"human_inspectable_portfolios":25,"verified_portfolios":20,"workforce":100,"research":97,"coordination":98,"prestige":95,"security":98,"legitimacy":98,"operational_power":97.85}
+  ],
+  "hard_boundaries": [
+    "no owner override",
+    "no Covenant self-amendment",
+    "no BOSS-final reporting override",
+    "no personality-derived permission",
+    "no autonomous third-party or public targeting"
+  ]
+}

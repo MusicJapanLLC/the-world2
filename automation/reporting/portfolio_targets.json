@@ -1,0 +1,30 @@
+{
+  "schema": "the-world-portfolio-live-targets/v1",
+  "targets": [
+    {
+      "id": "musicjapan-ai-portfolio",
+      "name": "Music Japan AI Portfolio",
+      "url": "https://test-musicjapanllc.vercel.app/",
+      "expected_status": [200, 301, 302, 307, 308],
+      "latency_budget_ms": 2500,
+      "priority": "P1"
+    },
+    {
+      "id": "standment-personal-ai-core",
+      "name": "Standment Personal AI Core",
+      "url": "https://standment-personal-ai-core-se1c3z.v2.appdeploy.ai/",
+      "expected_status": [200, 301, 302, 307, 308],
+      "latency_budget_ms": 3000,
+      "priority": "P1"
+    },
+    {
+      "id": "madlab-deepguard",
+      "name": "MADLAB DeepGuard",
+      "url": "https://madlab-guard-0i24yt.v2.appdeploy.ai/",
+      "health_url": "https://madlab-guard-0i24yt.v2.appdeploy.ai/api/_healthcheck",
+      "expected_status": [200],
+      "latency_budget_ms": 3000,
+      "priority": "P0"
+    }
+  ]
+}

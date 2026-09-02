@@ -74,6 +74,18 @@ class AgentFactoryTests(unittest.TestCase):
         self.assertLessEqual(plan["agent_count"], 9)
         self.assertIn("elite_whitehat", {x["role"] for x in plan["agents"]})
 
+    def test_explicit_track_progression_prefers_requested_track_and_fails_soft(self):
+        program = {
+            "tracks": [
+                {"id": "AI-DEV-001", "priority": 1000},
+                {"id": "AI-DEV-002", "priority": 950},
+            ]
+        }
+        selected = factory._track_by_id(program, "AI-DEV-002")
+        self.assertEqual(selected["id"], "AI-DEV-002")
+        fallback = factory._track_by_id(program, "AI-DEV-DOES-NOT-EXIST")
+        self.assertEqual(fallback["id"], "AI-DEV-001")
+
     def test_prompt_is_bounded_and_json_only(self):
         tmp, root = self._root()
         self.addCleanup(tmp.cleanup)

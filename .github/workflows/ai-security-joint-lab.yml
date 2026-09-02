@@ -1,0 +1,257 @@
+name: THE WORLD - AI x Security Joint Lab
+
+on:
+  schedule:
+    # Fast cross-assist cadence. This lab is read-only and produces evidence artifacts.
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+  pull_request:
+    branches: ['claude/employee-onboarding-setup-udm86']
+    paths:
+      - '.github/workflows/ai-security-joint-lab.yml'
+      - '.github/workflows/standment-agent-auditability.yml'
+      - 'automation/world/ai_security_joint_lab.py'
+      - 'automation/world/test_ai_security_joint_lab.py'
+      - 'automation/ai_foundry/**'
+      - 'automation/security/agent_auditability_eval.py'
+      - 'automation/security/test_agent_auditability_eval.py'
+      - 'automation/security/elite_whitehat_continuous.py'
+      - 'automation/security/test_elite_whitehat_continuous.py'
+  push:
+    branches: ['claude/employee-onboarding-setup-udm86']
+    paths:
+      - '.github/workflows/ai-security-joint-lab.yml'
+      - '.github/workflows/standment-agent-auditability.yml'
+      - 'automation/world/ai_security_joint_lab.py'
+      - 'automation/world/test_ai_security_joint_lab.py'
+      - 'automation/ai_foundry/minute_evolution.py'
+      - 'automation/security/agent_auditability_eval.py'
+      - 'automation/security/elite_whitehat_continuous.py'
+      - 'standment-security/security_research_frontier.json'
+      - 'standment-security/security_framework_crosswalk.json'
+      - 'standment-security/evidence-packs/agent-auditability/**'
+
+concurrency:
+  group: the-world-ai-security-joint-lab-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  actions: read
+
+env:
+  JOINT_DIR: /tmp/the-world-ai-security-joint
+  GH_TOKEN: ${{ github.token }}
+
+jobs:
+  joint-lab:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout THE WORLD
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          persist-credentials: false
+
+      - name: Setup Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: '3.12'
+
+      - name: Verify joint-assist contract
+        run: |
+          set -euo pipefail
+          python -m unittest -v automation.world.test_ai_security_joint_lab
+          python -m unittest -v automation.ai_foundry.test_minute_evolution
+          python -m unittest -v automation.security.test_agent_auditability_eval
+          (cd automation/security && python -m unittest -v test_elite_whitehat_continuous.py)
+
+      - name: Load latest AI, Security, Research, and Auditability evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p \
+            "$JOINT_DIR/sources/ai" \
+            "$JOINT_DIR/sources/security" \
+            "$JOINT_DIR/sources/research" \
+            "$JOINT_DIR/sources/auditability" \
+            "$JOINT_DIR/sources/joint-prev"
+          printf '%s\n' '{}' > "$JOINT_DIR/ai-summary.json"
+          printf '%s\n' '{}' > "$JOINT_DIR/security-index.json"
+          printf '%s\n' '{}' > "$JOINT_DIR/research-batch.json"
+          printf '%s\n' '{}' > "$JOINT_DIR/auditability-result.json"
+
+          # Prefer the prior joint champion so this collaboration lane has continuity.
+          joint_prev="$(gh run list --repo "$GITHUB_REPOSITORY" --workflow ai-security-joint-lab.yml --status success --limit 8 --json databaseId --jq '.[].databaseId' | grep -v "^${GITHUB_RUN_ID}$" | head -n1 || true)"
+          if [[ -n "$joint_prev" ]]; then
+            gh run download "$joint_prev" --repo "$GITHUB_REPOSITORY" --name "ai-security-joint-lab-${joint_prev}" --dir "$JOINT_DIR/sources/joint-prev" || true
+            candidate="$(find "$JOINT_DIR/sources/joint-prev" -type f -name ai-assisted-champion.json | head -n1 || true)"
+            if [[ -n "$candidate" ]]; then cp "$candidate" "$JOINT_DIR/ai-start.json"; fi
+          fi
+
+          ai_run="$(gh run list --repo "$GITHUB_REPOSITORY" --workflow ai-dev-minute-foundry.yml --status success --limit 8 --json databaseId --jq '.[].databaseId' | head -n1 || true)"
+          if [[ -n "$ai_run" ]]; then
+            gh run download "$ai_run" --repo "$GITHUB_REPOSITORY" --name "ai-dev-minute-foundry-${ai_run}" --dir "$JOINT_DIR/sources/ai" || true
+            candidate="$(find "$JOINT_DIR/sources/ai" -type f -name hourly-summary.json | head -n1 || true)"
+            if [[ -n "$candidate" ]]; then cp "$candidate" "$JOINT_DIR/ai-summary.json"; fi
+            if [[ ! -f "$JOINT_DIR/ai-start.json" ]]; then
+              champion="$(find "$JOINT_DIR/sources/ai" -type f -name champion.json | head -n1 || true)"
+              if [[ -n "$champion" ]]; then cp "$champion" "$JOINT_DIR/ai-start.json"; fi
+            fi
+          fi
+
+          security_run="$(gh run list --repo "$GITHUB_REPOSITORY" --workflow security-continuous-whitehat.yml --status success --limit 12 --json databaseId --jq '.[].databaseId' | head -n1 || true)"
+          if [[ -n "$security_run" ]]; then
+            gh run download "$security_run" --repo "$GITHUB_REPOSITORY" --name "security-whitehat-continuous-${security_run}" --dir "$JOINT_DIR/sources/security" || true
+            candidate="$(find "$JOINT_DIR/sources/security" -type f -name run-index.json | head -n1 || true)"
+            if [[ -n "$candidate" ]]; then cp "$candidate" "$JOINT_DIR/security-index.json"; fi
+          fi
+
+          research_run="$(gh run list --repo "$GITHUB_REPOSITORY" --workflow the-world-autonomous-research-fabric.yml --status success --limit 12 --json databaseId --jq '.[].databaseId' | head -n1 || true)"
+          if [[ -n "$research_run" ]]; then
+            gh run download "$research_run" --repo "$GITHUB_REPOSITORY" --name "the-world-research-fabric-${research_run}" --dir "$JOINT_DIR/sources/research" || true
+            candidate="$(find "$JOINT_DIR/sources/research" -type f -name batch.json | head -n1 || true)"
+            if [[ -n "$candidate" ]]; then cp "$candidate" "$JOINT_DIR/research-batch.json"; fi
+          fi
+
+          # SEC-PORT-005 evidence is optional on PRs and required only as a priority signal.
+          # Missing evidence falls back to the existing local AI/Security signals.
+          audit_run="$(gh run list --repo "$GITHUB_REPOSITORY" --workflow standment-agent-auditability.yml --status success --limit 12 --json databaseId --jq '.[].databaseId' | head -n1 || true)"
+          if [[ -n "$audit_run" ]]; then
+            gh run download "$audit_run" \
+              --repo "$GITHUB_REPOSITORY" \
+              --name "sec-port-005-agent-auditability-${audit_run}-primary" \
+              --dir "$JOINT_DIR/sources/auditability" || true
+            candidate="$(find "$JOINT_DIR/sources/auditability" -type f -name result.json | head -n1 || true)"
+            if [[ -n "$candidate" ]]; then cp "$candidate" "$JOINT_DIR/auditability-result.json"; fi
+          fi
+
+          if [[ ! -f "$JOINT_DIR/ai-start.json" ]]; then
+            python automation/ai_foundry/minute_evolution.py init --out "$JOINT_DIR/ai-start.json"
+          fi
+
+          echo "AI source run: ${ai_run:-NONE}" >> "$GITHUB_STEP_SUMMARY"
+          echo "Security source run: ${security_run:-NONE}" >> "$GITHUB_STEP_SUMMARY"
+          echo "Research source run: ${research_run:-NONE}" >> "$GITHUB_STEP_SUMMARY"
+          echo "Agent auditability source run: ${audit_run:-NONE}" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Build cross-assist packet
+        run: |
+          set -euo pipefail
+          python automation/world/ai_security_joint_lab.py \
+            --ai-summary "$JOINT_DIR/ai-summary.json" \
+            --security-index "$JOINT_DIR/security-index.json" \
+            --research-batch "$JOINT_DIR/research-batch.json" \
+            --auditability "$JOINT_DIR/auditability-result.json" \
+            --out "$JOINT_DIR/assist-packet.json" \
+            --report "$JOINT_DIR/assist-packet.md"
+          cat "$JOINT_DIR/assist-packet.md" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Run AI strategy micro-assist under Security pressure
+        run: |
+          set -euo pipefail
+          seed="$(python -c "import json,os;print(json.load(open(os.environ['JOINT_DIR']+'/assist-packet.json'))['assist_seed'])")"
+          python automation/ai_foundry/minute_evolution.py run \
+            --state "$JOINT_DIR/ai-start.json" \
+            --out "$JOINT_DIR/ai-assisted-champion.json" \
+            --summary "$JOINT_DIR/ai-assisted-summary.json" \
+            --history "$JOINT_DIR/ai-assisted-history.jsonl" \
+            --rounds 28 \
+            --sleep-seconds 0 \
+            --seed "joint:${seed}:security-pressure"
+
+      - name: Run Security adversarial micro-assist using AI and Research evidence
+        run: |
+          set -euo pipefail
+          mkdir -p "$JOINT_DIR/security-assisted"
+          numeric_seed="$(python -c "import json,os;d=json.load(open(os.environ['JOINT_DIR']+'/assist-packet.json'));print(int(d['assist_seed'][:12],16))")"
+          for round in 1 2 3 4 5 6; do
+            python automation/security/elite_whitehat_continuous.py \
+              --round "$round" \
+              --run-id "$numeric_seed" \
+              --out-dir "$JOINT_DIR/security-assisted"
+          done
+
+      - name: Build joint result and anti-fake evidence
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import glob, json, os
+          from pathlib import Path
+          root=Path(os.environ['JOINT_DIR'])
+          packet=json.loads((root/'assist-packet.json').read_text(encoding='utf-8'))
+          ai=json.loads((root/'ai-assisted-summary.json').read_text(encoding='utf-8'))
+          rounds=[]
+          for p in sorted(glob.glob(str(root/'security-assisted/round-*.json'))):
+              rounds.append(json.loads(Path(p).read_text(encoding='utf-8')))
+          pairs={(r.get('lens_id'),r.get('research_stage')) for r in rounds}
+          audit=packet['source'].get('agent_auditability') or {}
+          result={
+              'schema':'the-world-ai-security-joint-result/v2',
+              'status':'BUILDING',
+              'assist_seed_short':packet['assist_seed_short'],
+              'joint_focus':packet['joint_focus'],
+              'agent_auditability':audit,
+              'ai_micro_assist':{
+                  'rounds':ai.get('rounds'),
+                  'promotions_delta':ai.get('promotions_delta'),
+                  'noops_delta':ai.get('noops_delta'),
+                  'weakest_next_focus':ai.get('weakest_next_focus'),
+                  'report_fingerprint':ai.get('report_fingerprint'),
+                  'quality_proxy_delta':ai.get('quality_proxy_delta'),
+              },
+              'security_micro_assist':{
+                  'rounds':len(rounds),
+                  'unique_lens_stage_pairs':len(pairs),
+                  'pairs':[{'lens':x[0],'stage':x[1]} for x in sorted(pairs)],
+                  'promotion_blockers':sorted({b for r in rounds for b in (r.get('promotion_blockers') or [])}),
+              },
+              'research_input':packet['source']['research'],
+              'claim_boundary':[
+                  'Joint Lab output is research evidence, not customer validation.',
+                  'AI quality values are strategy proxies and do not prove model-weight improvement.',
+                  'Agent auditability evidence covers only the owned GitHub realtime control plane.',
+                  'Security rounds remain BUILDING unless independent behavioral/retest evidence satisfies their gates.',
+                  'No external target testing is authorized by this workflow.',
+              ],
+              'owner_action':'NONE',
+          }
+          (root/'joint-result.json').write_text(json.dumps(result,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+          lines=[
+              '# Joint Lab result',
+              f"- AI micro rounds: {result['ai_micro_assist']['rounds']}",
+              f"- AI promotions: {result['ai_micro_assist']['promotions_delta']}",
+              f"- Security micro rounds: {result['security_micro_assist']['rounds']}",
+              f"- Unique Security lens×stage: {result['security_micro_assist']['unique_lens_stage_pairs']}",
+              f"- Auditability pressure: {audit.get('pressure') or 'NONE'}",
+              f"- Auditability score: {float(audit.get('auditability_score') or 0):.2f}",
+              f"- Research source program count: {result['research_input'].get('program_count') or 0}",
+              '- Status: BUILDING (cross-assist evidence only)',
+          ]
+          (root/'joint-result.md').write_text('\n'.join(lines)+'\n',encoding='utf-8')
+          print('\n'.join(lines))
+          PY
+          cat "$JOINT_DIR/joint-result.md" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Preserve joint-assist evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: ai-security-joint-lab-${{ github.run_id }}
+          retention-days: 30
+          if-no-files-found: warn
+          path: |
+            /tmp/the-world-ai-security-joint/assist-packet.json
+            /tmp/the-world-ai-security-joint/assist-packet.md
+            /tmp/the-world-ai-security-joint/ai-summary.json
+            /tmp/the-world-ai-security-joint/ai-start.json
+            /tmp/the-world-ai-security-joint/ai-assisted-champion.json
+            /tmp/the-world-ai-security-joint/ai-assisted-summary.json
+            /tmp/the-world-ai-security-joint/ai-assisted-history.jsonl
+            /tmp/the-world-ai-security-joint/security-index.json
+            /tmp/the-world-ai-security-joint/auditability-result.json
+            /tmp/the-world-ai-security-joint/security-assisted/*.json
+            /tmp/the-world-ai-security-joint/security-assisted/*.md
+            /tmp/the-world-ai-security-joint/research-batch.json
+            /tmp/the-world-ai-security-joint/joint-result.json
+            /tmp/the-world-ai-security-joint/joint-result.md

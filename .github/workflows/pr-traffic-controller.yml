@@ -1,0 +1,47 @@
+name: PR Traffic Controller
+
+on:
+  schedule:
+    - cron: '*/30 * * * *'
+  pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+  workflow_dispatch:
+
+concurrency:
+  group: pr-traffic-controller
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: read
+  issues: read
+
+jobs:
+  control-traffic:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Setup Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: '3.12'
+
+      - name: Run PR Traffic Controller
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python automation/control_plane/pr_traffic_controller.py \
+            --out reports/pr-traffic/status.json
+
+      - name: Upload PR Traffic Status Artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: pr-traffic-status
+          path: reports/pr-traffic/status.json
+          retention-days: 7

@@ -1,0 +1,118 @@
+name: Autonomous Codegen Loop x3
+
+on:
+  workflow_dispatch:
+    inputs:
+      task_id:
+        description: "Task ID (filename in automation/codegen/tasks/ without .json)"
+        required: true
+        default: "example"
+      max_iterations:
+        description: "Max generation attempts per agent"
+        required: false
+        default: "10"
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  codegen-loop:
+    name: "${{ matrix.agent }} / ${{ github.event.inputs.task_id || 'example' }}"
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        agent:
+          - worker-1
+          - worker-2
+          - worker-3
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install anthropic pytest
+
+      - name: Resolve inputs
+        id: inputs
+        shell: bash
+        run: |
+          TASK_ID="${{ github.event.inputs.task_id || 'example' }}"
+          MAX_ITER="${{ github.event.inputs.max_iterations || '10' }}"
+          echo "task_id=$TASK_ID" >> "$GITHUB_OUTPUT"
+          echo "max_iterations=$MAX_ITER" >> "$GITHUB_OUTPUT"
+
+      - name: Configure git
+        run: |
+          git config user.name "claude-${{ matrix.agent }}"
+          git config user.email "claude-${{ matrix.agent }}@noreply"
+
+      - name: Create isolated working branch
+        id: branch
+        shell: bash
+        run: |
+          SAFE_TASK=$(echo "${{ steps.inputs.outputs.task_id }}" | tr -cs 'A-Za-z0-9._-' '-')
+          BRANCH="codegen/${SAFE_TASK}/${{ matrix.agent }}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          git checkout -b "$BRANCH"
+          echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
+
+      - name: Run autonomous loop
+        id: loop
+        continue-on-error: true
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          python automation/codegen/loop.py \
+            "${{ steps.inputs.outputs.task_id }}" \
+            "${{ steps.inputs.outputs.max_iterations }}" \
+            "${{ matrix.agent }}"
+
+      - name: Commit agent results
+        if: always()
+        run: |
+          git add -A automation/codegen/runs/ automation/codegen/generated/
+          git diff --cached --quiet && echo "nothing to commit" || \
+            git commit -m "codegen(${{ steps.inputs.outputs.task_id }}): ${{ matrix.agent }} results [skip ci]"
+
+      - name: Push isolated branch
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh auth setup-git
+          git push -u origin "${{ steps.branch.outputs.branch }}"
+
+      - name: Report summary
+        if: always()
+        shell: bash
+        run: |
+          echo "## Autonomous Codegen - ${{ matrix.agent }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Task: \`${{ steps.inputs.outputs.task_id }}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Agent: \`${{ matrix.agent }}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Branch: \`${{ steps.branch.outputs.branch }}\`" >> "$GITHUB_STEP_SUMMARY"
+          RUN_DIR="automation/codegen/runs/${{ steps.inputs.outputs.task_id }}/${{ matrix.agent }}"
+          RUNS=$(find "$RUN_DIR" -maxdepth 1 -name 'iter_*.json' 2>/dev/null | wc -l | tr -d ' ')
+          echo "- Iterations recorded: $RUNS" >> "$GITHUB_STEP_SUMMARY"
+          LAST=$(find "$RUN_DIR" -maxdepth 1 -name 'iter_*.json' 2>/dev/null | sort | tail -1)
+          if [ -n "$LAST" ]; then
+            PASSED=$(python -c "import json; d=json.load(open('$LAST')); print('✅ PASSED' if d['passed'] else '❌ FAILED')")
+            echo "- Final status: $PASSED" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "- Final status: ⚠️ no run record" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Fail job when loop did not pass
+        if: steps.loop.outcome != 'success'
+        run: exit 1

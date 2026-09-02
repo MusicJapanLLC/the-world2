@@ -1,0 +1,25 @@
+{
+  "scope_id": "owner-default",
+  "owner": "Owner/BOSS",
+  "domain_roots": [
+    "owned.example.com"
+  ],
+  "effect_level": "state_change",
+  "allowed_methods": [
+    "GET",
+    "HEAD",
+    "OPTIONS",
+    "POST",
+    "PUT",
+    "PATCH",
+    "DELETE"
+  ],
+  "allow_http": false,
+  "follow_redirects": true,
+  "max_redirects": 8,
+  "max_rps": 10,
+  "timeout_seconds": 15,
+  "max_request_bytes": 1048576,
+  "max_response_bytes": 8388608,
+  "retries": 3
+}

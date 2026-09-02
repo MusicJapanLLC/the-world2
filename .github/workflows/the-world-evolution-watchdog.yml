@@ -1,0 +1,312 @@
+name: THE WORLD - Evolution Watchdog
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+  push:
+    branches: ['claude/employee-onboarding-setup-udm86']
+    paths:
+      - '.github/workflows/the-world-evolution-watchdog.yml'
+
+concurrency:
+  group: the-world-evolution-watchdog
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  actions: write
+
+jobs:
+  watchdog:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Inspect, wake, and recover autonomous evolution fleet
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import datetime as dt
+          import json
+          import os
+          import subprocess
+          from pathlib import Path
+
+          repo = os.environ['GITHUB_REPOSITORY']
+          base = subprocess.check_output(
+              ['gh', 'repo', 'view', repo, '--json', 'defaultBranchRef', '--jq', '.defaultBranchRef.name'],
+              text=True,
+          ).strip()
+
+          # Fixed, security-reviewed fleet. max_age is deliberately larger than
+          # each lane's native cadence so GitHub scheduling jitter does not create
+          # duplicate run storms. Heavier lanes are woken several times per day.
+          specs = [
+              ('Realtime Kernel', 'the-world-realtime-kernel.yml', 15),
+              ('Manager Queue', 'tomoki-manager-queue.yml', 15),
+              ('AI Foundry Executor', 'ai-foundry-executor.yml', 15),
+              ('Resident Task Worker', 'the-world-task-worker.yml', 15),
+              ('Research Fabric', 'the-world-autonomous-research-fabric.yml', 30),
+              ('TOMOKI Manager', 'tomoki-manager.yml', 45),
+              ('AI Factory BOSS', 'ai-factory-boss.yml', 60),
+              ('Autonomous Director', 'the-core-autonomous-director.yml', 60),
+              ('TOMOKI SKEPTIC', 'tomoki-skeptic.yml', 90),
+              ('TOMOKI HOUND', 'tomoki-hound.yml', 90),
+              ('TOMOKI FORGE', 'tomoki-forge.yml', 90),
+              ('Agent Factory', 'the-world-agent-factory.yml', 120),
+              ('Standment Portfolio R&D', 'standment-security-portfolio-rnd.yml', 90),
+              ('Standment Portfolio Foundry', 'standment-security-portfolio-foundry.yml', 360),
+              ('Portfolio Evolution', 'portfolio-evolution-daily.yml', 360),
+              ('Senju Self Evolution', 'senju-autonomous-improver.yml', 120),
+              ('R&D x Senju Coupling', 'rnd-senju-coupled-loop.yml', 180),
+              ('MADLAB Evolution', 'madlab-world-evolution.yml', 180),
+          ]
+
+          now = dt.datetime.now(dt.timezone.utc)
+          active_states = {'queued', 'in_progress', 'pending', 'waiting', 'requested'}
+          failed_conclusions = {
+              'failure', 'cancelled', 'timed_out', 'startup_failure', 'stale', 'action_required'
+          }
+          report = []
+          forge_repair_dispatched = False
+
+          def run_cmd(args):
+              return subprocess.run(args, text=True, capture_output=True)
+
+          def dispatch(workflow, *extra):
+              return run_cmd([
+                  'gh', 'workflow', 'run', workflow, '--repo', repo, '--ref', base, *extra
+              ])
+
+          def classify_failure(workflow, run_id):
+              """Classify only blockers proven by exact failed-job evidence.
+
+              Observation/read failures may fail soft into a repair lane, but
+              execution and security boundaries remain fail closed. Unknown
+              failures are deliberately left retryable so this classifier cannot
+              hide a real regression.
+              """
+              logs = run_cmd([
+                  'gh', 'run', 'view', str(run_id), '--repo', repo, '--log-failed'
+              ])
+              text = ((logs.stdout or '') + '\n' + (logs.stderr or '')).lower()
+
+              quota_markers = {
+                  'copilot_monthly_quota': (
+                      'exceeded your monthly quota',
+                      'monthly quota has been exceeded',
+                  ),
+                  'provider_quota': (
+                      'insufficient quota',
+                      'quota exceeded',
+                  ),
+              }
+              for fingerprint, needles in quota_markers.items():
+                  if any(needle in text for needle in needles):
+                      return {
+                          'fingerprint': fingerprint,
+                          'kind': 'external_quota',
+                          'retryable_now': False,
+                          'repairable': False,
+                      }
+
+              # MADLAB is an owner-controlled deployment. A proven HTTP 401/403
+              # during its production-observation step is not something to hammer
+              # every 15 minutes. Route it to bounded repair, then periodically
+              # probe again after the lane's normal max_age.
+              if workflow == 'madlab-world-evolution.yml':
+                  access_needles = (
+                      'requested url returned error: 401',
+                      'requested url returned error: 403',
+                      'http 401',
+                      'http 403',
+                  )
+                  if any(needle in text for needle in access_needles):
+                      return {
+                          'fingerprint': 'owned_service_access_denied',
+                          'kind': 'owned_access',
+                          'retryable_now': False,
+                          'repairable': True,
+                      }
+
+              return None
+
+          for label, workflow, max_age in specs:
+              query = run_cmd([
+                  'gh', 'run', 'list', '--repo', repo, '--workflow', workflow,
+                  '--limit', '3', '--json',
+                  'databaseId,status,conclusion,createdAt,updatedAt'
+              ])
+
+              if query.returncode != 0:
+                  report.append({
+                      'label': label,
+                      'workflow': workflow,
+                      'action': 'lookup_failed',
+                      'detail': (query.stderr or query.stdout)[-1200:],
+                  })
+                  continue
+
+              rows = json.loads(query.stdout or '[]')
+              if not rows:
+                  wake = dispatch(workflow)
+                  report.append({
+                      'label': label,
+                      'workflow': workflow,
+                      'age_minutes': None,
+                      'consecutive_failures': 0,
+                      'blocker': None,
+                      'action': 'dispatched_no_history' if wake.returncode == 0 else 'dispatch_failed',
+                      'detail': '' if wake.returncode == 0 else (wake.stderr or wake.stdout)[-1200:],
+                  })
+                  continue
+
+              latest = rows[0]
+              created = dt.datetime.fromisoformat(latest['createdAt'].replace('Z', '+00:00'))
+              age_minutes = round((now - created).total_seconds() / 60, 1)
+              status = latest.get('status') or ''
+              conclusion = latest.get('conclusion') or ''
+              consecutive_failures = 0
+              for row in rows:
+                  if (row.get('conclusion') or '') in failed_conclusions:
+                      consecutive_failures += 1
+                  else:
+                      break
+
+              action = 'healthy'
+              detail = ''
+              systemic_repair = None
+              blocker = None
+
+              if status in active_states:
+                  action = 'active'
+              elif conclusion in failed_conclusions:
+                  blocker = classify_failure(workflow, latest['databaseId'])
+
+                  if blocker and blocker['kind'] == 'external_quota':
+                      action = 'blocked_external_no_retry'
+
+                  elif blocker and blocker['kind'] == 'owned_access':
+                      action = 'blocked_owned_access_waiting_repair'
+
+                      # Repair only while the failure is fresh so a persistent
+                      # access problem cannot create a FORGE storm every 15 min.
+                      if blocker.get('repairable') and age_minutes <= 30 and not forge_repair_dispatched:
+                          forge = dispatch('tomoki-forge.yml', '-f', 'mode=repair')
+                          forge_repair_dispatched = forge.returncode == 0
+                          systemic_repair = (
+                              'forge_repair_dispatched' if forge.returncode == 0
+                              else 'forge_repair_dispatch_failed'
+                          )
+                          if forge.returncode != 0:
+                              detail = (forge.stderr or forge.stdout)[-1200:]
+
+                      # Once the normal lane age elapses, issue one controlled
+                      # probe. A fresh failed run resets age and re-enters repair;
+                      # success returns the lane to healthy automatically.
+                      if age_minutes > max_age:
+                          probe = dispatch(workflow)
+                          action = (
+                              'blocked_owned_access_probe_dispatched'
+                              if probe.returncode == 0 else 'blocked_owned_access_probe_error'
+                          )
+                          if probe.returncode != 0:
+                              detail = (detail + '\n' + (probe.stderr or probe.stdout)[-1200:]).strip()
+
+                  else:
+                      retry = run_cmd([
+                          'gh', 'run', 'rerun', str(latest['databaseId']), '--repo', repo, '--failed'
+                      ])
+                      action = 'rerun_failed_jobs' if retry.returncode == 0 else 'rerun_failed_error'
+                      if retry.returncode != 0:
+                          detail = (retry.stderr or retry.stdout)[-1200:]
+
+                      # Two consecutive repairable terminal failures are treated as
+                      # a mechanism problem, not another one-off retry. Invoke one
+                      # bounded FORGE repair session per watchdog cycle.
+                      if consecutive_failures >= 2 and workflow != 'tomoki-forge.yml' and not forge_repair_dispatched:
+                          forge = dispatch('tomoki-forge.yml', '-f', 'mode=repair')
+                          forge_repair_dispatched = forge.returncode == 0
+                          systemic_repair = (
+                              'forge_repair_dispatched' if forge.returncode == 0
+                              else 'forge_repair_dispatch_failed'
+                          )
+                          if forge.returncode != 0:
+                              detail = (detail + '\n' + (forge.stderr or forge.stdout)[-1200:]).strip()
+              elif age_minutes > max_age:
+                  wake = dispatch(workflow)
+                  action = 'dispatched_stale' if wake.returncode == 0 else 'dispatch_stale_error'
+                  if wake.returncode != 0:
+                      detail = (wake.stderr or wake.stdout)[-1200:]
+
+              report.append({
+                  'label': label,
+                  'workflow': workflow,
+                  'run_id': latest.get('databaseId'),
+                  'status': status,
+                  'conclusion': conclusion,
+                  'age_minutes': age_minutes,
+                  'max_age_minutes': max_age,
+                  'consecutive_failures': consecutive_failures,
+                  'blocker': blocker,
+                  'action': action,
+                  'systemic_repair': systemic_repair,
+                  'detail': detail,
+              })
+
+          result = {
+              'schema': 'the-world-evolution-watchdog/v5',
+              'checked_at': now.isoformat(),
+              'repository': repo,
+              'default_branch': base,
+              'fleet_size': len(specs),
+              'loops': report,
+              'summary': {
+                  'checked': len(report),
+                  'recovered_or_woken': sum(
+                      1 for row in report
+                      if row.get('action') in {
+                          'rerun_failed_jobs', 'dispatched_stale', 'dispatched_no_history',
+                          'blocked_owned_access_probe_dispatched'
+                      }
+                  ),
+                  'external_blocks_suppressed': sum(
+                      1 for row in report if row.get('action') == 'blocked_external_no_retry'
+                  ),
+                  'owned_access_blocks_routed': sum(
+                      1 for row in report
+                      if str(row.get('action', '')).startswith('blocked_owned_access_')
+                  ),
+                  'systemic_repairs_dispatched': sum(
+                      1 for row in report if row.get('systemic_repair') == 'forge_repair_dispatched'
+                  ),
+                  'errors': sum(
+                      1 for row in report
+                      if 'error' in row.get('action', '') or row.get('action') == 'lookup_failed'
+                  ),
+              },
+          }
+          Path('/tmp/world-evolution-watchdog.json').write_text(
+              json.dumps(result, ensure_ascii=False, indent=2) + '\n', encoding='utf-8'
+          )
+          print(json.dumps(result, ensure_ascii=False, indent=2))
+          PY
+
+          {
+            echo '## THE WORLD Evolution Watchdog v5'
+            echo '```json'
+            cat /tmp/world-evolution-watchdog.json
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Preserve watchdog evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: world-evolution-watchdog-${{ github.run_id }}
+          path: /tmp/world-evolution-watchdog.json
+          retention-days: 30
+          if-no-files-found: warn

@@ -1,0 +1,15 @@
+{
+  "schema": "meta-discovery-policy/v1",
+  "trusted_roots": [
+    "kabeya-authorized-test-range.onrender.com"
+  ],
+  "promotion": {
+    "mode": "probationary_read_only",
+    "ttl_seconds": 21600,
+    "allowed_methods": ["GET", "HEAD"],
+    "credential_scope": "none",
+    "allow_http": false,
+    "allow_delete": false
+  },
+  "untrusted_discovery": "candidate_only"
+}

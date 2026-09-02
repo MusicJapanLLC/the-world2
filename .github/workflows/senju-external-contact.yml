@@ -1,0 +1,178 @@
+name: Senju External Contact Autopilot
+
+on:
+  schedule:
+    - cron: "37 */6 * * *"
+  workflow_dispatch:
+  push:
+    branches:
+      - "claude/employee-onboarding-setup-udm86"
+      - "feat/senju-external-autotune-20260830"
+    paths:
+      - "senju/**"
+      - ".github/workflows/senju-external-contact.yml"
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: senju-external-contact-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test-and-contact:
+    name: Tests + live egress + adaptive resilience
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: "3.12"
+
+      - name: Run Senju tests
+        working-directory: senju
+        env:
+          PIP_DISABLE_PIP_VERSION_CHECK: "1"
+          PIP_NO_INPUT: "1"
+        run: |
+          set -euo pipefail
+          python -m pip install pytest==9.1.1
+          python -m pytest tests -q
+
+      - name: Prove Arena target guard remains fail-closed
+        working-directory: senju
+        run: |
+          set -euo pipefail
+          python -m senju.cli safety-check sim://ci-target
+          if python -m senju.cli safety-check https://example.com; then
+            echo "Arena target guard unexpectedly accepted a public URL" >&2
+            exit 1
+          fi
+
+      - name: Restore adaptive transport memory
+        working-directory: senju
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/senju-contact /tmp/senju-contact-prev
+          PREV_RUN="$(gh run list \
+            --repo "$GITHUB_REPOSITORY" \
+            --workflow "Senju External Contact Autopilot" \
+            --status success \
+            --limit 10 \
+            --json databaseId \
+            --jq '.[0].databaseId // empty' || true)"
+          if [[ -n "$PREV_RUN" ]]; then
+            gh run download "$PREV_RUN" \
+              --repo "$GITHUB_REPOSITORY" \
+              --name senju-external-contact-v2-evidence \
+              --dir /tmp/senju-contact-prev || true
+          fi
+          if [[ -f /tmp/senju-contact-prev/transport-state.next.json ]]; then
+            cp /tmp/senju-contact-prev/transport-state.next.json /tmp/senju-contact/transport-state.json
+            echo "Restored adaptive transport memory from run $PREV_RUN"
+          else
+            python - <<'PY'
+          import json
+          from pathlib import Path
+          from senju.external_tuner import DEFAULT_STATE
+          Path('/tmp/senju-contact/transport-state.json').write_text(
+              json.dumps(DEFAULT_STATE, indent=2) + '\n', encoding='utf-8'
+          )
+          PY
+            echo "Using bootstrap adaptive transport state"
+          fi
+
+      - name: Load adaptive transport policy
+        id: strategy
+        working-directory: senju
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          from senju.external_tuner import load_state
+          s = load_state('/tmp/senju-contact/transport-state.json')
+          with open(os.environ['GITHUB_OUTPUT'], 'a', encoding='utf-8') as f:
+              f.write(f"timeout={s['timeout_seconds']}\n")
+              f.write(f"retries={s['retries']}\n")
+          print(json.dumps(s, indent=2))
+          PY
+
+      - name: Contact public web and capture response body
+        working-directory: senju
+        run: |
+          set -euo pipefail
+          python -m senju.cli contact \
+            https://example.com/ \
+            --allow-host example.com \
+            --method GET \
+            --timeout "${{ steps.strategy.outputs.timeout }}" \
+            --retries "${{ steps.strategy.outputs.retries }}" \
+            --receipt /tmp/senju-contact/example-receipt.json \
+            --response-out /tmp/senju-contact/example-body.html
+
+      - name: Contact public API independently
+        working-directory: senju
+        run: |
+          set -euo pipefail
+          python -m senju.cli contact \
+            https://api.github.com/zen \
+            --allow-host api.github.com \
+            --method GET \
+            --timeout "${{ steps.strategy.outputs.timeout }}" \
+            --retries "${{ steps.strategy.outputs.retries }}" \
+            --receipt /tmp/senju-contact/github-receipt.json \
+            --response-out /tmp/senju-contact/github-body.txt
+
+      - name: Verify live evidence contract
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          for stem in ('example', 'github'):
+              receipt = json.loads(Path(f'/tmp/senju-contact/{stem}-receipt.json').read_text())
+              body = Path(f'/tmp/senju-contact/{stem}-body.' + ('html' if stem == 'example' else 'txt')).read_bytes()
+              assert receipt['schema'] == 'senju-external-contact/v3'
+              assert receipt['requested_url']
+              assert receipt['final_url']
+              assert receipt['final_host']
+              assert receipt['contacted_hosts']
+              assert 200 <= receipt['status'] < 400
+              assert receipt['provider_acknowledged'] is True
+              assert receipt['resolved_ips']
+              assert receipt['response_bytes'] == len(body)
+              assert len(body) > 0
+              assert 1 <= receipt['attempt_count'] <= 4
+              assert receipt['redirect_count'] >= 0
+          print('SENJU_EXTERNAL_CONTACT_V3_VERIFIED')
+          PY
+
+      - name: Adapt transport strategy for next run
+        working-directory: senju
+        run: |
+          set -euo pipefail
+          python -m senju.external_tuner \
+            --state /tmp/senju-contact/transport-state.json \
+            --receipt /tmp/senju-contact/example-receipt.json \
+            --receipt /tmp/senju-contact/github-receipt.json \
+            --out /tmp/senju-contact/transport-state.next.json
+          cat /tmp/senju-contact/transport-state.next.json >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload external-contact evidence and adaptive memory
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        with:
+          # Keep the historical artifact name so prior transport memory remains restorable.
+          name: senju-external-contact-v2-evidence
+          retention-days: 30
+          if-no-files-found: error
+          path: /tmp/senju-contact/

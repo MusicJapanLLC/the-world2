@@ -1,0 +1,103 @@
+name: Senju Self-Development CI
+
+on:
+  push:
+    paths:
+      - "senju/senju/lab_planner.py"
+      - "senju/scripts/self_code_gen.py"
+      - "senju/tests/test_lab_planner_v2.py"
+      - ".github/workflows/senju-self-develop.yml"
+      - ".github/workflows/senju-self-develop-ci.yml"
+  pull_request:
+    paths:
+      - "senju/senju/lab_planner.py"
+      - "senju/scripts/self_code_gen.py"
+      - "senju/tests/test_lab_planner_v2.py"
+      - ".github/workflows/senju-self-develop.yml"
+      - ".github/workflows/senju-self-develop-ci.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: senju-self-develop-ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  planner-contract:
+    name: Determinism + idempotency + dry-run
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      PYTHONPATH: ${{ github.workspace }}/senju
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: "3.12"
+
+      - name: Install test dependency with layout compatibility
+        env:
+          PIP_DISABLE_PIP_VERSION_CHECK: "1"
+          PIP_NO_INPUT: "1"
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -f senju/pyproject.toml || -f senju/setup.py ]]; then
+            python -m pip install -e './senju[dev]'
+          else
+            python -m pip install pytest
+          fi
+
+      - name: Run planner regression suite
+        working-directory: senju
+        run: python -m pytest tests/test_lab_planner_v2.py -q
+
+      - name: Exercise self-code generator without writes to GitHub
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/senju-ci-labs
+          cat > /tmp/evolution-summary.json <<'JSON'
+          {
+            "vuln_class_hits": {},
+            "vuln_class_elo": {}
+          }
+          JSON
+
+          python senju/scripts/self_code_gen.py \
+            --summary /tmp/evolution-summary.json \
+            --labs-dir /tmp/senju-ci-labs \
+            --max-manifests 3 \
+            --dry-run \
+            --report-json /tmp/self-code-gen-report.json
+
+      - name: Validate dry-run evidence
+        shell: python
+        run: |
+          import json
+          from pathlib import Path
+
+          report = json.loads(Path('/tmp/self-code-gen-report.json').read_text())
+          assert report['schema'] == 'senju-self-code-gen/v2'
+          assert report['dry_run'] is True
+          assert report['generated_count'] > 0
+          assert report['pr'] is None
+          assert report['deduplicated'] is False
+          assert len(report['campaign_fingerprint']) == 64
+
+          manifests = sorted(Path('/tmp/senju-ci-labs').glob('*.json'))
+          assert manifests
+          for path in manifests:
+              payload = json.loads(path.read_text())
+              assert payload['schema'] == 'senju-auto-lab/v3'
+              assert payload['host'] is None
+              assert len(payload['fingerprint']) == 64
+
+          print(f"validated {len(manifests)} deterministic local-lab manifests")

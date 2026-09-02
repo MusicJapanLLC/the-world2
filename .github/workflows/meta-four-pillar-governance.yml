@@ -1,0 +1,37 @@
+name: META Four Pillar Governance
+
+on:
+  schedule:
+    - cron: "11,41 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: meta-four-pillar-governance
+  cancel-in-progress: true
+
+jobs:
+  evaluate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run four-pillar decision cycle
+        run: python automation/codegen/four_pillar_runner.py
+
+      - name: Test four-pillar invariants
+        run: |
+          cd automation/codegen
+          python -m pytest tests/test_four_pillar_governance.py -q
+
+      - name: Preserve decision artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: meta-four-pillar-decision-${{ github.run_id }}
+          path: automation/codegen/meta_state/four_pillar_decision.json
+          if-no-files-found: ignore
+          retention-days: 14

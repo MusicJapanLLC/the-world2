@@ -1,0 +1,63 @@
+name: X — Autonomous Code Generation (Full Cycle)
+
+on:
+  schedule:
+    - cron: '0 */4 * * *'
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'Mode: full | run | expand | report | selfdev'
+        required: false
+        default: 'full'
+      new_tasks:
+        description: 'New task count (full/expand mode)'
+        required: false
+        default: '10'
+      max_iter:
+        description: 'Max iterations per task (0=adaptive)'
+        required: false
+        default: '0'
+
+jobs:
+  orchestrate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      X_WORKERS: "8"
+      X_NEW_TASKS: ${{ github.event.inputs.new_tasks || '10' }}
+      SELF_DEV_BRANCH: ${{ github.ref_name }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install requests anthropic 2>/dev/null || pip install requests
+
+      - name: Run X orchestrator
+        working-directory: automation/codegen
+        run: |
+          MODE="${{ github.event.inputs.mode || 'full' }}"
+          NEW_TASKS="${{ github.event.inputs.new_tasks || '10' }}"
+          MAX_ITER="${{ github.event.inputs.max_iter || '0' }}"
+          if [ "$MAX_ITER" = "0" ]; then
+            python3 orchestrator.py $MODE $NEW_TASKS
+          else
+            python3 orchestrator.py $MODE $NEW_TASKS $MAX_ITER
+          fi
+
+      - name: Commit generated files
+        run: |
+          git config user.name "X-Autonomous"
+          git config user.email "x-autonomous@musicjapanllc.com"
+          git add -A
+          git diff --staged --quiet || git commit -m "chore(X): autonomous cycle output [skip ci]"
+          git push origin HEAD || true

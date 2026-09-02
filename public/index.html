@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AI FOUNDRY IDE</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <div id="mobileBlock">AI FOUNDRY IDE is desktop-first. Open this URL on a PC.</div>
+  <div id="app" class="shell">
+    <aside class="sidebar">
+      <div class="brand"><span class="dot"></span><strong>AI FOUNDRY</strong><small>DEVELOPMENT IDE</small></div>
+      <button id="newThread" class="new-thread">+ NEW CHAT</button>
+      <div class="sidebar-label">SESSIONS</div>
+      <div id="threadList" class="thread-list"></div>
+      <div class="sidebar-foot">GPT-5.6 SOL · VERCEL AI GATEWAY</div>
+    </aside>
+
+    <main class="chat-pane">
+      <header class="pane-head">
+        <div><div class="eyebrow">AI DEVELOPMENT CORE</div><h1 id="threadTitle">New AI Development</h1></div>
+        <div class="head-meta"><span class="green"></span> ONLINE</div>
+      </header>
+      <section id="messages" class="messages"></section>
+      <div class="composer-wrap">
+        <textarea id="composer" rows="1" placeholder="Build, debug, evaluate or evolve an AI system...  Enter = send / Shift+Enter = newline"></textarea>
+        <button id="sendBtn">SEND</button>
+      </div>
+    </main>
+
+    <aside class="tools-pane">
+      <header class="tools-head"><div class="eyebrow">EXECUTION</div><h2>DEV TOOLS</h2></header>
+      <div class="pipeline">
+        <button id="runPipeline" class="primary">RUN BUILD PIPELINE</button>
+        <button id="clearLog" class="secondary">CLEAR LOG</button>
+      </div>
+      <div class="tool-status">
+        <div><span>MODEL</span><b>openai/gpt-5.6-sol</b></div>
+        <div><span>BUILD</span><b id="buildState">IDLE</b></div>
+        <div><span>TEST</span><b id="testState">IDLE</b></div>
+        <div><span>PUBLISH</span><b id="publishState">IDLE</b></div>
+      </div>
+      <div class="terminal-head"><span>TERMINAL</span><span id="clock"></span></div>
+      <pre id="terminal" class="terminal"></pre>
+      <section id="artifact" class="artifact hidden">
+        <div class="artifact-title">GENERATED AI</div>
+        <h3 id="artifactName"></h3>
+        <p id="artifactDescription"></p>
+        <div id="artifactCaps" class="caps"></div>
+        <a id="artifactUrl" target="_blank" rel="noreferrer">OPEN AI ↗</a>
+        <button id="copyUrl" class="secondary">COPY URL</button>
+      </section>
+    </aside>
+  </div>
+  <script src="/auto-execute.js"></script>
+  <script type="module" src="/app.js"></script>
+</body>
+</html>

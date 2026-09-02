@@ -1,0 +1,181 @@
+name: Senju Autonomous Self-Development Loop
+
+on:
+  schedule:
+    - cron: "0 * * * *"   # every hour
+  workflow_dispatch:
+  workflow_run:
+    workflows:
+      - "Senju GitHub Native Autonomous Improver"
+      - "Auto Merge PRs"
+      - "Senju Data Mesh — Unified Intelligence Hub"
+      - "Senju Blitz — Parallel Adversary Surge"
+    types: [completed]
+
+concurrency:
+  group: senju-self-develop
+  cancel-in-progress: true
+
+jobs:
+  analyze-generate-verify:
+    name: Verify → ELO gap plan → deduplicated PR
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    permissions:
+      contents: write
+      pull-requests: write
+      actions: read
+
+    env:
+      GH_TOKEN: ${{ github.token }}
+      BASE_BRANCH: claude/employee-onboarding-setup-udm86
+      GITHUB_REPOSITORY: ${{ github.repository }}
+      PYTHONPATH: ${{ github.workspace }}/senju
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: "3.12"
+
+      - name: Install test dependency with layout compatibility
+        env:
+          PIP_DISABLE_PIP_VERSION_CHECK: "1"
+          PIP_NO_INPUT: "1"
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -f senju/pyproject.toml || -f senju/setup.py ]]; then
+            python -m pip install -e './senju[dev]'
+          else
+            python -m pip install pytest
+          fi
+
+      - name: Restore latest validated Senju evolution summary
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/senju-memory
+          PREV_RUN="$(gh run list --repo "$GITHUB_REPOSITORY" \
+            --workflow "Senju GitHub Native Autonomous Improver" \
+            --status success --limit 10 \
+            --json databaseId --jq '.[0].databaseId // empty' || true)"
+
+          if [[ -n "$PREV_RUN" ]]; then
+            gh run download "$PREV_RUN" --repo "$GITHUB_REPOSITORY" \
+              --name senju-validated-promotion --dir /tmp/senju-memory || true
+          fi
+
+          if [[ -f /tmp/senju-memory/last-evolution-summary.json ]]; then
+            cp /tmp/senju-memory/last-evolution-summary.json /tmp/evolution-summary.json
+            echo "restored_source=artifact:$PREV_RUN" >> "$GITHUB_ENV"
+          elif [[ -f senju/state/last-evolution-summary.json ]]; then
+            cp senju/state/last-evolution-summary.json /tmp/evolution-summary.json
+            echo "restored_source=repository" >> "$GITHUB_ENV"
+          else
+            printf '{}\n' > /tmp/evolution-summary.json
+            echo "restored_source=fresh" >> "$GITHUB_ENV"
+          fi
+
+      - name: Validate restored state
+        shell: python
+        run: |
+          import json
+          from pathlib import Path
+
+          path = Path('/tmp/evolution-summary.json')
+          if path.stat().st_size > 2 * 1024 * 1024:
+              raise SystemExit('evolution summary exceeds 2 MiB')
+          payload = json.loads(path.read_text(encoding='utf-8'))
+          if not isinstance(payload, dict):
+              raise SystemExit('evolution summary must be a JSON object')
+          for key in ('vuln_class_hits', 'vuln_class_elo'):
+              value = payload.get(key, {})
+              if value is not None and not isinstance(value, dict):
+                  raise SystemExit(f'{key} must be an object')
+          print('restored state validated')
+
+      - name: Run autonomous planner regression tests
+        working-directory: senju
+        run: python -m pytest tests/test_lab_planner_v2.py -q
+
+      - name: Configure authenticated git transport
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh auth setup-git
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Generate deterministic plan and open at most one equivalent PR
+        id: generate
+        shell: bash
+        run: |
+          set -euo pipefail
+          python senju/scripts/self_code_gen.py \
+            --summary /tmp/evolution-summary.json \
+            --labs-dir senju/labs \
+            --max-manifests 10 \
+            --report-json /tmp/self-code-gen-report.json
+
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+          import json
+          from pathlib import Path
+          report = json.loads(Path('/tmp/self-code-gen-report.json').read_text())
+          print(f"generated_count={report.get('generated_count', 0)}")
+          print(f"deduplicated={str(bool(report.get('deduplicated'))).lower()}")
+          print(f"campaign_fingerprint={report.get('campaign_fingerprint', '')}")
+          print(f"pr={report.get('pr') or ''}")
+          PY
+
+      - name: Verify generated local-lab contracts
+        if: steps.generate.outputs.generated_count != '0'
+        shell: python
+        run: |
+          import json
+          from pathlib import Path
+
+          report = json.loads(Path('/tmp/self-code-gen-report.json').read_text())
+          for raw in report.get('generated', []):
+              path = Path(raw)
+              payload = json.loads(path.read_text(encoding='utf-8'))
+              assert payload.get('schema') == 'senju-auto-lab/v3'
+              assert payload.get('host') is None
+              assert len(payload.get('fingerprint', '')) == 64
+              gaps = payload.get('coverage_gaps')
+              surfaces = payload.get('surfaces')
+              assert isinstance(gaps, list) and gaps
+              assert isinstance(surfaces, list) and surfaces
+              assert all(item.get('vuln_class') for item in surfaces)
+          print(f"verified {len(report.get('generated', []))} manifest(s)")
+
+      - name: Upload self-development evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: senju-self-development-${{ github.run_id }}
+          path: |
+            /tmp/evolution-summary.json
+            /tmp/self-code-gen-report.json
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Summary
+        if: always()
+        shell: bash
+        run: |
+          cat >> "$GITHUB_STEP_SUMMARY" <<EOF
+          ## Senju Self-Development Run ${GITHUB_RUN_ID}
+          - Restored state: **${restored_source:-unknown}**
+          - Changed manifests: **${{ steps.generate.outputs.generated_count || '0' }}**
+          - Equivalent open PR reused: **${{ steps.generate.outputs.deduplicated || 'false' }}**
+          - Plan fingerprint: **${{ steps.generate.outputs.campaign_fingerprint || 'none' }}**
+          - PR: ${{ steps.generate.outputs.pr || 'none' }}
+          EOF

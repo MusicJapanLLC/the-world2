@@ -1,0 +1,147 @@
+{
+  "schema": "standment-security-research-frontier/v1",
+  "mission": "Continuously turn defensive security research on owned or explicitly authorized systems into customer-inspectable, reproducible portfolio evidence, while feeding bounded evidence back into THE WORLD AI-development loop.",
+  "selection_policy": {
+    "rotate_across_runs": true,
+    "avoid_same_lens_same_stage_consecutively": true,
+    "stages": ["DISCOVERY", "FALSIFICATION", "REMEDIATION", "RETEST", "PORTFOLIO"],
+    "promotion_rule": "No research item becomes VERIFIED from file existence, AI self-evaluation, severity labels, or prose alone. Behavioral evidence, counterevidence, reproducibility and authorized scope are required."
+  },
+  "lenses": [
+    {
+      "id": "AUTH-BOUNDARY",
+      "title": "Auth / Tenant / Permission Boundary Review",
+      "purpose": "AI/SaaSの認証・権限・テナント境界がfail-closedになっているかを証拠化する",
+      "customer_use": "テナント越境や権限設定ミスを防げるかを、allowed/blockedの実測で説明する",
+      "refs": ["security/STANDMENT_SECURITY_STANDARD.md", "standment-security/CONTROL_EVIDENCE_TEMPLATE.md", "standment-security/ai-security/agent-permission-boundary-lab.md"],
+      "safe_test": "所有/明示許可済みfixtureでallowed/blocked action matrixを再現する"
+    },
+    {
+      "id": "SUPPLY-CHAIN",
+      "title": "Software Supply-Chain Assurance Pack",
+      "purpose": "依存関係・静的解析・SBOM・変更ゲートを一つの顧客向け証拠パックにする",
+      "customer_use": "ソフトウェア変更時に依存脆弱性や危険なコードがどう検知されるかを確認できる",
+      "refs": [".github/workflows/codeql.yml", ".github/workflows/dependency-review.yml", ".github/workflows/standment-security-gate.yml", "scripts/security/sbom_from_lock.py"],
+      "safe_test": "同一commitのCodeQL/Dependency/SBOM結果を束ねて整合性を確認する"
+    },
+    {
+      "id": "AGENT-BOUNDARY",
+      "title": "Autonomous Agent Permission & Auditability Lab",
+      "purpose": "自律AIが何を許可され、何を拒否され、何を実行したかを追跡可能にする",
+      "customer_use": "AIエージェントの暴走・権限逸脱・監査不能リスクを具体的な操作証拠で評価する",
+      "refs": ["company-society/AUTONOMY.md", "automation/security/workflow_policy.py", ".github/workflows/security-guard.yml", "standment-security/ELITE_WHITEHAT_CELL.md"],
+      "safe_test": "安全なfixture入力で代表的なallowed/denied操作を再実行する"
+    },
+    {
+      "id": "LLM-TOOL-BOUNDARY",
+      "title": "LLM Prompt / Tool Boundary Evaluation",
+      "purpose": "プロンプト入力がツール権限・データ境界・実行ポリシーを越えないか評価する",
+      "customer_use": "AI機能に悪意ある入力や誤誘導が来ても外部操作やデータ越境がfail-closedになるか確認する",
+      "refs": ["automation/security/workflow_policy.py", "standment-security/ai-security/llm-security-eval-harness.md", "standment-security/ELITE_WHITEHAT_CELL.md"],
+      "safe_test": "ローカル/fixture上の無害なadversarial promptで期待するdeny結果を検証する"
+    },
+    {
+      "id": "SECRETS-CONFIG",
+      "title": "Secrets & Configuration Exposure Review",
+      "purpose": "秘密情報・環境変数・設定ファイル・CI権限の露出リスクを証拠化する",
+      "customer_use": "認証情報や高権限設定がリポジトリ・CI・成果物へ漏れにくい構造か確認する",
+      "refs": [".github/workflows/security-guard.yml", "security/STANDMENT_SECURITY_STANDARD.md", "standment-security/CONTROL_EVIDENCE_TEMPLATE.md"],
+      "safe_test": "ダミーfixtureでsecret-like patternと危険な設定が検知・拒否されるか確認する"
+    },
+    {
+      "id": "CI-PERMISSIONS",
+      "title": "CI/CD Permission & Change-Control Evidence",
+      "purpose": "GitHub Actions等の自動化権限・変更ゲート・依存Action固定をレビューする",
+      "customer_use": "自動化が必要以上の権限を持たず、重要変更が検証なしで通らないことを説明できる",
+      "refs": [".github/workflows/security-critical-change-control.yml", ".github/workflows/security-guard.yml", ".github/workflows/standment-security-gate.yml"],
+      "safe_test": "fixture workflowの危険なpermissions/persist-credentials/action参照を静的に検証する"
+    },
+    {
+      "id": "RECOVERY",
+      "title": "Incident Readiness / Recovery Evidence Pack",
+      "purpose": "バックアップ・ロールバック・復旧手順が『ある』ではなく『再現できる』ことを示す",
+      "customer_use": "障害や誤変更が起きた時にどこまで安全に戻せるか、復旧条件と限界を確認できる",
+      "refs": ["security/STANDMENT_SECURITY_STANDARD.md", "standment-security/CONTROL_EVIDENCE_TEMPLATE.md", "standment-security/evidence-packs/incident-readiness/README.md"],
+      "safe_test": "非破壊fixtureでrollback/recovery手順を再現し成功条件と失敗条件を記録する"
+    },
+    {
+      "id": "OBSERVABILITY",
+      "title": "Security Observability & Audit Trail Pack",
+      "purpose": "重要操作・拒否・失敗・自動修復が監査可能な証跡として残るか確認する",
+      "customer_use": "インシデント時に誰が何をしたか、AIが何を拒否したかを追跡できる",
+      "refs": ["standment-security/REPORTING_CONTRACT.md", "standment-security/CONTROL_EVIDENCE_TEMPLATE.md", "automation/security/portfolio_rnd.py"],
+      "safe_test": "fixtureイベントから安定したfingerprintと人間可読の監査記録が生成されるか確認する"
+    },
+    {
+      "id": "DATA-BOUNDARY",
+      "title": "Sensitive Data Boundary & Retention Review",
+      "purpose": "機密データがどこを通り、どこに残り、どこへ出てはいけないかを証拠化する",
+      "customer_use": "AI/SaaSのデータ越境・不要保存・ログ混入リスクを構造的に確認する",
+      "refs": ["security/STANDMENT_SECURITY_STANDARD.md", "standment-security/CONTROL_EVIDENCE_TEMPLATE.md", "company-society/AUTONOMY.md"],
+      "safe_test": "ダミーデータfixtureで許可/禁止の保存先と出力境界を確認する"
+    },
+    {
+      "id": "INPUT-ABUSE",
+      "title": "Input Abuse & Resource-Guard Review",
+      "purpose": "入力サイズ・頻度・異常値・再試行がシステムを不安定化させない設計か評価する",
+      "customer_use": "通常外の入力でもサービス品質やコストが急激に崩れないかを説明できる",
+      "refs": ["security/STANDMENT_SECURITY_STANDARD.md", "standment-security/CONTROL_EVIDENCE_TEMPLATE.md"],
+      "safe_test": "ローカルfixtureで境界値・異常値・rate policyの期待挙動を非破壊で検証する"
+    },
+    {
+      "id": "DEPENDENCY-TRUST",
+      "title": "Third-Party Dependency Trust Review",
+      "purpose": "外部ライブラリ・Action・サービスへの信頼境界と更新リスクを整理する",
+      "customer_use": "自社コード以外から入るサプライチェーンリスクと更新時の確認項目を理解できる",
+      "refs": [".github/workflows/dependency-review.yml", "scripts/security/sbom_from_lock.py", "security/STANDMENT_SECURITY_STANDARD.md"],
+      "safe_test": "既存lockfile/SBOM/Action参照を読み取り、追跡可能性と固定状態を確認する"
+    },
+    {
+      "id": "EVIDENCE-INTEGRITY",
+      "title": "Security Evidence Integrity & Reproducibility",
+      "purpose": "成果の根拠が人間に読め、同じ条件で再実行でき、反証も残る状態にする",
+      "customer_use": "セキュリティ会社の『大丈夫です』ではなく、第三者が再確認できる証拠として受け取れる",
+      "refs": ["automation/security/portfolio_rnd.py", "automation/security/test_portfolio_rnd.py", "standment-security/CONTROL_EVIDENCE_TEMPLATE.md", "standment-security/REPORTING_CONTRACT.md"],
+      "safe_test": "同一入力を複数回実行し、選定・evidence ratio・promotion decisionの安定性を確認する"
+    },
+    {
+      "id": "AI-EVAL-FEEDBACK",
+      "title": "AI Security Evaluation Feedback Integrity",
+      "purpose": "AI Security Evalの結果が次のAI開発・Security研究へ戻る時、評価結果が単なる自己正当化やゲート迂回にならないことを証拠化する",
+      "customer_use": "AIが自分の評価を使って勝手に安全宣言せず、評価は改善方向だけを補助し、昇格判定は独立したままか確認できる",
+      "refs": [".github/workflows/standment-ai-security-eval.yml", "automation/security/llm_security_eval.py", ".github/workflows/ai-dev-minute-foundry.yml", "automation/ai_foundry/minute_evolution.py"],
+      "safe_test": "synthetic Before/Afterと固定pass/fail gateを使い、評価ヒントを変えてもpromotion条件自体が変化しないことを再現する"
+    },
+    {
+      "id": "AI-MEMORY-PROVENANCE",
+      "title": "AI Memory / Research Provenance Boundary",
+      "purpose": "過去のAI研究・Champion・Security findingが、根拠・世代・反証状態を失ったまま次の判断へ混入しないかを検証する",
+      "customer_use": "AIが古い・矛盾した・出所不明な学習メモを事実として再利用し続けるリスクを評価できる",
+      "refs": ["automation/world/research_fabric.py", "automation/ai_foundry/minute_evolution.py", "standment-security/CONTROL_EVIDENCE_TEMPLATE.md", "standment-security/ai-security/llm-security-eval-evidence-pack.md"],
+      "safe_test": "候補/反証/再現済みのsynthetic findingを混在させ、provenanceを失った入力が昇格やVERIFIED扱いへ直結しないことを確認する"
+    },
+    {
+      "id": "AI-EVAL-DRIFT",
+      "title": "AI Eval Drift / Benchmark Gaming Detection",
+      "purpose": "AI改善が特定fixtureや単一proxyだけへ過適合し、実質的な安全性・信頼性が改善していない状態を検出する",
+      "customer_use": "AIが評価テストだけ上手くなって安全になったように見えるbenchmark gamingを見抜ける",
+      "refs": ["automation/security/llm_security_eval.py", "automation/security/test_llm_security_eval.py", "automation/ai_foundry/minute_evolution.py", ".github/workflows/standment-ai-security-eval.yml"],
+      "safe_test": "seed・fixture slice・評価カテゴリを変えたsynthetic再評価を行い、単一benchmarkだけの改善を独立改善として扱わない"
+    },
+    {
+      "id": "AI-CAPABILITY-DIFF",
+      "title": "AI Agent Capability / Permission Diff Review",
+      "purpose": "AI開発で新しいtool・workflow・権限・外部作用能力が増えた時、そのcapability差分をSecurityが自動的に研究対象へ昇格する",
+      "customer_use": "AIの性能向上に伴って権限だけが静かに膨張していないか、変更前後で追跡できる",
+      "refs": ["automation/security/workflow_policy.py", ".github/workflows/security-guard.yml", ".github/workflows/the-world-agent-factory.yml", ".github/workflows/ai-dev-minute-foundry.yml"],
+      "safe_test": "fixture workflowでpermissions/tool surfaceのBefore/After差分を作り、追加capabilityが未分類ならfail-closedになることを確認する"
+    }
+  ],
+  "stage_contracts": {
+    "DISCOVERY": "証拠と不足証拠を列挙し、検証可能な仮説を1つ定義する",
+    "FALSIFICATION": "その仮説を否定し得る反証条件と既存の矛盾を探す",
+    "REMEDIATION": "反証に耐えるための最小かつ可逆な改善案を定義する",
+    "RETEST": "同一条件でBefore/Afterを比較できる再テスト契約を定義する",
+    "PORTFOLIO": "技術詳細を顧客が用途・証拠・限界・残存リスクを理解できるEvidence Cardへ変換する"
+  }
+}

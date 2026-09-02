@@ -1,0 +1,43 @@
+name: AI FOUNDRY - Execution Truth Guard
+
+on:
+  push:
+    branches: ['chatgpt/foundry-no-more-fake-deploy-v1']
+    paths:
+      - 'public/auto-execute.js'
+      - 'public/index.html'
+      - 'vercel.json'
+      - '.github/workflows/ai-foundry-execution-truth-guard.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          ref: chatgpt/foundry-no-more-fake-deploy-v1
+          persist-credentials: false
+      - name: JavaScript syntax
+        run: node --check public/auto-execute.js
+      - name: Verify execution guard wiring and Vercel filters
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          html=Path('public/index.html').read_text(encoding='utf-8')
+          js=Path('public/auto-execute.js').read_text(encoding='utf-8')
+          config=json.loads(Path('vercel.json').read_text(encoding='utf-8'))
+          assert '<script src="/auto-execute.js"></script>' in html
+          for token in ['作って','実装して','デプロイして','build','deploy']:
+              assert token in js, token
+          rules=config['git']['deploymentEnabled']
+          for pattern in ['security/**','senju/**','dependabot/**','automation/**','rnd/**','world/**','chatgpt/**']:
+              assert rules.get(pattern) is False, pattern
+          assert any(r.get('source') == '/auto-execute.js' for r in config['rewrites'])
+          print('EXECUTION_TRUTH_GUARD_OK')
+          PY

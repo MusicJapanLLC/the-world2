@@ -1,0 +1,2 @@
+AI FOUNDRY Forge V2 production release trigger
+commit purpose: force Vercel production rebuild after merged execution upgrades

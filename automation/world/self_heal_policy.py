@@ -21,6 +21,8 @@ FORBIDDEN_FILES = {
     "automation/world/self_heal_merge.py",
     "automation/world/prompts/self-heal.md",
 }
+from automation.world.adaptive_budget import compute_adaptive_budget
+
 MAX_FILES = 4
 MAX_CHANGED_LINES = 400
 FORBIDDEN_PATTERNS = [
@@ -50,8 +52,13 @@ def main() -> int:
     if not names:
         print("SELF_HEAL_POLICY: no changes")
         return 0
-    if len(names) > MAX_FILES:
-        raise SystemExit(f"SELF_HEAL_POLICY: too many changed files: {len(names)} > {MAX_FILES}")
+    first_name = names[0] if names else ""
+    adaptive = compute_adaptive_budget(first_name, base_files=MAX_FILES, base_lines=MAX_CHANGED_LINES)
+    effective_max_files = adaptive.max_files
+    effective_max_lines = adaptive.max_changed_lines
+
+    if len(names) > effective_max_files:
+        raise SystemExit(f"SELF_HEAL_POLICY: too many changed files: {len(names)} > {effective_max_files}")
 
     for name in names:
         if name in FORBIDDEN_FILES:
@@ -70,8 +77,8 @@ def main() -> int:
         for value in parts[:2]:
             if value.isdigit():
                 changed_lines += int(value)
-    if changed_lines > MAX_CHANGED_LINES:
-        raise SystemExit(f"SELF_HEAL_POLICY: patch too large: {changed_lines} > {MAX_CHANGED_LINES}")
+    if changed_lines > effective_max_lines:
+        raise SystemExit(f"SELF_HEAL_POLICY: patch too large: {changed_lines} > {effective_max_lines}")
 
     diff = git("diff", "--unified=0")
     added = "\n".join(

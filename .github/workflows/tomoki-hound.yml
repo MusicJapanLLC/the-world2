@@ -40,14 +40,59 @@ jobs:
           copilot -p "$(cat tomoki-agents/prompts/hound.md)" -s --allow-tool=write --no-ask-user > /tmp/tomoki-copilot.log 2>&1
           rc=$?
           set -e
-          if [[ ! -f tomoki-report.md ]]; then printf 'HOUND failed or produced no report. Exit code: %s\n' "$rc" > tomoki-report.md; fi
+
+          python - <<'PY'
+          import re
+          from pathlib import Path
+
+          src = Path('/tmp/tomoki-copilot.log')
+          text = src.read_text(encoding='utf-8', errors='replace') if src.exists() else 'Copilot CLI produced no diagnostic log.\n'
+          patterns = [
+              (r'(?i)(authorization\s*[:=]\s*bearer\s+)[^\s]+', r'\1[REDACTED]'),
+              (r'\bgh[pousr]_[A-Za-z0-9_]{20,}\b', '[REDACTED_GITHUB_TOKEN]'),
+              (r'\bgithub_pat_[A-Za-z0-9_]{20,}\b', '[REDACTED_GITHUB_PAT]'),
+          ]
+          for pattern, repl in patterns:
+              text = re.sub(pattern, repl, text)
+          lines = text.splitlines()[-160:]
+          Path('tomoki-copilot-diagnostic.log').write_text('\n'.join(lines) + '\n', encoding='utf-8')
+          PY
+
+          # Preserve enough redacted failure evidence for MANAGER/SKEPTIC and the
+          # Evolution Watchdog. Never persist or print the raw Copilot log.
+          if [[ ! -s tomoki-report.md ]]; then
+            printf 'HOUND failed or produced no report. Exit code: %s\n' "$rc" > tomoki-report.md
+          fi
+          if [[ "$rc" -ne 0 ]]; then
+            {
+              printf '\n## Redacted diagnostic tail\n'
+              cat tomoki-copilot-diagnostic.log
+            } >> tomoki-report.md
+            echo '--- sanitized Copilot diagnostic ---' >&2
+            cat tomoki-copilot-diagnostic.log >&2
+
+            # Known external-provider blockers (quota/entitlement) are not a
+            # HOUND bug. Report them as a non-failing BLOCKED state instead of
+            # tripping the Evolution Watchdog's repeated-failure repair loop.
+            # Any other failure reason still fails the job as before.
+            if grep -qiE 'exceeded your monthly quota|monthly quota has been exceeded|insufficient quota|quota exceeded' tomoki-copilot-diagnostic.log; then
+              {
+                echo ''
+                echo '_HOUND did not run: external Copilot quota/entitlement blocker. This is not a code failure._'
+              } >> tomoki-report.md
+              echo 'HOUND external Copilot quota/entitlement blocker; not a code failure.' >> "$GITHUB_STEP_SUMMARY"
+              rc=0
+            fi
+          fi
           exit "$rc"
       - name: Persist HOUND evidence for Manager
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: tomoki-hound-report
-          path: tomoki-report.md
+          path: |
+            tomoki-report.md
+            tomoki-copilot-diagnostic.log
           retention-days: 14
           if-no-files-found: warn
       - name: Report to TOMOKI Slack

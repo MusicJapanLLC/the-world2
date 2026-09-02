@@ -43,8 +43,8 @@
       <div class="sidebar-foot" id="modelLabel">GPT-5.6-SOL · VERCEL AI</div>
     </aside>
 
-    <!-- CHAT PANE -->
-    <main class="chat-pane">
+    <!-- SPLIT PANE CONTAINER -->
+    <main class="split-pane-container">
       <header class="pane-head">
         <div>
           <div class="eyebrow">AI DEVELOPMENT CORE</div>
@@ -60,18 +60,50 @@
         </div>
       </header>
 
-      <section id="messages" class="messages"></section>
-
-      <div class="composer-wrap">
-        <div class="composer-hints" id="composerHints">
-          <span class="hint" data-text="Next.js API with Supabase RLS">Next.js + Supabase</span>
-          <span class="hint" data-text="Python FastAPI streaming SSE endpoint">FastAPI SSE</span>
-          <span class="hint" data-text="Refactor TypeScript — eliminate all `any` types">TS strict</span>
-          <span class="hint" data-text="/pr MusicJapanLLC/the-world2 feature/test &quot;My PR title&quot;">/pr command</span>
+      <!-- EDITOR & PREVIEW PANES -->
+      <div class="split-content">
+        <!-- EDITOR PANE -->
+        <div class="editor-pane">
+          <div class="pane-label">EDITOR</div>
+          <div class="editor-container">
+            <textarea id="editor" class="code-editor" placeholder="// Write or paste code here…" spellcheck="false"></textarea>
+            <div class="editor-status"><span id="editorLines">0</span> lines · <span id="editorChars">0</span> chars</div>
+          </div>
         </div>
-        <div class="composer-row">
-          <textarea id="composer" rows="1" placeholder="Describe what to build, debug, or improve…  Enter = send  Shift+Enter = newline"></textarea>
-          <button id="sendBtn">SEND</button>
+
+        <!-- DIVIDER -->
+        <div class="pane-divider" id="divider"></div>
+
+        <!-- PREVIEW PANE -->
+        <div class="preview-pane">
+          <div class="pane-label">PREVIEW</div>
+          <div class="preview-container">
+            <div id="preview" class="preview-output">
+              <div class="preview-placeholder">
+                <span>📄 Preview output will appear here</span>
+                <small>Execute code or view results</small>
+              </div>
+            </div>
+            <div class="preview-status"><span id="previewStatus">Ready</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CHAT PANE (BOTTOM) -->
+      <div class="chat-pane-bottom">
+        <section id="messages" class="messages"></section>
+
+        <div class="composer-wrap">
+          <div class="composer-hints" id="composerHints">
+            <span class="hint" data-text="Next.js API with Supabase RLS">Next.js + Supabase</span>
+            <span class="hint" data-text="Python FastAPI streaming SSE endpoint">FastAPI SSE</span>
+            <span class="hint" data-text="Refactor TypeScript — eliminate all `any` types">TS strict</span>
+            <span class="hint" data-text="/pr MusicJapanLLC/the-world2 feature/test &quot;My PR title&quot;">/pr command</span>
+          </div>
+          <div class="composer-row">
+            <textarea id="composer" rows="1" placeholder="Describe what to build, debug, or improve…  Enter = send  Shift+Enter = newline"></textarea>
+            <button id="sendBtn">SEND</button>
+          </div>
         </div>
       </div>
     </main>

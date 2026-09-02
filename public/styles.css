@@ -138,6 +138,43 @@ button{letter-spacing:.055em}
 .messages::-webkit-scrollbar-thumb,.thread-list::-webkit-scrollbar-thumb,.terminal::-webkit-scrollbar-thumb{background:#1c2a21;border:2px solid #050806}
 .messages::-webkit-scrollbar-thumb:hover,.thread-list::-webkit-scrollbar-thumb:hover,.terminal::-webkit-scrollbar-thumb:hover{background:#34513d}
 
+/* ── Split Pane Layout (ux-004) ── */
+.split-pane-container{min-width:0;min-height:0;height:100dvh;display:grid;grid-template-rows:70px minmax(0,1fr) auto;background:#060907;overflow:hidden}
+
+.split-content{display:grid;grid-template-columns:minmax(300px,1fr) auto minmax(300px,1fr);min-height:0;overflow:hidden;border-bottom:1px solid #172019}
+
+.editor-pane,.preview-pane{display:flex;flex-direction:column;background:#050806;min-width:0;overflow:hidden}
+
+.pane-label{padding:8px 12px;background:#070a08;border-bottom:1px solid #1a241e;font-size:9px;letter-spacing:.15em;color:#66746b;flex:0 0 auto}
+
+.editor-container,.preview-container{flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden}
+
+.code-editor{flex:1;resize:none;background:#050806;border:none;outline:none;color:#dce5df;padding:12px;font-family:'M PLUS 1 Code','Cascadia Code','JetBrains Mono',Consolas,monospace;font-size:12px;line-height:1.65;caret-color:#65ff9b;border:none;overflow:auto}
+
+.code-editor::placeholder{color:#3f4c44}
+
+.code-editor:focus{outline:none;background:#0a0f0c;box-shadow:inset 0 0 20px rgba(101,255,155,.02)}
+
+.editor-status,.preview-status{padding:6px 12px;background:#070a08;border-top:1px solid #1a241e;font-size:8px;color:#46534b;letter-spacing:.1em;flex:0 0 auto}
+
+.preview-output{flex:1;background:#050806;overflow:auto;padding:16px;border:1px solid #1a241e}
+
+.preview-placeholder{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:#4d5b52;text-align:center}
+
+.preview-placeholder span{font-size:13px;margin-bottom:8px}
+
+.preview-placeholder small{font-size:10px;color:#3f4c44}
+
+.pane-divider{width:8px;background:#070a08;border-left:1px solid #1a241e;border-right:1px solid #1a241e;cursor:col-resize;flex:0 0 auto;display:flex;align-items:center;justify-content:center;color:#3f4c44;font-size:9px;user-select:none}
+
+.pane-divider:hover{background:#0d1510}
+
+.pane-divider::after{content:'⋮';letter-spacing:.2em}
+
+.chat-pane-bottom{display:grid;grid-template-rows:minmax(80px,1fr) auto;min-height:0;overflow:hidden;background:#050806}
+
+.messages{min-height:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;scroll-behavior:smooth;padding:20px clamp(14px,3vw,40px) 12px;scrollbar-gutter:stable}
+
 /* ── Mobile block ── */
 #mobileBlock{display:none}
 @media(max-width:1050px){#app{display:none}#mobileBlock{display:grid;place-items:center;height:100vh;padding:30px;color:#92a198;font-size:13px;text-align:center}}

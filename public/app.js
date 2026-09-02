@@ -500,3 +500,65 @@ if(githubRepo){$('#githubUrl').value=githubRepo}
   log('⚙ SELF-FORGE: active — AI improves this app autonomously');
   log('shortcuts: Ctrl+K=clear input  Ctrl+L=clear log  Esc=cancel stream  ?=help');
 })();
+
+// ─── Split Pane Layout (ux-004) ──────────────────────────────
+(function initSplitPane(){
+  const editor=$('#editor');
+  const divider=$('#divider');
+  const splitContent=$('.split-content');
+  const editorPane=$('.editor-pane');
+  const previewPane=$('.preview-pane');
+
+  if(!editor||!divider||!splitContent)return;
+
+  // Track editor line/char count
+  function updateEditorStats(){
+    const lines=editor.value.split('\n').length;
+    const chars=editor.value.length;
+    const lc=$('#editorLines');const cc=$('#editorChars');
+    if(lc)lc.textContent=lines;if(cc)cc.textContent=chars;
+  }
+
+  editor.addEventListener('input',()=>{updateEditorStats()});
+  editor.addEventListener('change',()=>{updateEditorStats()});
+  updateEditorStats();
+
+  // Draggable divider to resize panes
+  let isDragging=false;
+  divider.addEventListener('mousedown',()=>{isDragging=true;document.body.style.cursor='col-resize'});
+  document.addEventListener('mouseup',()=>{isDragging=false;document.body.style.cursor='auto'});
+  document.addEventListener('mousemove',(e)=>{
+    if(!isDragging)return;
+    const rect=splitContent.getBoundingClientRect();
+    const x=e.clientX-rect.left;
+    const pct=(x/rect.width)*100;
+    if(pct>30&&pct<70){
+      editorPane.style.flex=`${pct} 0 auto`;
+      previewPane.style.flex=`${100-pct} 0 auto`;
+    }
+  });
+
+  // Update preview when user sends a message
+  window.updatePreviewOutput=function(output){
+    const preview=$('#preview');
+    if(!preview)return;
+    if(typeof output==='string'){
+      preview.innerHTML=`<div style="white-space:pre-wrap;font-size:12px;line-height:1.6;color:#dce5df">${escapeHtml(output)}</div>`;
+    }else if(output instanceof HTMLElement){
+      preview.innerHTML='';preview.appendChild(output);
+    }else{
+      preview.innerHTML=`<div style="color:#65ff9b">${escapeHtml(JSON.stringify(output,null,2))}</div>`;
+    }
+    const status=$('#previewStatus');if(status)status.textContent='Updated';
+  };
+
+  // Clear preview
+  window.clearPreview=function(){
+    const preview=$('#preview');
+    if(!preview)return;
+    preview.innerHTML='<div class="preview-placeholder"><span>📄 Preview output will appear here</span><small>Execute code or view results</small></div>';
+    const status=$('#previewStatus');if(status)status.textContent='Ready';
+  };
+
+  log('split-pane editor loaded');
+})();

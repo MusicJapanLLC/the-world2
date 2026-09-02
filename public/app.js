@@ -618,7 +618,7 @@ if(githubRepo){$('#githubUrl').value=githubRepo}
     log('✓ Monaco Editor loaded and ready');
   });
 
-  // Code execution engine
+  // Enhanced code execution engine with HTML/CSS/JS support
   window.executeCode = function(code) {
     const preview = document.getElementById('preview');
     if (!preview) return;
@@ -627,7 +627,54 @@ if(githubRepo){$('#githubUrl').value=githubRepo}
     const output = [];
     const errors = [];
 
-    // Create isolated execution context
+    // Detect if this is HTML/CSS content
+    const isHTML = code.includes('<') || code.includes('<!DOCTYPE') || code.includes('<html');
+    const isCSS = code.trim().startsWith('@') || code.includes('{') && !code.includes('function') && !code.includes('const') && !code.includes('let') && !code.includes('var');
+
+    // Handle HTML/CSS/mixed content
+    if (isHTML) {
+      try {
+        // Create a sandbox iframe for HTML
+        const iframe = document.createElement('iframe');
+        iframe.style.width = '100%';
+        iframe.style.height = '100%';
+        iframe.style.border = 'none';
+        iframe.style.background = '#fff';
+        iframe.sandbox.add('allow-scripts');
+        iframe.sandbox.add('allow-same-origin');
+
+        // Build complete HTML document
+        let htmlContent = code;
+        if (!code.includes('<!DOCTYPE') && !code.includes('<html')) {
+          htmlContent = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>body{margin:0;padding:8px;font-family:system-ui}</style>
+</head>
+<body>${code}</body>
+</html>`;
+        }
+
+        const blob = new Blob([htmlContent], { type: 'text/html' });
+        const url = URL.createObjectURL(blob);
+        iframe.src = url;
+
+        preview.innerHTML = '';
+        preview.appendChild(iframe);
+
+        const status = document.getElementById('previewStatus');
+        if (status) status.textContent = '✓ HTML Preview';
+      } catch (e) {
+        preview.innerHTML = `<div style="color:#ff8e8e;padding:8px">Error rendering HTML: ${escapeHtml(e.message)}</div>`;
+        const status = document.getElementById('previewStatus');
+        if (status) status.textContent = '✗ Error';
+      }
+      return;
+    }
+
+    // JavaScript execution
     const originalLog = console.log;
     const originalError = console.error;
     const originalWarn = console.warn;
@@ -637,7 +684,6 @@ if(githubRepo){$('#githubUrl').value=githubRepo}
     console.warn = (...args) => output.push('[WARN] ' + args.map(a => typeof a === 'string' ? a : JSON.stringify(a)).join(' '));
 
     try {
-      // Execute code in function scope
       const fn = new Function(code);
       const result = fn();
 
@@ -645,12 +691,10 @@ if(githubRepo){$('#githubUrl').value=githubRepo}
         output.push(`✓ Result: ${typeof result === 'string' ? result : JSON.stringify(result, null, 2)}`);
       }
 
-      // Restore console
       console.log = originalLog;
       console.error = originalError;
       console.warn = originalWarn;
 
-      // Display output
       const elapsed = (performance.now() - startTime).toFixed(2);
       let html = `<div style="font-size:12px;line-height:1.6;color:#dce5df;padding:8px;font-family:monospace">`;
       html += `<div style="color:#65ff9b;margin-bottom:8px">✓ Executed in ${elapsed}ms</div>`;
@@ -667,7 +711,6 @@ if(githubRepo){$('#githubUrl').value=githubRepo}
       const status = document.getElementById('previewStatus');
       if (status) status.textContent = '✓ Executed';
     } catch (e) {
-      // Restore console
       console.log = originalLog;
       console.error = originalError;
       console.warn = originalWarn;

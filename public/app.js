@@ -562,3 +562,130 @@ if(githubRepo){$('#githubUrl').value=githubRepo}
 
   log('split-pane editor loaded');
 })();
+
+// ─── Monaco Editor Integration (ULTIMATE IDE v3) ─────────────────
+(function initMonacoEditor(){
+  // Configure Monaco loader
+  require.config({ paths: { 'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.50.0/min/vs' }});
+
+  require(['vs/editor/editor.main'], function() {
+    // Initialize Monaco Editor
+    const editor = monaco.editor.create(document.getElementById('monaco-editor'), {
+      value: '// 🚀 ULTIMATE IDE v3\n// Start coding here\n// Press Ctrl+Enter or click RUN to execute\n\nconsole.log("Hello from Ultimate IDE!");',
+      language: 'javascript',
+      theme: 'vs-dark',
+      automaticLayout: true,
+      minimap: { enabled: false },
+      fontSize: 13,
+      fontFamily: "'M PLUS 1 Code', 'Cascadia Code', Consolas, monospace",
+      lineNumbers: 'on',
+      scrollBeyondLastLine: false,
+      wordWrap: 'on',
+      tabSize: 2,
+      insertSpaces: true
+    });
+
+    // Update position indicator
+    editor.onDidChangeCursorPosition((e) => {
+      const pos = editor.getPosition();
+      if (pos) {
+        document.getElementById('editorLines').textContent = pos.lineNumber;
+        document.getElementById('editorCols').textContent = pos.column;
+      }
+    });
+
+    // Auto-format on save
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
+      editor.getAction('editor.action.formatDocument').run();
+    });
+
+    // Execute on Ctrl+Enter
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () => {
+      executeCode(editor.getValue());
+    });
+
+    // Store editor reference for global access
+    window.monacoEditor = editor;
+
+    // RUN button
+    const runBtn = document.getElementById('runCodeBtn');
+    if (runBtn) {
+      runBtn.addEventListener('click', () => {
+        executeCode(editor.getValue());
+      });
+    }
+
+    log('✓ Monaco Editor loaded and ready');
+  });
+
+  // Code execution engine
+  window.executeCode = function(code) {
+    const preview = document.getElementById('preview');
+    if (!preview) return;
+
+    const startTime = performance.now();
+    const output = [];
+    const errors = [];
+
+    // Create isolated execution context
+    const originalLog = console.log;
+    const originalError = console.error;
+    const originalWarn = console.warn;
+
+    console.log = (...args) => output.push(args.map(a => typeof a === 'string' ? a : JSON.stringify(a)).join(' '));
+    console.error = (...args) => errors.push(args.map(a => typeof a === 'string' ? a : JSON.stringify(a)).join(' '));
+    console.warn = (...args) => output.push('[WARN] ' + args.map(a => typeof a === 'string' ? a : JSON.stringify(a)).join(' '));
+
+    try {
+      // Execute code in function scope
+      const fn = new Function(code);
+      const result = fn();
+
+      if (result !== undefined && result !== null) {
+        output.push(`✓ Result: ${typeof result === 'string' ? result : JSON.stringify(result, null, 2)}`);
+      }
+
+      // Restore console
+      console.log = originalLog;
+      console.error = originalError;
+      console.warn = originalWarn;
+
+      // Display output
+      const elapsed = (performance.now() - startTime).toFixed(2);
+      let html = `<div style="font-size:12px;line-height:1.6;color:#dce5df;padding:8px;font-family:monospace">`;
+      html += `<div style="color:#65ff9b;margin-bottom:8px">✓ Executed in ${elapsed}ms</div>`;
+      if (output.length > 0) {
+        output.forEach(line => {
+          html += `<div>${escapeHtml(line)}</div>`;
+        });
+      } else {
+        html += `<div style="color:#4d5b52">(no output)</div>`;
+      }
+      html += `</div>`;
+
+      preview.innerHTML = html;
+      const status = document.getElementById('previewStatus');
+      if (status) status.textContent = '✓ Executed';
+    } catch (e) {
+      // Restore console
+      console.log = originalLog;
+      console.error = originalError;
+      console.warn = originalWarn;
+
+      const elapsed = (performance.now() - startTime).toFixed(2);
+      let html = `<div style="font-size:12px;line-height:1.6;color:#ff8e8e;padding:8px;font-family:monospace">`;
+      html += `<div style="color:#ff8e8e;margin-bottom:8px">✗ Error (${elapsed}ms)</div>`;
+      html += `<div>${escapeHtml(e.message)}</div>`;
+      if (e.stack) {
+        html += `<div style="color:#9db0a3;font-size:10px;margin-top:8px">${escapeHtml(e.stack.split('\n').slice(0, 3).join('\n'))}</div>`;
+      }
+      html += `</div>`;
+
+      preview.innerHTML = html;
+      const status = document.getElementById('previewStatus');
+      if (status) status.textContent = '✗ Error';
+    }
+  };
+
+  log('code executor initialized');
+})();

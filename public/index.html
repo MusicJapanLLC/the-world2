@@ -6,6 +6,10 @@
   <title>AI FOUNDRY IDE</title>
   <link rel="stylesheet" href="/styles.css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css" />
+  <!-- Monaco Editor -->
+  <link rel="stylesheet" data-name="vs/editor/editor.main" href="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.50.0/min/vs/editor/editor.main.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.50.0/min/vs/loader.min.js"></script>
+  <!-- Syntax Highlighting -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/javascript.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/typescript.min.js"></script>
@@ -64,10 +68,13 @@
       <div class="split-content">
         <!-- EDITOR PANE -->
         <div class="editor-pane">
-          <div class="pane-label">EDITOR</div>
+          <div class="pane-label">EDITOR <span id="editorLang" style="font-size:9px;color:#66746b">(JavaScript)</span></div>
           <div class="editor-container">
-            <textarea id="editor" class="code-editor" placeholder="// Write or paste code here…" spellcheck="false"></textarea>
-            <div class="editor-status"><span id="editorLines">0</span> lines · <span id="editorChars">0</span> chars</div>
+            <div id="monaco-editor" style="width:100%;height:100%;border:1px solid #1a241e"></div>
+            <div class="editor-status">
+              <span id="editorLines">1</span>:<span id="editorCols">1</span> ·
+              <button id="runCodeBtn" style="background:#0d1e12;border:1px solid #2d5e3e;color:#65ff9b;padding:2px 6px;font-size:9px;cursor:pointer;margin-left:8px">▶ RUN</button>
+            </div>
           </div>
         </div>
 

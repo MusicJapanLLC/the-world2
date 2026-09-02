@@ -171,6 +171,15 @@ button{letter-spacing:.055em}
 
 .pane-divider::after{content:'⋮';letter-spacing:.2em}
 
+/* ── Monaco Editor ── */
+#monaco-editor{background:#050806!important}
+.monaco-editor{background:#050806!important;color:#dce5df!important}
+.monaco-editor .margin{background:#070a08!important}
+.monaco-editor .line-numbers{color:#46534b!important}
+.monaco-editor.focused .cslr{outline:none!important}
+.monaco-editor .current-line{background:rgba(101,255,155,.05)!important}
+.monaco-editor .cursor{background:#65ff9b!important}
+
 .chat-pane-bottom{display:grid;grid-template-rows:minmax(80px,1fr) auto;min-height:0;overflow:hidden;background:#050806}
 
 .messages{min-height:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;scroll-behavior:smooth;padding:20px clamp(14px,3vw,40px) 12px;scrollbar-gutter:stable}

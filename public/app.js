@@ -432,8 +432,8 @@ diffBtn.addEventListener('click',()=>{
   if(Object.keys(window.diffCache||{}).length===0){log('diffs: 変更がありません','warn');return}
   window.showDiffPreview();
 });
-const pipeline=$('.pipeline');
-if(pipeline)pipeline.appendChild(diffBtn);
+const pipelineEl=$('.pipeline');
+if(pipelineEl)pipelineEl.appendChild(diffBtn);
 
 // ─── Keyboard shortcuts help overlay (ux-003) ────────────────────────────
 (function initShortcutsOverlay(){
@@ -506,6 +506,39 @@ async function loadThreadsFromSupabase(){
     return false;
   }catch(e){return false}
 }
+
+// ─── Theme Toggle (ux-005) ──────────────────────────────────────
+(function initThemeToggle(){
+  const THEME_KEY='foundry-theme';
+  const prefersDark=window.matchMedia('(prefers-color-scheme:dark)').matches;
+  const savedTheme=localStorage.getItem(THEME_KEY);
+  const currentTheme=savedTheme||(prefersDark?'dark':'light');
+
+  function applyTheme(theme){
+    if(theme==='light'){
+      document.documentElement.setAttribute('data-theme','light');
+      document.body.style.filter='invert(0.95) hue-rotate(180deg)';
+      if($('#themeToggle'))$('#themeToggle').textContent='☀️';
+      localStorage.setItem(THEME_KEY,'light');
+    }else{
+      document.documentElement.removeAttribute('data-theme');
+      document.body.style.filter='none';
+      if($('#themeToggle'))$('#themeToggle').textContent='🌙';
+      localStorage.setItem(THEME_KEY,'dark');
+    }
+  }
+
+  applyTheme(currentTheme);
+
+  const themeBtn=$('#themeToggle');
+  if(themeBtn){
+    themeBtn.addEventListener('click',()=>{
+      const isLight=document.documentElement.hasAttribute('data-theme');
+      applyTheme(isLight?'dark':'light');
+      log(`theme: ${isLight?'dark':'light'}`);
+    });
+  }
+})();
 
 // Init
 if(githubToken){$('#githubToken').value=githubToken}

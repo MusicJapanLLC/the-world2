@@ -1,7 +1,18 @@
 @import url('https://fonts.googleapis.com/css2?family=M+PLUS+1+Code:wght@300;400;500;600;700&display=swap');
 
+:root{
+  --bg-primary:#030504;--bg-secondary:#050806;--bg-tertiary:#070a08;
+  --border-color:#1a241e;--text-primary:#d7e4dc;--text-secondary:#9db0a3;
+  --text-tertiary:#66746b;--accent:#65ff9b;--accent-dim:#2d5e3e
+}
+html[data-theme='light']{
+  --bg-primary:#fafaf9;--bg-secondary:#f5f5f3;--bg-tertiary:#efefed;
+  --border-color:#e0e0d8;--text-primary:#2c2c2a;--text-secondary:#5a5a57;
+  --text-tertiary:#8a8a85;--accent:#1b7f3a;--accent-dim:#d4f1e4
+}
+
 *{box-sizing:border-box}
-html,body{margin:0;height:100%;background:#030504;color:#d7e4dc;font-family:'M PLUS 1 Code','Cascadia Code','JetBrains Mono','IBM Plex Mono','Fira Code',Consolas,monospace}
+html,body{margin:0;height:100%;background:var(--bg-primary);color:var(--text-primary);font-family:'M PLUS 1 Code','Cascadia Code','JetBrains Mono','IBM Plex Mono','Fira Code',Consolas,monospace}
 body{overflow:hidden}
 button,textarea,input,select{font:inherit}
 button{letter-spacing:.055em}

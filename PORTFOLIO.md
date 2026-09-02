@@ -6,10 +6,10 @@ Music Japan / Standment のAI開発工場が**実際に作り、現在どこま�
 
 ## 今日のPortfolio Blitz
 
-- **VERIFIED: 7 / 8**
-- **BLOCKED: 1 / 8**
-- **BUILDING: 0 / 8**
-- **EXPERIMENT: 0 / 8**
+- **VERIFIED: 7 / 9**
+- **BLOCKED: 2 / 9**
+- **BUILDING: 0 / 9**
+- **EXPERIMENT: 0 / 9**
 
 `VERIFIED` はコードやPRがあるだけでは付けません。**人間が確認できる成果物 + 主張した中核挙動の実測証拠**が必要です。
 
@@ -253,6 +253,29 @@ R&D Engineの稼働証拠であり、市場需要・契約・売上の証拠で�
 
 ### 次の改善
 Security Scanの実診断をControl Evidence Packへ連結し、Before / Afterの顧客提示可能ケーススタディを増やす。
+
+---
+
+## 9. Music Japan Site (test-musicjapanllc.vercel.app)
+
+**状態: BLOCKED**
+
+### 何を作った？
+まだ何も。`test-musicjapanllc.vercel.app` に紐づくフロントエンド実装（Next.js等）がこのリポジトリ内に存在せず、Vercelプロジェクトが参照しているソースが未特定。
+
+### 何に使える？
+未定。
+
+### 実測証拠
+なし。
+
+### 限界
+`vercel.json` の `deploymentEnabled` は owner確認の上で `true` へ変更したが（2026-09-02）、対象アプリのソースコード自体が本リポジトリに存在しないため、pushしてもデプロイ内容は変わらない。
+
+### 次の改善
+1. `test-musicjapanllc.vercel.app` がどのVercelプロジェクト/どのリポジトリ・ディレクトリをビルドしているか特定する。
+2. 対象が本リポジトリ内であるべきなら、最小のNext.jsアプリ雛形をこのリポジトリに作成し、Vercel Git連携のRoot Directoryと一致させる。
+3. 特定・雛形作成が完了するまでは `owner_action` として人間判断が必要（自律ワークフローだけでは対象を推測しない）。
 
 ---
 

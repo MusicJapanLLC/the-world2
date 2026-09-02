@@ -69,6 +69,28 @@
       "files": ["public/index.html", "public/styles.css", "public/app.js"],
       "verification": "チャット返答のコードブロックが色付きになること",
       "status": "implemented"
+    },
+    {
+      "id": "ux-002",
+      "title": "Session stats bar in sidebar",
+      "priority": 72,
+      "category": "ux",
+      "agent": "X",
+      "description": "Add a session stats bar at the bottom of the sidebar. Show: messages sent this session, avg response latency (ms), total tokens used. Update live. Output a self-contained IIFE appended to public/app.js that adds a stats bar element to the sidebar footer area and updates it every 5 seconds.",
+      "files": ["public/app.js"],
+      "verification": "Stats bar visible in sidebar with live-updating numbers",
+      "status": "pending"
+    },
+    {
+      "id": "ux-003",
+      "title": "Keyboard shortcuts help overlay",
+      "priority": 68,
+      "category": "ux",
+      "agent": "X",
+      "description": "Add a help panel (toggle with ? key or clicking a ? button) listing keyboard shortcuts in a small overlay in bottom-right corner. Output a self-contained IIFE appended to public/app.js.",
+      "files": ["public/app.js"],
+      "verification": "? key shows shortcut overlay panel",
+      "status": "pending"
     }
   ],
   "completion_criteria": {

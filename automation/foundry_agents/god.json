@@ -25,13 +25,13 @@
     "autonomousEvolution": "ENABLED"
   },
   "globalState": {
-    "cycleNumber": 3,
+    "cycleNumber": 4,
     "cycleDuration": 300000,
     "lastEvolution": null,
     "nextEvolutionTarget": null,
     "metrics": {
-      "totalCyclesCompleted": 3,
-      "averageExecutionTime": 7,
+      "totalCyclesCompleted": 4,
+      "averageExecutionTime": 7.25,
       "agentSatisfaction": 1,
       "improvementRate": 1,
       "rewardHistory": [
@@ -45,16 +45,18 @@
           },
           "timestamp": 1788372510127
         },
+        0.75,
         0.75
       ],
       "strategyStats": {
         "balanced": {
-          "uses": 2,
-          "totalReward": "0[object Object]0.75",
+          "uses": 3,
+          "totalReward": "0[object Object]0.750.75",
           "avgReward": null
         }
       },
-      "throughput": 0
+      "throughput": 0,
+      "rewardTrend": "degrading"
     }
   },
   "agentRegistry": {

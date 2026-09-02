@@ -124,6 +124,17 @@
       "files": ["public/app.js", "public/styles.css", "public/index.html"],
       "verification": "Click theme toggle button in header to switch between dark and light themes",
       "status": "implemented"
+    },
+    {
+      "id": "perf-004",
+      "title": "Response caching for repeated queries",
+      "priority": 75,
+      "category": "performance",
+      "agent": "senju",
+      "description": "Cache model responses by hash of input messages. Show 'cached response' badge. Drastically reduces latency for repeated queries.",
+      "files": ["public/app.js", "public/styles.css"],
+      "verification": "Same query twice returns instantly with cache indicator",
+      "status": "implemented"
     }
   ],
   "completion_criteria": {
@@ -132,16 +143,6 @@
     "auto_stop_loop": false
   },
   "nextTargets": [
-    {
-      "id": "perf-004",
-      "title": "Response caching for repeated queries",
-      "priority": 75,
-      "category": "performance",
-      "agent": "senju",
-      "description": "Cache model responses by hash of input messages. Show 'cached response' badge. Drastically reduces latency for repeated queries.",
-      "files": ["public/app.js", "api/foundry.js"],
-      "verification": "Same query twice returns instantly with cache indicator"
-    },
     {
       "id": "meta-003",
       "title": "Model latency dashboard + cost tracking",

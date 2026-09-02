@@ -26,6 +26,47 @@ async function hashMessages(messages){
 const MODEL_COSTS={claude:{input:3.0,output:15.0},gemini:{input:0.075,output:0.30},gpt:{input:2.50,output:10.0}};
 let _sessionInputTokens=0,_sessionOutputTokens=0,_sessionMessages=0;
 
+// Model stats tracking (meta-003)
+const modelStats={
+  gpt:{latencies:[],costs:0,messages:0},
+  claude:{latencies:[],costs:0,messages:0},
+  gemini:{latencies:[],costs:0,messages:0}
+};
+
+function updateModelStats(model,latencyMs,usage){
+  const key=model.includes('claude')?'claude':model.includes('gemini')?'gemini':'gpt';
+  if(!modelStats[key])modelStats[key]={latencies:[],costs:0,messages:0};
+  modelStats[key].latencies.push(latencyMs);
+  modelStats[key].messages++;
+
+  if(usage){
+    const costs=MODEL_COSTS[key]||MODEL_COSTS.gpt;
+    const cost=(usage.promptTokens/1e6*costs.input)+(usage.completionTokens/1e6*costs.output);
+    modelStats[key].costs+=cost;
+  }
+  updateModelDashboard();
+}
+
+function getAvgLatency(latencies){
+  if(!latencies||latencies.length===0)return null;
+  return Math.round(latencies.reduce((a,b)=>a+b,0)/latencies.length);
+}
+
+function updateModelDashboard(){
+  const models=['gpt','claude','gemini'];
+  models.forEach(model=>{
+    const stats=modelStats[model];
+    const avgLat=getAvgLatency(stats.latencies);
+    const latencyEl=document.getElementById(`stat-${model}-latency`);
+    const costEl=document.getElementById(`stat-${model}-cost`);
+    const msgsEl=document.getElementById(`stat-${model}-msgs`);
+
+    if(latencyEl)latencyEl.textContent=avgLat?avgLat+' ms':'— ms';
+    if(costEl)costEl.textContent='$'+stats.costs.toFixed(4);
+    if(msgsEl)msgsEl.textContent=stats.messages;
+  });
+}
+
 function updatePerfPanel(latencyMs,usage,model){
   const el=document.getElementById('latencyDisplay');if(el)el.textContent=latencyMs>0?latencyMs+'ms':'—';
   if(usage){_sessionInputTokens+=usage.promptTokens||0;_sessionOutputTokens+=usage.completionTokens||0}
@@ -330,6 +371,7 @@ async function send(){
       const latFinal=Date.now()-_t0;
       t.messages.push({role:'assistant',content:accumulated||'(empty response)',usage:lastUsage,model:lastModel,latencyMs:cached.latencyMs,cached:true});
       t.updatedAt=Date.now();saveThreads();renderThreads();renderMessages(false);scrollToBottom();
+      updateModelStats(lastModel,cached.latencyMs,lastUsage);
       _sessionMessages++;
     } else {
       // Fetch from API
@@ -361,6 +403,7 @@ async function send(){
       responseCache.set(cacheKey,{content:accumulated||'(empty response)',usage:lastUsage,model:lastModel,latencyMs:latFinal});
       t.messages.push({role:'assistant',content:accumulated||'(empty response)',usage:lastUsage,model:lastModel,latencyMs:latFinal});
       t.updatedAt=Date.now();saveThreads();renderThreads();renderMessages(false);scrollToBottom();
+      updateModelStats(lastModel,latFinal,lastUsage);
       _sessionMessages++;
     }
   }catch(e){

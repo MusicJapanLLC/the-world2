@@ -134,6 +134,15 @@ button{letter-spacing:.055em}
 .tool-status span{display:block;color:#46534b;font-size:8px;margin-bottom:4px;letter-spacing:.11em}
 .tool-status b{font-size:9px;font-weight:500;color:#9db0a3;word-break:break-all}
 
+/* ── Model Dashboard (meta-003) ── */
+.model-dashboard{border-top:1px solid #172019;padding:10px 12px;background:#070a08;flex:0 0 auto;max-height:200px;overflow-y:auto}
+.model-header{font-size:8px;letter-spacing:.15em;color:#66746b;margin-bottom:8px;text-transform:uppercase}
+.model-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.model-stat{border:1px solid #1a241e;background:#020403;padding:8px;font-size:8px}
+.stat-model{font-weight:600;color:#65ff9b;margin-bottom:6px;letter-spacing:.1em}
+.stat-row{display:grid;grid-template-columns:auto 1fr;gap:4px;color:#66746b;margin:3px 0}
+.stat-row span:last-child{color:#9db0a3;text-align:right;font-weight:500}
+
 .terminal-head{height:30px;padding:9px 12px 0;display:flex;justify-content:space-between;color:#4d5b52;font-size:8px;letter-spacing:.14em;flex:0 0 auto}
 .terminal{margin:0 12px;height:240px;overflow:auto;background:#020403;border:1px solid #172019;color:#7ee99a;padding:11px;font-size:10px;line-height:1.65;white-space:pre-wrap;box-shadow:inset 0 0 34px rgba(101,255,155,.025)}
 

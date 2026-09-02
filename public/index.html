@@ -141,6 +141,31 @@
         <div><span>TOKENS</span><b id="tokenTotal">0</b></div>
       </div>
 
+      <!-- Model latency dashboard (meta-003) -->
+      <div class="model-dashboard">
+        <div class="model-header">MODEL STATS</div>
+        <div class="model-grid" id="modelStatsGrid">
+          <div class="model-stat">
+            <div class="stat-model">GPT</div>
+            <div class="stat-row"><span>Latency:</span><span id="stat-gpt-latency">— ms</span></div>
+            <div class="stat-row"><span>Cost:</span><span id="stat-gpt-cost">$0.0000</span></div>
+            <div class="stat-row"><span>Msgs:</span><span id="stat-gpt-msgs">0</span></div>
+          </div>
+          <div class="model-stat">
+            <div class="stat-model">Claude</div>
+            <div class="stat-row"><span>Latency:</span><span id="stat-claude-latency">— ms</span></div>
+            <div class="stat-row"><span>Cost:</span><span id="stat-claude-cost">$0.0000</span></div>
+            <div class="stat-row"><span>Msgs:</span><span id="stat-claude-msgs">0</span></div>
+          </div>
+          <div class="model-stat">
+            <div class="stat-model">Gemini</div>
+            <div class="stat-row"><span>Latency:</span><span id="stat-gemini-latency">— ms</span></div>
+            <div class="stat-row"><span>Cost:</span><span id="stat-gemini-cost">$0.0000</span></div>
+            <div class="stat-row"><span>Msgs:</span><span id="stat-gemini-msgs">0</span></div>
+          </div>
+        </div>
+      </div>
+
       <div class="terminal-head">
         <span>TERMINAL</span><span id="clock"></span>
       </div>

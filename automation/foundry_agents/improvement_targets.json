@@ -135,6 +135,17 @@
       "files": ["public/app.js", "public/styles.css"],
       "verification": "Same query twice returns instantly with cache indicator",
       "status": "implemented"
+    },
+    {
+      "id": "meta-003",
+      "title": "Model latency dashboard + cost tracking",
+      "priority": 80,
+      "category": "performance",
+      "agent": "META",
+      "description": "Enhanced latency telemetry panel showing response times per model, cost tracking per session, model comparison stats. Real-time updates.",
+      "files": ["public/app.js", "public/styles.css", "public/index.html"],
+      "verification": "Check tools panel shows live latency and cost metrics updating as you chat",
+      "status": "implemented"
     }
   ],
   "completion_criteria": {
@@ -143,16 +154,6 @@
     "auto_stop_loop": false
   },
   "nextTargets": [
-    {
-      "id": "meta-003",
-      "title": "Model latency dashboard + cost tracking",
-      "priority": 80,
-      "category": "performance",
-      "agent": "META",
-      "description": "Enhanced latency telemetry panel showing response times per model, cost tracking per session, model comparison stats. Real-time updates.",
-      "files": ["public/app.js", "public/styles.css"],
-      "verification": "Check tools panel shows live latency and cost metrics updating as you chat"
-    },
     {
       "id": "ux-006",
       "title": "File tree explorer for GitHub repos",

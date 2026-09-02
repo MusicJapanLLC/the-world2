@@ -1,25 +1,27 @@
+// AI FOUNDRY IDE v2 — app.js
 const $=(s)=>document.querySelector(s);
-const STORE='ai-foundry-threads-v2';
+const STORE='ai-foundry-threads-v3';
 const GATEWAY='https://czwdtjgunsafcifjhpwt.supabase.co/functions/v1/ai-foundry-runtime';
 let threads=loadThreads();
 let activeId=threads[0]?.id||null;
 let busy=false;
 let githubContext='';
-let githubToken='';
+let githubToken=localStorage.getItem('foundry-gh-token')||'';
+let githubRepo=localStorage.getItem('foundry-gh-repo')||'';
 let currentModel='gpt';
 const executionTimers=new Map();
-const ENHANCEMENT_MODE=true;
-const CONTINUOUS_IMPROVEMENT_ENABLED=true;
 
-// Latency + cost tracking (meta-002)
+// Perf tracking
 const MODEL_COSTS={claude:{input:3.0,output:15.0},gemini:{input:0.075,output:0.30},gpt:{input:2.50,output:10.0}};
-let _sessionInputTokens=0,_sessionOutputTokens=0;
+let _sessionInputTokens=0,_sessionOutputTokens=0,_sessionMessages=0;
+
 function updatePerfPanel(latencyMs,usage,model){
   const el=document.getElementById('latencyDisplay');if(el)el.textContent=latencyMs>0?latencyMs+'ms':'—';
   if(usage){_sessionInputTokens+=usage.promptTokens||0;_sessionOutputTokens+=usage.completionTokens||0}
   const costs=MODEL_COSTS[model]||MODEL_COSTS.gpt;
   const est=(_sessionInputTokens/1e6*costs.input)+(_sessionOutputTokens/1e6*costs.output);
   const ce=document.getElementById('costDisplay');if(ce)ce.textContent='$'+est.toFixed(4);
+  const tt=document.getElementById('tokenTotal');if(tt)tt.textContent=(_sessionInputTokens+_sessionOutputTokens).toLocaleString();
 }
 
 function loadThreads(){try{return JSON.parse(localStorage.getItem(STORE)||'[]')}catch{return[]}}
@@ -60,10 +62,18 @@ window.copyCode=function(btn){
   }).catch(()=>{btn.textContent='ERR'});
 };
 
-function newThread(){const t={id:uid(),title:'New AI Development',createdAt:Date.now(),updatedAt:Date.now(),messages:[]};threads.unshift(t);activeId=t.id;saveThreads();renderAll(true);return t}
-function log(line,type='ok'){const el=$('#terminal');const tag=type==='err'?'ERR':type==='warn'?'WRN':'RUN';el.textContent+=`[${stamp()}] ${tag}  ${line}\n`;el.scrollTop=el.scrollHeight}
-function state(sel,value,pass=false){const el=$(sel);el.textContent=value;el.style.color=pass?'#65ff9b':''}
-function scrollMessagesToBottom(){requestAnimationFrame(()=>{const box=$('#messages');if(box)box.scrollTop=box.scrollHeight})}
+function newThread(){
+  const t={id:uid(),title:'New Session',createdAt:Date.now(),updatedAt:Date.now(),messages:[]};
+  threads.unshift(t);activeId=t.id;saveThreads();renderAll(true);return t;
+}
+function log(line,type='ok'){
+  const el=$('#terminal');
+  const tag=type==='err'?'ERR':type==='warn'?'WRN':'RUN';
+  el.textContent+=`[${stamp()}] ${tag}  ${line}\n`;
+  el.scrollTop=el.scrollHeight;
+}
+function state(sel,value,pass=false){const el=$(sel);if(!el)return;el.textContent=value;el.style.color=pass?'#65ff9b':''}
+function scrollToBottom(){requestAnimationFrame(()=>{const box=$('#messages');if(box)box.scrollTop=box.scrollHeight})}
 function modelName(key){return key==='claude'?'anthropic/claude-sonnet-4-6':key==='gemini'?'google/gemini-2.0-flash':'openai/gpt-5.6-sol'}
 
 async function streamChat(payload){
@@ -71,55 +81,140 @@ async function streamChat(payload){
   if(!res.ok){const e=await res.json().catch(()=>({}));throw new Error(e.error||`HTTP ${res.status}`)}
   return res.body.getReader();
 }
-
-async function postJson(url,payload,credentials='same-origin'){
-  const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),credentials,redirect:'follow'});
+async function postJson(url,payload){
+  const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
   const ct=r.headers.get('content-type')||'';
-  if(!ct.includes('application/json'))throw new Error(`non-json runtime response (${r.status})`);
+  if(!ct.includes('application/json'))throw new Error(`non-json response (${r.status})`);
   const data=await r.json();
   if(!r.ok)throw new Error(data.error||`HTTP ${r.status}`);
   return data;
 }
 async function direct(action,payload){return postJson('/api/foundry',{action,...payload})}
-async function gateway(action,payload){return postJson(GATEWAY,{action,...payload},'omit')}
+async function gateway(action,payload){
+  const r=await fetch(GATEWAY,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,...payload}),credentials:'omit',redirect:'follow'});
+  const data=await r.json().catch(()=>({}));
+  if(!r.ok)throw new Error(data.error||`HTTP ${r.status}`);
+  return data;
+}
+
+// ── Thread rendering ──────────────────────────────────────────────────────────
 
 function renderThreads(){
   const el=$('#threadList');el.innerHTML='';
   threads.forEach(t=>{
     const row=document.createElement('div');row.className=`thread ${t.id===activeId?'active':''}`;
-    row.innerHTML=`<div><div class="thread-title">${escapeHtml(t.title)}</div><div class="thread-time">${new Date(t.updatedAt).toLocaleString('ja-JP',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'})}</div></div><button class="thread-delete">×</button>`;
+    const timeStr=new Date(t.updatedAt).toLocaleString('ja-JP',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
+    row.innerHTML=`<div><div class="thread-title">${escapeHtml(t.title)}</div><div class="thread-time">${timeStr}</div></div><button class="thread-delete">×</button>`;
     row.addEventListener('click',e=>{if(e.target.classList.contains('thread-delete'))return;activeId=t.id;renderAll(true);resumeExecution(t)});
-    row.querySelector('.thread-delete').addEventListener('click',e=>{e.stopPropagation();threads=threads.filter(x=>x.id!==t.id);if(activeId===t.id)activeId=threads[0]?.id||null;saveThreads();renderAll(true)});
+    row.querySelector('.thread-delete').addEventListener('click',e=>{
+      e.stopPropagation();threads=threads.filter(x=>x.id!==t.id);
+      if(activeId===t.id)activeId=threads[0]?.id||null;
+      saveThreads();renderAll(true);
+    });
     el.appendChild(row);
   });
 }
 
 function renderMessages(follow=false){
-  const t=active();$('#threadTitle').textContent=t?.title||'New AI Development';const box=$('#messages');
-  if(!t||!t.messages.length){box.innerHTML='<div class="welcome"><h3>AI FOUNDRY CORE — Claude Code Level</h3><p>GitHub URLを上のバーに貼り付けてリポジトリを読み込み、リアルタイムストリーミングで実装を会話してください。<br><code>/pr owner/repo branch "タイトル"</code> でPR作成 · モデルはヘッダーで切り替え可能。</p></div>';if(follow)scrollMessagesToBottom();return}
-  box.innerHTML=t.messages.map(m=>`<article class="message ${m.role} ${m.error?'error':''}"><div class="role">${m.role==='user'?'YOU':'FOUNDRY'}</div><div class="content">${formatText(m.content)}</div>${m.usage?`<div class="usage-bar">↑${m.usage.promptTokens||0} ↓${m.usage.completionTokens||0} tok · ${m.model||''}</div>`:''}</article>`).join('');
-  if(follow)scrollMessagesToBottom();
+  const t=active();
+  $('#threadTitle').textContent=t?.title||'New Session';
+  const box=$('#messages');
+  if(!t||!t.messages.length){
+    box.innerHTML=`<div class="welcome">
+      <h3>AI FOUNDRY IDE v2</h3>
+      <p>GitHub URLを左パネルで接続してコンテキスト付きで開発。リアルタイムSSEストリーミング対応。<br>
+      <code>/pr owner/repo branch "タイトル"</code> でPR直接作成。<br>
+      右の <strong>⚙ SELF-FORGE</strong> でAIがこのアプリ自身を改良します。</p>
+      <div class="quick-actions">
+        <button class="qa-btn" onclick="setComposer('Next.js App RouterでSupabase RLSを使ったCRUD実装 — 完全なコードを出力して')">Next.js + Supabase</button>
+        <button class="qa-btn" onclick="setComposer('Python FastAPIでSSEストリーミングエンドポイントを実装して')">FastAPI SSE</button>
+        <button class="qa-btn" onclick="setComposer('このTypeScriptファイルのanyを全部型付きに修正して')">TypeScript strict</button>
+        <button class="qa-btn" onclick="setComposer('このアプリに追加できる機能を5つ提案して、それぞれ実装コードを出力して')">機能追加提案</button>
+      </div>
+    </div>`;
+    if(follow)scrollToBottom();return;
+  }
+  box.innerHTML=t.messages.map(m=>`
+    <article class="message ${m.role} ${m.error?'error':''}">
+      <div class="role">${m.role==='user'?'YOU':'FOUNDRY'}</div>
+      <div class="content">${formatText(m.content)}</div>
+      ${m.usage?`<div class="usage-bar">↑${m.usage.promptTokens||0} ↓${m.usage.completionTokens||0} tok · ${m.model||''} · ${m.latencyMs||0}ms</div>`:''}
+    </article>`).join('');
+  if(follow)scrollToBottom();
 }
 function renderAll(follow=false){renderThreads();renderMessages(follow);renderExecution(active())}
-function resizeComposer(){const c=$('#composer');c.style.height='auto';c.style.height=Math.min(c.scrollHeight,210)+'px'}
+function resizeComposer(){const c=$('#composer');c.style.height='auto';c.style.height=Math.min(c.scrollHeight,200)+'px'}
+window.setComposer=function(text){const c=$('#composer');c.value=text;resizeComposer();c.focus()}
+
+// ── GitHub Panel ──────────────────────────────────────────────────────────────
+
+function updateGhPanel(){
+  const connected=!!(githubContext&&githubRepo);
+  const label=document.getElementById('ghConnectedLabel');
+  const panel=document.getElementById('ghConnected');
+  const ghState=$('#ghState');
+  if(connected){
+    if(label)label.textContent=`✓ ${githubRepo}`;
+    if(panel)panel.classList.remove('hidden');
+    if(ghState){ghState.textContent=githubRepo.split('/')[1]||'CONNECTED';ghState.style.color='#65ff9b'}
+  } else {
+    if(panel)panel.classList.add('hidden');
+    if(ghState){ghState.textContent='DISCONNECTED';ghState.style.color=''}
+  }
+}
+
+async function loadGithubRepo(){
+  const urlInput=$('#githubUrl');
+  const tokenInput=$('#githubToken');
+  const urlRaw=urlInput.value.trim()||githubRepo;
+  if(!urlRaw){log('GitHub: URLまたはowner/repoを入力してください','warn');return}
+  const tok=tokenInput.value.trim()||githubToken;
+  if(tok){githubToken=tok;localStorage.setItem('foundry-gh-token',tok)}
+
+  // Normalize: accept "owner/repo" or full URL
+  const url=urlRaw.includes('github.com')?urlRaw:`https://github.com/${urlRaw}`;
+  $('#githubLoad').disabled=true;$('#githubLoad').textContent='LOADING…';
+  $('#githubStatus').textContent='';
+  log(`GitHub: loading ${url}…`);
+  try{
+    const r=await postJson('/api/github',{action:'read_repo',url,token:githubToken||undefined});
+    githubContext=r.context||'';
+    githubRepo=`${r.owner}/${r.repo}`;
+    localStorage.setItem('foundry-gh-repo',githubRepo);
+    urlInput.value=githubRepo;
+    $('#githubStatus').textContent=`✓ ${r.fileCount} files`;
+    log(`GitHub: loaded ${githubRepo} · ${r.fileCount} files`,'ok');
+    updateGhPanel();
+    // Show in chat
+    const t=active()||newThread();
+    t.messages.push({role:'assistant',content:`✓ GitHubリポジトリを接続しました\n\n**${githubRepo}** (${r.fileCount} files)\n\nこのリポジトリのコードを文脈として会話できます。何を改善しますか？`});
+    t.updatedAt=Date.now();saveThreads();renderMessages(true);
+  }catch(e){
+    githubContext='';$('#githubStatus').textContent=`✗ ${e.message.slice(0,40)}`;
+    log(`GitHub: ${e.message}`,'err');
+  }finally{$('#githubLoad').disabled=false;$('#githubLoad').textContent='CONNECT REPO'}
+}
+
+// ── Execution ─────────────────────────────────────────────────────────────────
 
 function showArtifact(spec,url){
-  $('#artifact').classList.remove('hidden');$('#artifactName').textContent=spec.name||'Generated AI';$('#artifactDescription').textContent=spec.description||'Verified AI FOUNDRY deployment';
-  $('#artifactCaps').innerHTML=(spec.capabilities||['VERIFIED DEPLOYMENT']).slice(0,8).map(x=>`<span class="cap">${escapeHtml(x)}</span>`).join('');$('#artifactUrl').href=url;$('#copyUrl').dataset.url=url;
+  $('#artifact').classList.remove('hidden');
+  $('#artifactName').textContent=spec.name||'Generated';
+  $('#artifactDescription').textContent=spec.description||'';
+  $('#artifactCaps').innerHTML=(spec.capabilities||[]).slice(0,6).map(x=>`<span class="cap">${escapeHtml(x)}</span>`).join('');
+  $('#artifactUrl').href=url;$('#copyUrl').dataset.url=url;
 }
 function renderExecution(t){
   const ex=t?.execution;
-  if(!ex){state('#buildState','IDLE');state('#testState','IDLE');state('#publishState','IDLE');$('#artifact').classList.add('hidden');return}
+  if(!ex){state('#buildState','IDLE');$('#artifact').classList.add('hidden');return}
   const s=ex.status||'queued';
-  if(s==='queued'){state('#buildState','QUEUED');state('#testState','WAIT');state('#publishState','WAIT')}
-  else if(s==='building'){state('#buildState','RUNNING');state('#testState','WAIT');state('#publishState','WAIT')}
-  else if(s==='testing'){state('#buildState','PASS',true);state('#testState','RUNNING');state('#publishState','WAIT')}
-  else if(s==='committing'||s==='deploying'){state('#buildState','PASS',true);state('#testState','PASS',true);state('#publishState',s==='committing'?'COMMIT':'DEPLOY')}
-  else if(s==='ready'){state('#buildState','PASS',true);state('#testState','PASS',true);state('#publishState','READY',true);if(ex.public_url)showArtifact({name:ex.result?.name||ex.title,description:ex.result?.description||'Verified production deployment',capabilities:ex.result?.capabilities||['GITHUB COMMIT','SMOKE TEST','VERCEL HTTP 200']},ex.public_url)}
-  else if(s==='failed'){state('#buildState','FAIL');state('#testState','FAIL');state('#publishState','FAIL');log(`EXECUTION FAILED · ${ex.error||'unknown error'}`,'err')}
+  if(s==='ready'){state('#buildState','READY',true);if(ex.public_url)showArtifact({name:ex.result?.name||ex.title,description:ex.result?.description||'',capabilities:ex.result?.capabilities||[]},ex.public_url)}
+  else if(s==='failed'){state('#buildState','FAIL');log(`BUILD FAILED · ${ex.error||'unknown'}`,'err')}
+  else state('#buildState',s.toUpperCase());
 }
 function trackExecution(t,execution){
-  const jobId=execution.jobId||execution.id;t.execution={...execution,jobId,status:execution.status||'queued'};t.updatedAt=Date.now();saveThreads();renderExecution(t);log(`EXECUTION QUEUED · job ${jobId}`);scheduleExecutionPoll(t,1200)
+  const jobId=execution.jobId||execution.id;t.execution={...execution,jobId,status:execution.status||'queued'};
+  t.updatedAt=Date.now();saveThreads();renderExecution(t);log(`EXECUTION QUEUED · ${jobId}`);scheduleExecutionPoll(t,1200);
 }
 function scheduleExecutionPoll(t,delay=7000){
   const jobId=t?.execution?.jobId;if(!jobId||['ready','failed'].includes(t.execution.status))return;
@@ -129,180 +224,153 @@ function scheduleExecutionPoll(t,delay=7000){
 async function pollExecution(threadId){
   const t=threads.find(x=>x.id===threadId);const jobId=t?.execution?.jobId;if(!t||!jobId)return;
   try{
-    const r=await gateway('execution_status',{jobId});const ex=r.execution||{};const previous=t.execution.status;t.execution={...t.execution,...ex,jobId:ex.id||jobId};t.updatedAt=Date.now();saveThreads();
-    if(previous!==t.execution.status)log(`EXECUTION ${String(t.execution.status).toUpperCase()} · ${jobId}`);
+    const r=await gateway('execution_status',{jobId});const ex=r.execution||{};
+    t.execution={...t.execution,...ex,jobId:ex.id||jobId};t.updatedAt=Date.now();saveThreads();
     if(activeId===threadId)renderExecution(t);
-    if(t.execution.status==='ready'){log(`VERIFIED URL · ${t.execution.public_url}`);return}
-    if(t.execution.status==='failed'){log(`EXECUTION FAILED · ${t.execution.error||'unknown error'}`,'err');return}
-  }catch(e){log(`execution status retry · ${e.message}`,'warn')}
-  scheduleExecutionPoll(t,7000)
+    if(['ready','failed'].includes(t.execution.status))return;
+  }catch(e){log(`execution poll · ${e.message}`,'warn')}
+  scheduleExecutionPoll(t,7000);
 }
 function resumeExecution(t){if(t?.execution&&!['ready','failed'].includes(t.execution.status))scheduleExecutionPoll(t,500)}
 
 async function titleThread(t,first){
   if(t.messages.filter(m=>m.role==='user').length!==1)return;
-  try{const r=await direct('title',{text:first});t.title=r.title||t.title;t.updatedAt=Date.now();saveThreads();renderThreads();$('#threadTitle').textContent=t.title}catch(e){log(`title generation failed: ${e.message}`,'warn')}
+  try{const r=await direct('title',{text:first});t.title=r.title||t.title;t.updatedAt=Date.now();saveThreads();renderThreads();$('#threadTitle').textContent=t.title}
+  catch{}
 }
+
+// ── Stream bubble ──────────────────────────────────────────────────────────────
 
 function appendStreamingBubble(){
   const id='stream-'+uid();
   const box=$('#messages');
   const el=document.createElement('article');el.className='message assistant';el.id=id;
   el.innerHTML=`<div class="role">FOUNDRY</div><div class="content" id="${id}-c"><span class="cursor"></span></div>`;
-  box.appendChild(el);scrollMessagesToBottom();
+  box.appendChild(el);scrollToBottom();
   return {id,contentId:`${id}-c`};
 }
+
+// ── /pr slash command ─────────────────────────────────────────────────────────
 
 async function handlePrCommand(text){
   const m=text.match(/^\/pr\s+([\w.-]+\/[\w.-]+)\s+(\S+)\s+"([^"]+)"/);
   if(!m){log('/pr フォーマット: /pr owner/repo branch "タイトル"','warn');return}
   const [,repoSlug,head,title]=m;
   const tok=githubToken||$('#githubToken').value.trim();
-  if(!tok){log('PATを上のバーに入力してください','err');return}
+  if(!tok){log('GitHub PATが必要です','err');return}
   log(`PR作成中: ${repoSlug} → ${head}`);
   try{
     const r=await postJson('/api/github',{action:'create_pr',url:`https://github.com/${repoSlug}`,token:tok,title,head,base:'main'});
     log(`PR作成完了: ${r.url}`,'ok');
     const t=active()||newThread();
-    t.messages.push({role:'assistant',content:`PR作成完了 ✓\n\nURL: ${r.url}\nNumber: #${r.number}\nTitle: ${r.title}`});
+    t.messages.push({role:'assistant',content:`✓ PR作成完了\n\nURL: ${r.url}\nNumber: #${r.number}\nTitle: ${r.title}`});
     t.updatedAt=Date.now();saveThreads();renderMessages(true);
   }catch(e){log(`PR作成失敗: ${e.message}`,'err')}
 }
 
+// ── Send ──────────────────────────────────────────────────────────────────────
+
 async function send(){
-  if(busy)return;const c=$('#composer');const text=c.value.trim();if(!text)return;
+  if(busy)return;
+  const c=$('#composer');const text=c.value.trim();if(!text)return;
   if(text.startsWith('/pr ')){c.value='';resizeComposer();await handlePrCommand(text);return}
-  const t=active()||newThread();t.messages.push({role:'user',content:text});t.updatedAt=Date.now();saveThreads();c.value='';resizeComposer();renderMessages(true);busy=true;$('#sendBtn').disabled=true;log('chat dispatch → streaming');titleThread(t,text);
+  const t=active()||newThread();
+  t.messages.push({role:'user',content:text});t.updatedAt=Date.now();saveThreads();
+  c.value='';resizeComposer();renderMessages(true);
+  busy=true;$('#sendBtn').disabled=true;
+  log(`→ ${modelName(currentModel)}`);
+  titleThread(t,text);
   const model=currentModel;
   const {contentId}=appendStreamingBubble();
-  let accumulated='';
-  let lastUsage=null;
-  let lastModel=model;
+  let accumulated='';let lastUsage=null;let lastModel=model;
   const _t0=Date.now();
   try{
     const reader=await streamChat({messages:t.messages,model,githubContext:githubContext||undefined});
-    const decoder=new TextDecoder();
-    let buf='';
+    const decoder=new TextDecoder();let buf='';
     while(true){
-      const{done,value}=await reader.read();
-      if(done)break;
+      const{done,value}=await reader.read();if(done)break;
       buf+=decoder.decode(value,{stream:true});
       const lines=buf.split('\n');buf=lines.pop()||'';
       for(const line of lines){
         if(!line.startsWith('data:'))continue;
         try{
           const evt=JSON.parse(line.slice(5).trim());
-          if(evt.chunk){accumulated+=evt.chunk;const el=document.getElementById(contentId);if(el){el.innerHTML=formatText(accumulated)+'<span class="cursor"></span>';scrollMessagesToBottom()}}
-          if(evt.done){lastUsage=evt.usage||null;lastModel=evt.model||modelName(model);const lat=Date.now()-_t0;updatePerfPanel(lat,lastUsage,model);log(`stream complete · ${lastModel}${lastUsage?` · ${(lastUsage.promptTokens||0)+(lastUsage.completionTokens||0)} tok`:''} · ${lat}ms`)}
-          if(evt.error){throw new Error(evt.error)}
+          if(evt.chunk){accumulated+=evt.chunk;const el=document.getElementById(contentId);if(el){el.innerHTML=formatText(accumulated)+'<span class="cursor"></span>';scrollToBottom()}}
+          if(evt.done){
+            lastUsage=evt.usage||null;lastModel=evt.model||modelName(model);
+            const lat=Date.now()-_t0;
+            updatePerfPanel(lat,lastUsage,model);
+            log(`← ${lastModel} · ${lat}ms${lastUsage?` · ${(lastUsage.promptTokens||0)+(lastUsage.completionTokens||0)}tok`:''}`)
+          }
+          if(evt.error)throw new Error(evt.error);
         }catch(parseErr){if(!parseErr.message?.includes('JSON')&&!parseErr.message?.includes('Unexpected'))throw parseErr}
       }
     }
-    const el=document.getElementById(contentId);if(el){el.innerHTML=formatText(accumulated||'(empty response)')}
-    t.messages.push({role:'assistant',content:accumulated||'(empty response)',usage:lastUsage,model:lastModel});t.updatedAt=Date.now();saveThreads();renderThreads();
-    renderMessages(false);scrollMessagesToBottom();
+    const el=document.getElementById(contentId);if(el)el.innerHTML=formatText(accumulated||'(empty response)');
+    const latFinal=Date.now()-_t0;
+    t.messages.push({role:'assistant',content:accumulated||'(empty response)',usage:lastUsage,model:lastModel,latencyMs:latFinal});
+    t.updatedAt=Date.now();saveThreads();renderThreads();renderMessages(false);scrollToBottom();
+    _sessionMessages++;
   }catch(e){
-    const el=document.getElementById(contentId);if(el)el.innerHTML=`<span class="error-text">STREAM ERROR: ${escapeHtml(e.message)}</span>`;
-    t.messages.push({role:'assistant',content:`RUNTIME ERROR: ${e.message}`,error:true});t.updatedAt=Date.now();saveThreads();renderThreads();
+    const el=document.getElementById(contentId);if(el)el.innerHTML=`<span class="error-text">ERROR: ${escapeHtml(e.message)}</span>`;
+    t.messages.push({role:'assistant',content:`ERROR: ${e.message}`,error:true});t.updatedAt=Date.now();saveThreads();renderThreads();
     log(e.message,'err');
-  }finally{busy=false;$('#sendBtn').disabled=false;c.focus();scrollMessagesToBottom()}
+  }finally{busy=false;$('#sendBtn').disabled=false;c.focus();scrollToBottom()}
 }
 
+// ── Pipeline ──────────────────────────────────────────────────────────────────
+
 async function pipeline(){
-  if(busy)return;const t=active();if(!t||!t.messages.some(m=>m.role==='user')){log('execution aborted: no development conversation','warn');return}
-  if(t.execution&&!['ready','failed'].includes(t.execution.status)){log(`execution already active · ${t.execution.jobId}`,'warn');resumeExecution(t);return}
-  busy=true;$('#runPipeline').disabled=true;$('#artifact').classList.add('hidden');state('#buildState','QUEUED');state('#testState','WAIT');state('#publishState','WAIT');log('EXECUTE -> queue real GitHub build');
-  try{const r=await gateway('execute',{messages:t.messages});if(!r.execution)throw new Error('execution job was not created');trackExecution(t,r.execution)}
-  catch(e){state('#buildState','FAIL');log(`execution queue failed: ${e.message}`,'err')}
+  if(busy)return;const t=active();if(!t||!t.messages.some(m=>m.role==='user')){log('no conversation to build','warn');return}
+  if(t.execution&&!['ready','failed'].includes(t.execution.status)){log(`execution active · ${t.execution.jobId}`,'warn');resumeExecution(t);return}
+  busy=true;$('#runPipeline').disabled=true;state('#buildState','QUEUED');log('EXECUTE → queue build');
+  try{const r=await gateway('execute',{messages:t.messages});if(!r.execution)throw new Error('no execution created');trackExecution(t,r.execution)}
+  catch(e){state('#buildState','FAIL');log(`build failed: ${e.message}`,'err')}
   finally{busy=false;$('#runPipeline').disabled=false}
 }
 
-async function loadGithubRepo(){
-  const url=$('#githubUrl').value.trim();
-  if(!url){log('GitHub URL を入力してください','warn');return}
-  githubToken=$('#githubToken').value.trim();
-  const token=githubToken||undefined;
-  $('#githubStatus').textContent='Loading...';$('#githubLoad').disabled=true;
-  log(`GitHub repo 読み込み中: ${url}`);
-  try{
-    const r=await postJson('/api/github',{action:'read_repo',url,token});
-    githubContext=r.context||'';
-    $('#githubStatus').textContent=`✓ ${r.owner}/${r.repo} (${r.fileCount} files)`;
-    log(`GitHub context loaded: ${r.owner}/${r.repo} · ${r.fileCount} files`,'ok');
-  }catch(e){
-    githubContext='';$('#githubStatus').textContent=`✗ ${e.message}`;log(`GitHub load failed: ${e.message}`,'err');
-  }finally{$('#githubLoad').disabled=false}
-}
+// ── SELF-FORGE ────────────────────────────────────────────────────────────────
 
-$('#modelPicker').addEventListener('change',e=>{
-  currentModel=e.target.value;
-  const name=modelName(currentModel);
-  $('#modelDisplay').textContent=name;
-  $('#modelLabel').textContent=`${name.split('/')[1]||name} · VERCEL AI GATEWAY`;
-  log(`model switched → ${name}`);
-});
-
-// ── SELF-FORGE: アプリが自分自身のコードを改良する ────────────────────────────
-let forgeTargets=[];
 let forgeAutoInterval=null;
 
-async function loadForgeTargets(){
-  try{const r=await postJson('/api/forge',{action:'list'});forgeTargets=r.targets||[]}catch(e){log(`forge target load failed: ${e.message}`,'warn')}
-}
-
-function forgeStatus(msg,color='#65ff9b'){
+function forgeStatusShow(msg,color='#65ff9b'){
   const el=$('#forgeStatus');if(!el)return;
-  el.style.display='block';el.style.color=color;el.textContent=msg;
+  el.classList.remove('hidden');el.style.color=color;el.textContent=msg;
 }
 
 async function runSelfForge(targetId){
   const tok=githubToken||$('#githubToken').value.trim();
   if(!tok){
-    forgeStatus('⚠ SELF-FORGEにはGitHub PATが必要です。上バーのPATを入力してください。','#ff8e8e');
-    log('SELF-FORGE: GitHub PAT required','err');
-    return;
+    forgeStatusShow('⚠ SELF-FORGEにはGitHub PATが必要です (左パネルで入力)','#ff8e8e');
+    log('SELF-FORGE: GitHub PAT required','err');return;
   }
   const btn=$('#selfForgeBtn');btn.disabled=true;btn.textContent='⚙ FORGING…';
-  forgeStatus('⚙ AI FOUNDRY — 自己改良コードを生成中…');
-  log('SELF-FORGE: generating improvement via AI…');
+  forgeStatusShow('⚙ AI FOUNDRY — コード生成中…');
+  log('SELF-FORGE: generating improvement…');
   try{
-    const payload={action:'forge',token:tok,model:modelName(currentModel)};
-    if(targetId)payload.target_id=targetId;
-    const r=await postJson('/api/forge',payload);
-    forgeStatus(`✓ FORGED: ${r.title} → commit ${r.commit} — Vercel deploying…`);
-    log(`SELF-FORGE SUCCESS: ${r.target} · ${r.title}`,'ok');
-    log(`commit: ${r.commit} → ${r.url}`,'ok');
-    log(`deploy: ${r.deploy_url} (Vercel自動デプロイ中)`,'ok');
-    // Show in chat as system message
+    const r=await postJson('/api/forge',{action:'forge',token:tok,model:modelName(currentModel),target_id:targetId});
+    forgeStatusShow(`✓ ${r.title} → commit ${r.commit}`);
+    log(`SELF-FORGE: ${r.target} · ${r.title} → ${r.commit}`,'ok');
     const t=active()||newThread();
-    t.messages.push({
-      role:'assistant',
-      content:`⚙ SELF-FORGE 完了\n\n**${r.title}**\n\ncommit: \`${r.commit}\`\nファイル: \`${r.file}\`\n\n生成コードプレビュー:\n\`\`\`javascript\n${r.code_preview}\n\`\`\`\n\nVercel自動デプロイ中 → ${r.deploy_url}\n\nNEXT: 次の改良ターゲットを選択して再度 SELF-FORGE を実行`
-    });
+    t.messages.push({role:'assistant',content:`⚙ SELF-FORGE 完了\n\n**${r.title}**\ncommit: \`${r.commit}\`\nfile: \`${r.file}\`\n\n\`\`\`javascript\n${r.code_preview}\n\`\`\`\n\nVercel自動デプロイ中 → ${r.deploy_url}`});
     t.updatedAt=Date.now();saveThreads();renderMessages(true);
   }catch(e){
-    forgeStatus(`✗ FORGE FAILED: ${e.message}`,'#ff8e8e');
+    forgeStatusShow(`✗ FORGE FAILED: ${e.message}`,'#ff8e8e');
     log(`SELF-FORGE failed: ${e.message}`,'err');
-  }finally{
-    btn.disabled=false;btn.textContent='⚙ SELF-FORGE';
-  }
+  }finally{btn.disabled=false;btn.textContent='⚙ SELF-FORGE'}
 }
 
-$('#selfForgeBtn').addEventListener('click',()=>runSelfForge());
+// ── Model picker ───────────────────────────────────────────────────────────────
 
-// Auto-forge every 5 minutes when enabled
-$('#autoImproveBtn').addEventListener('click',()=>{
-  if(forgeAutoInterval){
-    clearInterval(forgeAutoInterval);forgeAutoInterval=null;
-    $('#autoImproveBtn').textContent='AUTO ENHANCE (5m)';
-    log('auto-forge disabled');
-    return;
-  }
-  forgeAutoInterval=setInterval(()=>runSelfForge(),5*60*1000);
-  $('#autoImproveBtn').textContent='STOP AUTO (running)';
-  log('auto-forge enabled — runs every 5 minutes');
-  runSelfForge(); // immediate first run
+$('#modelPicker').addEventListener('change',e=>{
+  currentModel=e.target.value;
+  const name=modelName(currentModel);
+  $('#modelDisplay').textContent=name;
+  $('#modelLabel').textContent=`${name.split('/')[1]||name} · VERCEL AI`;
+  log(`model → ${name}`);
 });
+
+// ── Event listeners ───────────────────────────────────────────────────────────
 
 $('#newThread').addEventListener('click',newThread);
 $('#sendBtn').addEventListener('click',send);
@@ -313,12 +381,48 @@ $('#clearLog').addEventListener('click',()=>{$('#terminal').textContent=''});
 $('#copyUrl').addEventListener('click',async e=>{const url=e.currentTarget.dataset.url;if(url){await navigator.clipboard.writeText(url);log('URL copied')}});
 $('#githubLoad').addEventListener('click',loadGithubRepo);
 $('#githubUrl').addEventListener('keydown',e=>{if(e.key==='Enter')loadGithubRepo()});
+$('#githubToken').addEventListener('keydown',e=>{if(e.key==='Enter')loadGithubRepo()});
 
+// Hint buttons
+document.querySelectorAll('.hint').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    const c=$('#composer');c.value=btn.dataset.text;resizeComposer();c.focus();
+  });
+});
+
+// SELF-FORGE button
+$('#selfForgeBtn').addEventListener('click',()=>runSelfForge());
+
+// Auto-forge toggle
+$('#autoImproveBtn').addEventListener('click',()=>{
+  if(forgeAutoInterval){
+    clearInterval(forgeAutoInterval);forgeAutoInterval=null;
+    $('#autoImproveBtn').textContent='AUTO FORGE (5m)';
+    log('auto-forge: stopped');return;
+  }
+  forgeAutoInterval=setInterval(()=>runSelfForge(),5*60*1000);
+  $('#autoImproveBtn').textContent='■ STOP AUTO';
+  log('auto-forge: started — every 5 minutes');
+  runSelfForge();
+});
+
+// Keyboard shortcuts
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'&&busy){busy=false;$('#sendBtn').disabled=false;log('stream cancelled','warn')}
+  if((e.ctrlKey||e.metaKey)&&e.key==='k'){e.preventDefault();const c=$('#composer');c.value='';resizeComposer();c.focus()}
+  if((e.ctrlKey||e.metaKey)&&e.key==='l'){e.preventDefault();$('#terminal').textContent=''}
+});
+
+// Clock
 setInterval(()=>{$('#clock').textContent=stamp()},1000);
+
+// Init
+if(githubToken){$('#githubToken').value=githubToken}
+if(githubRepo){$('#githubUrl').value=githubRepo}
 if(!activeId)newThread();else{renderAll(true);threads.forEach(resumeExecution)}
-loadForgeTargets();
-log('AI FOUNDRY IDE boot — Claude Code level');
-log('SELF-FORGE: active — ⚙ボタンでAIがアプリ自身を改良');
-log('streaming SSE: active · copy-code: active · /pr: active');
-log('GitHub integration: read_repo / create_pr / self-forge');
-log('models: GPT-5.6-SOL · Claude Sonnet · Gemini 2.0');
+updateGhPanel();
+log('AI FOUNDRY IDE v2 — boot complete');
+log(`GitHub: ${githubRepo?'✓ '+githubRepo:'not connected — enter repo in left panel'}`);
+log('models: GPT-5.6-SOL / Claude Sonnet / Gemini 2.0');
+log('⚙ SELF-FORGE: active — AI improves this app autonomously');
+log('shortcuts: Ctrl+K=clear input  Ctrl+L=clear log  Esc=cancel stream');

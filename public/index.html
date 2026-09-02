@@ -13,20 +13,43 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/bash.min.js"></script>
 </head>
 <body>
-  <div id="mobileBlock">AI FOUNDRY IDE is desktop-first. Open this URL on a PC.</div>
-  <div id="enhancement-indicator" style="position:fixed;top:5px;right:5px;z-index:9999;font-size:11px;color:#65ff9b;background:#050806;padding:4px 8px;border:1px solid #1a241e;display:none;border-radius:2px;letter-spacing:.05em">ENHANCEMENT ACTIVE</div>
+  <div id="mobileBlock">AI FOUNDRY IDE — desktop only. Open on a PC.</div>
   <div id="app" class="shell">
+
+    <!-- SIDEBAR -->
     <aside class="sidebar">
-      <div class="brand"><span class="dot"></span><strong>AI FOUNDRY</strong><small>DEVELOPMENT IDE</small></div>
-      <button id="newThread" class="new-thread">+ NEW CHAT</button>
+      <div class="brand">
+        <span class="dot"></span>
+        <strong>AI FOUNDRY</strong>
+        <small>DEVELOPMENT IDE v2</small>
+      </div>
+      <button id="newThread" class="new-thread">＋ NEW SESSION</button>
       <div class="sidebar-label">SESSIONS</div>
       <div id="threadList" class="thread-list"></div>
-      <div class="sidebar-foot" id="modelLabel">GPT-5.6 SOL · VERCEL AI GATEWAY</div>
+
+      <!-- GitHub Connect Panel -->
+      <div id="ghPanel" class="gh-panel">
+        <div class="sidebar-label">GITHUB</div>
+        <div id="ghConnected" class="gh-connected hidden">
+          <span class="dot" style="width:6px;height:6px;display:inline-block"></span>
+          <span id="ghConnectedLabel">NOT CONNECTED</span>
+        </div>
+        <input id="githubToken" type="password" placeholder="GitHub PAT" class="gh-input" />
+        <input id="githubUrl" type="text" placeholder="owner/repo or full URL" class="gh-input" spellcheck="false" />
+        <button id="githubLoad" class="gh-connect-btn">CONNECT REPO</button>
+        <span id="githubStatus" class="gh-status-small"></span>
+      </div>
+
+      <div class="sidebar-foot" id="modelLabel">GPT-5.6-SOL · VERCEL AI</div>
     </aside>
 
+    <!-- CHAT PANE -->
     <main class="chat-pane">
       <header class="pane-head">
-        <div><div class="eyebrow">AI DEVELOPMENT CORE</div><h1 id="threadTitle">New AI Development</h1></div>
+        <div>
+          <div class="eyebrow">AI DEVELOPMENT CORE</div>
+          <h1 id="threadTitle">New Session</h1>
+        </div>
         <div class="head-right">
           <select id="modelPicker" title="Model">
             <option value="gpt">GPT-5.6-SOL</option>
@@ -37,49 +60,58 @@
         </div>
       </header>
 
-      <div id="githubBar" class="github-bar">
-        <input id="githubUrl" type="text" placeholder="GitHub repo URL (e.g. github.com/owner/repo)" spellcheck="false" />
-        <input id="githubToken" type="password" placeholder="PAT (optional — needed for PR creation)" />
-        <button id="githubLoad" class="gh-btn">LOAD REPO</button>
-        <span id="githubStatus" class="gh-status"></span>
-      </div>
-
       <section id="messages" class="messages"></section>
+
       <div class="composer-wrap">
-        <textarea id="composer" rows="1" placeholder="Build, debug, evaluate or evolve an AI system...  Enter = send / Shift+Enter = newline"></textarea>
-        <button id="sendBtn">SEND</button>
+        <div class="composer-hints" id="composerHints">
+          <span class="hint" data-text="Next.js API with Supabase RLS">Next.js + Supabase</span>
+          <span class="hint" data-text="Python FastAPI streaming SSE endpoint">FastAPI SSE</span>
+          <span class="hint" data-text="Refactor TypeScript — eliminate all `any` types">TS strict</span>
+          <span class="hint" data-text="/pr MusicJapanLLC/the-world2 feature/test &quot;My PR title&quot;">/pr command</span>
+        </div>
+        <div class="composer-row">
+          <textarea id="composer" rows="1" placeholder="Describe what to build, debug, or improve…  Enter = send  Shift+Enter = newline"></textarea>
+          <button id="sendBtn">SEND</button>
+        </div>
       </div>
     </main>
 
+    <!-- TOOLS PANE -->
     <aside class="tools-pane">
-      <header class="tools-head"><div class="eyebrow">EXECUTION & CONTINUOUS ENHANCEMENT</div><h2>DEV TOOLS</h2></header>
+      <header class="tools-head">
+        <div class="eyebrow">AUTONOMOUS IMPROVEMENT</div>
+        <h2>DEV TOOLS</h2>
+      </header>
+
       <div class="pipeline">
-        <button id="runPipeline" class="primary">RUN BUILD PIPELINE</button>
-        <button id="selfForgeBtn" class="primary" style="background:#1a3a25;border-color:#65ff9b;color:#65ff9b">⚙ SELF-FORGE</button>
-        <button id="autoImproveBtn" class="secondary">AUTO ENHANCE (5m)</button>
+        <button id="selfForgeBtn" class="forge-btn">⚙ SELF-FORGE</button>
+        <button id="autoImproveBtn" class="secondary">AUTO FORGE (5m)</button>
+        <button id="runPipeline" class="secondary">BUILD PIPELINE</button>
         <button id="clearLog" class="secondary">CLEAR LOG</button>
       </div>
-      <div id="forgeStatus" style="display:none;padding:8px 14px;font-size:9px;color:#65ff9b;letter-spacing:.08em;border-bottom:1px solid #172019;background:#020403"></div>
+
+      <div id="forgeStatus" class="forge-status hidden"></div>
+
       <div class="tool-status">
         <div><span>MODEL</span><b id="modelDisplay">openai/gpt-5.6-sol</b></div>
-        <div><span>BUILD</span><b id="buildState">IDLE</b></div>
-        <div><span>TEST</span><b id="testState">IDLE</b></div>
-        <div><span>PUBLISH</span><b id="publishState">IDLE</b></div>
-      </div>
-      <div class="tool-status" style="grid-template-columns:1fr 1fr;border-top:1px solid #172019">
-        <div><span>ENHANCE</span><b id="enhanceState">READY</b></div>
-        <div><span>MERGE</span><b id="mergeState">IDLE</b></div>
+        <div><span>GITHUB</span><b id="ghState">DISCONNECTED</b></div>
         <div><span>LATENCY</span><b id="latencyDisplay">—</b></div>
         <div><span>EST COST</span><b id="costDisplay">$0.0000</b></div>
+        <div><span>BUILD</span><b id="buildState">IDLE</b></div>
+        <div><span>TOKENS</span><b id="tokenTotal">0</b></div>
       </div>
-      <div class="terminal-head"><span>TERMINAL</span><span id="clock"></span></div>
+
+      <div class="terminal-head">
+        <span>TERMINAL</span><span id="clock"></span>
+      </div>
       <pre id="terminal" class="terminal"></pre>
+
       <section id="artifact" class="artifact hidden">
-        <div class="artifact-title">GENERATED AI</div>
+        <div class="artifact-title">GENERATED ARTIFACT</div>
         <h3 id="artifactName"></h3>
         <p id="artifactDescription"></p>
         <div id="artifactCaps" class="caps"></div>
-        <a id="artifactUrl" target="_blank" rel="noreferrer">OPEN AI ↗</a>
+        <a id="artifactUrl" target="_blank" rel="noreferrer">OPEN ↗</a>
         <button id="copyUrl" class="secondary">COPY URL</button>
       </section>
     </aside>

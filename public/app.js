@@ -54,7 +54,7 @@ function formatText(text){
           highlighted=window.hljs.highlight(code,{language:lang,ignoreIllegals:true}).value;
         }
       }catch{}
-      return `<div class="code-wrap"><div class="code-header"><span class="code-lang">${escapeHtml(lang)||'code'}</span><button class="copy-btn" data-id="${copyId}" onclick="copyCode(this)">COPY</button></div><pre><code id="${copyId}" class="hljs${lang?' language-'+escapeHtml(lang):''}">${highlighted}</code></pre></div>`;
+      return `<div class="code-wrap"><div class="code-header"><span class="code-lang">${escapeHtml(lang)||'code'}</span><button class="copy-btn" data-id="${copyId}" onclick="copyCode(this)">COPY</button><button class="copy-btn" onclick="sendToEditor('${copyId}')">→ EDITOR</button></div><pre><code id="${copyId}" class="hljs${lang?' language-'+escapeHtml(lang):''}">${highlighted}</code></pre></div>`;
     }
     return escapeHtml(p).replace(/\n/g,'<br>');
   }).join('');
@@ -689,3 +689,28 @@ if(githubRepo){$('#githubUrl').value=githubRepo}
 
   log('code executor initialized');
 })();
+
+// ─── Send AI-Generated Code to Editor ────────────────────────────
+window.sendToEditor = function(codeId) {
+  const el = document.getElementById(codeId);
+  if (!el && !window.monacoEditor) return;
+
+  const code = el ? (el.innerText || el.textContent || '') : '';
+  if (!code) return;
+
+  if (window.monacoEditor) {
+    window.monacoEditor.setValue(code);
+    window.monacoEditor.focus();
+    log(`✓ Code loaded into editor (${code.split('\n').length} lines)`);
+  }
+};
+
+// ─── Integration: Auto-run AI-generated code on demand ───────────
+window.quickExecute = function(codeId) {
+  const el = document.getElementById(codeId);
+  if (!el) return;
+  const code = el.innerText || el.textContent || '';
+  if (code && window.executeCode) {
+    window.executeCode(code);
+  }
+};

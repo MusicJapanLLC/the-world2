@@ -2,29 +2,22 @@ name: AI Dev - Minute Foundry
 
 on:
   schedule:
-    # Four bounded cycles/hour. Each run is ~12 minutes, so Security/Eval feedback
-    # reaches AI strategy materially faster than the former hour-long loop.
-    - cron: '3,18,33,48 * * * *'
+    # GitHub scheduling is not real-time; the job itself performs ~1-minute ticks.
+    - cron: '11 * * * *'
   workflow_dispatch:
   pull_request:
     branches: ['claude/employee-onboarding-setup-udm86']
     paths:
       - '.github/workflows/ai-dev-minute-foundry.yml'
       - 'automation/ai_foundry/**'
-      - 'automation/security/ai_security_feedback.py'
-      - 'automation/security/test_ai_security_feedback.py'
-  push:
-    branches: ['claude/employee-onboarding-setup-udm86']
-    paths:
-      - '.github/workflows/ai-dev-minute-foundry.yml'
-      - 'automation/ai_foundry/**'
-      - 'automation/security/ai_security_feedback.py'
-      - 'automation/security/test_ai_security_feedback.py'
 
 concurrency:
-  group: ai-dev-minute-foundry-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  group: ai-dev-minute-foundry
+  cancel-in-progress: false
 
+# This lane is intentionally read-only. It evolves strategy state and preserves
+# evidence as Actions artifacts. Real code writes remain in the already-reviewed
+# THE WORLD Agent Factory privileged lane.
 permissions:
   contents: read
   actions: read
@@ -32,11 +25,10 @@ permissions:
 jobs:
   evolve:
     runs-on: ubuntu-latest
-    timeout-minutes: 18
+    timeout-minutes: 75
     env:
       STATE_DIR: /tmp/ai-dev-foundry
       GH_TOKEN: ${{ github.token }}
-      AI_DEV_SLACK_WEBHOOK_URL: ${{ secrets.AI_DEV_SLACK_WEBHOOK_URL }}
     steps:
       - name: Checkout THE WORLD
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
@@ -49,11 +41,10 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Verify AI x Security feedback boundaries
+      - name: Verify minute-evolution control plane
         run: |
           set -euo pipefail
           python -m unittest -v automation.ai_foundry.test_minute_evolution
-          python -m unittest -v automation.security.test_ai_security_feedback
 
       - name: Restore previous AI Developer champion from evidence
         if: github.event_name != 'pull_request'
@@ -65,12 +56,16 @@ jobs:
             --repo "$GITHUB_REPOSITORY" \
             --workflow ai-dev-minute-foundry.yml \
             --status success \
-            --limit 12 \
+            --limit 8 \
             --json databaseId \
             --jq '.[].databaseId' | grep -v "^${GITHUB_RUN_ID}$" | head -n1 || true)"
+
           restored=false
           if [[ -n "$prev" ]]; then
-            if gh run download "$prev" --repo "$GITHUB_REPOSITORY" --name "ai-dev-minute-foundry-${prev}" --dir "$STATE_DIR/previous"; then
+            if gh run download "$prev" \
+              --repo "$GITHUB_REPOSITORY" \
+              --name "ai-dev-minute-foundry-${prev}" \
+              --dir "$STATE_DIR/previous"; then
               candidate="$(find "$STATE_DIR/previous" -type f -name champion.json | head -n1 || true)"
               if [[ -n "$candidate" ]]; then
                 cp "$candidate" "$STATE_DIR/champion.json"
@@ -79,6 +74,7 @@ jobs:
               fi
             fi
           fi
+
           if [[ "$restored" != true ]]; then
             python automation/ai_foundry/minute_evolution.py init --out "$STATE_DIR/champion.json"
             echo "No usable prior champion evidence; initialized baseline." >> "$GITHUB_STEP_SUMMARY"
@@ -91,126 +87,22 @@ jobs:
           mkdir -p "$STATE_DIR"
           python automation/ai_foundry/minute_evolution.py init --out "$STATE_DIR/champion.json"
 
-      - name: Load latest Security R&D assist evidence
-        id: security_assist
-        shell: bash
-        run: |
-          set -euo pipefail
-          mkdir -p "$STATE_DIR/security-assist"
-          printf '%s\n' '{"status":"NO_SECURITY_ASSIST"}' > "$STATE_DIR/security-assist.json"
-          token="no-security-assist"
-          source_run=""
-          focus="security"
-
-          if [[ "$GITHUB_EVENT_NAME" != "pull_request" ]]; then
-            prev="$(gh run list --repo "$GITHUB_REPOSITORY" --workflow security-continuous-whitehat.yml --status success --limit 12 --json databaseId --jq '.[].databaseId' | head -n1 || true)"
-            if [[ -n "$prev" ]]; then
-              if gh run download "$prev" --repo "$GITHUB_REPOSITORY" --name "security-whitehat-continuous-${prev}" --dir "$STATE_DIR/security-assist"; then
-                candidate="$(find "$STATE_DIR/security-assist" -type f -name run-index.json | head -n1 || true)"
-                if [[ -n "$candidate" ]]; then
-                  cp "$candidate" "$STATE_DIR/security-assist.json"
-                  source_run="$prev"
-                  read -r token focus < <(python - <<'PY'
-          import hashlib,json,os
-          d=json.load(open(os.environ['STATE_DIR']+'/security-assist.json',encoding='utf-8'))
-          n=d.get('priority_next') or {}
-          lens=str(n.get('lens_id') or '')
-          stage=str(n.get('stage') or '')
-          blockers=' '.join(str(x) for x in (n.get('promotion_blockers') or []))
-          raw='|'.join(str(n.get(k) or '') for k in ('lens_id','stage','artifact','next_improvement'))
-          token=hashlib.sha256(raw.encode()).hexdigest()[:16] if raw.strip('|') else 'security-empty'
-          blob=(lens+' '+stage+' '+blockers).upper()
-          if 'OBSERV' in blob or 'EVIDENCE-INTEGRITY' in blob:
-              focus='observability'
-          elif stage=='PORTFOLIO':
-              focus='productization'
-          elif 'RECOVERY' in blob or 'RETEST' in blob:
-              focus='reliability'
-          elif 'SUPPLY' in blob or 'DEPENDENCY' in blob or 'CI-' in blob:
-              focus='architecture'
-          else:
-              focus='security'
-          print(token,focus)
-          PY
-          )
-                fi
-              fi
-            fi
-          fi
-          echo "token=$token" >> "$GITHUB_OUTPUT"
-          echo "source_run=$source_run" >> "$GITHUB_OUTPUT"
-          echo "focus=$focus" >> "$GITHUB_OUTPUT"
-          echo "Security assist: source=${source_run:-NONE}; translated focus=$focus; token=$token" >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Load latest bounded AI Security Eval feedback
-        id: eval_assist
-        env:
-          SECURITY_TOKEN: ${{ steps.security_assist.outputs.token }}
-          FALLBACK_FOCUS: ${{ steps.security_assist.outputs.focus }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          mkdir -p "$STATE_DIR/eval-assist"
-          printf '%s\n' '{"status":"NO_EVAL_ASSIST"}' > "$STATE_DIR/eval-assist.json"
-          source_run=""
-          eval_token="no-eval-assist"
-          focus="$FALLBACK_FOCUS"
-
-          if [[ "$GITHUB_EVENT_NAME" != "pull_request" ]]; then
-            prev="$(gh run list --repo "$GITHUB_REPOSITORY" --workflow standment-ai-security-eval.yml --status success --limit 12 --json databaseId --jq '.[].databaseId' | head -n1 || true)"
-            if [[ -n "$prev" ]]; then
-              if gh run download "$prev" --repo "$GITHUB_REPOSITORY" --name "standment-ai-security-eval-${prev}" --dir "$STATE_DIR/eval-assist"; then
-                candidate="$(find "$STATE_DIR/eval-assist" -type f -name feedback.json | head -n1 || true)"
-                if [[ -n "$candidate" ]]; then
-                  cp "$candidate" "$STATE_DIR/eval-assist.json"
-                  source_run="$prev"
-                  read -r eval_token focus < <(python - <<'PY'
-          import json,os
-          d=json.load(open(os.environ['STATE_DIR']+'/eval-assist.json',encoding='utf-8'))
-          c=d.get('constraints') or {}
-          assert d.get('authority') == 'priority_only'
-          assert c.get('promotion_gate_unchanged') is True
-          assert c.get('permission_surface_unchanged') is True
-          assert c.get('external_scope_unchanged') is True
-          allowed={'correctness','architecture','reliability','security','observability','efficiency','productization'}
-          focus=str((d.get('guidance') or {}).get('ai_priority_focus') or os.getenv('FALLBACK_FOCUS') or 'security').lower()
-          if focus not in allowed:
-              focus=str(os.getenv('FALLBACK_FOCUS') or 'security').lower()
-          print(str(d.get('feedback_token') or 'no-eval-assist'),focus)
-          PY
-          )
-                fi
-              fi
-            fi
-          fi
-
-          combined_token="$(EVAL_TOKEN="$eval_token" python - <<'PY'
-          import hashlib,os
-          raw=f"{os.environ.get('SECURITY_TOKEN','')}|{os.environ.get('EVAL_TOKEN','')}"
-          print(hashlib.sha256(raw.encode()).hexdigest()[:20])
-          PY
-          )"
-          echo "source_run=$source_run" >> "$GITHUB_OUTPUT"
-          echo "eval_token=$eval_token" >> "$GITHUB_OUTPUT"
-          echo "combined_token=$combined_token" >> "$GITHUB_OUTPUT"
-          echo "focus=$focus" >> "$GITHUB_OUTPUT"
-          echo "Eval assist: source=${source_run:-NONE}; priority-only focus=$focus; token=$eval_token" >> "$GITHUB_STEP_SUMMARY"
-
       - name: Snapshot starting champion
         run: cp "$STATE_DIR/champion.json" "$STATE_DIR/start.json"
 
-      - name: Run accelerated AI strategy evolution with bounded joint assist
+      - name: Run minute-scale AI strategy evolution
         id: evolve
         shell: bash
         run: |
           set -euo pipefail
-          if [[ "$GITHUB_EVENT_NAME" == "pull_request" ]]; then
-            rounds=9
+          if [[ "${GITHUB_EVENT_NAME}" == "pull_request" ]]; then
+            rounds=5
             sleep_seconds=0
           else
-            rounds=36
-            sleep_seconds=20
+            rounds=60
+            sleep_seconds=60
           fi
+
           python automation/ai_foundry/minute_evolution.py run \
             --state "$STATE_DIR/champion.json" \
             --out "$STATE_DIR/champion-next.json" \
@@ -218,45 +110,36 @@ jobs:
             --history "$STATE_DIR/history.jsonl" \
             --rounds "$rounds" \
             --sleep-seconds "$sleep_seconds" \
-            --seed "${GITHUB_RUN_ID}:${GITHUB_RUN_ATTEMPT}:${{ steps.eval_assist.outputs.combined_token }}" \
-            --assist-focus "${{ steps.eval_assist.outputs.focus }}"
+            --seed "${GITHUB_RUN_ID}:${GITHUB_RUN_ATTEMPT}"
+
           mv "$STATE_DIR/champion-next.json" "$STATE_DIR/champion.json"
           python - <<'PY' >> "$GITHUB_OUTPUT"
-          import json,os
-          d=json.load(open(os.environ['STATE_DIR']+'/hourly-summary.json',encoding='utf-8'))
+          import json, os
+          p=os.environ['STATE_DIR']+'/hourly-summary.json'
+          d=json.load(open(p, encoding='utf-8'))
           print('fingerprint='+d['report_fingerprint'])
-          print('material='+('true' if d['material_delta'] else 'false'))
+          print('material=' + ('true' if d['material_delta'] else 'false'))
           print('rounds='+str(d['rounds']))
           print('promotions='+str(d['promotions_delta']))
           print('next_focus='+d['weakest_next_focus'])
-          print('assist_rounds='+str(d.get('security_assist_rounds',0)))
           PY
 
-      - name: Render human-readable joint delta
-        env:
-          SECURITY_SOURCE_RUN: ${{ steps.security_assist.outputs.source_run }}
-          EVAL_SOURCE_RUN: ${{ steps.eval_assist.outputs.source_run }}
-          JOINT_FOCUS: ${{ steps.eval_assist.outputs.focus }}
-          EVAL_TOKEN: ${{ steps.eval_assist.outputs.eval_token }}
+      - name: Render human-readable hourly delta
         run: |
           set -euo pipefail
           python - <<'PY'
-          import json,os
-          d=json.load(open(os.environ['STATE_DIR']+'/hourly-summary.json',encoding='utf-8'))
+          import json, os
+          p=os.environ['STATE_DIR']+'/hourly-summary.json'
+          d=json.load(open(p, encoding='utf-8'))
           lines=[
-              '# AI Dev × Security Joint Foundry',
+              '# AI Dev Minute Foundry',
               f"- rounds: {d['rounds']}",
               f"- champion: {d['start_champion']} -> {d['end_champion']}",
               f"- promotions: {d['promotions_delta']}",
               f"- no-op rounds: {d['noops_delta']}",
               f"- curriculum: L{d['curriculum_level']}",
               f"- next weakest focus: {d['weakest_next_focus']}",
-              f"- Security R&D source: {os.getenv('SECURITY_SOURCE_RUN') or 'NONE'}",
-              f"- AI Security Eval source: {os.getenv('EVAL_SOURCE_RUN') or 'NONE'}",
-              f"- bounded joint focus: {os.getenv('JOINT_FOCUS') or 'NONE'}",
-              f"- assisted rounds: {d.get('security_assist_rounds',0)}/{d['rounds']}",
-              f"- eval feedback token: {os.getenv('EVAL_TOKEN') or 'NONE'}",
-              f"- fingerprint: {d['report_fingerprint']}",
+              f"- report fingerprint: {d['report_fingerprint']}",
               '',
               '## Quality proxy delta',
           ]
@@ -264,49 +147,13 @@ jobs:
               lines.append(f'- {k}: {v:+.3f}')
           lines += [
               '',
-              '> Joint feedback has priority-only authority and changes exactly one of every three focus rounds.',
-              '> Permissions, external scope, regression gates and VERIFIED promotion remain unchanged.',
-              '> Strategy-proxy changes are not proof of model-weight or customer capability improvement.',
+              '> These are strategy-proxy deltas, not proof that model weights or real-world capability improved. Code-level capability is verified separately by Agent Factory tests/PR gates.',
           ]
           text='\n'.join(lines)+'\n'
           open(os.environ['STATE_DIR']+'/hourly-summary.md','w',encoding='utf-8').write(text)
           print(text)
           PY
           cat "$STATE_DIR/hourly-summary.md" >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Deliver joint AI Dev delta to Slack
-        if: github.event_name != 'pull_request'
-        env:
-          SECURITY_SOURCE_RUN: ${{ steps.security_assist.outputs.source_run }}
-          EVAL_SOURCE_RUN: ${{ steps.eval_assist.outputs.source_run }}
-          JOINT_FOCUS: ${{ steps.eval_assist.outputs.focus }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          if [[ -z "${AI_DEV_SLACK_WEBHOOK_URL:-}" ]]; then
-            echo "BLOCKED_NO_CAPABILITY: AI_DEV_SLACK_WEBHOOK_URL is not configured." | tee -a "$GITHUB_STEP_SUMMARY"
-            exit 0
-          fi
-          python - <<'PY'
-          import json,os
-          d=json.load(open(os.environ['STATE_DIR']+'/hourly-summary.json',encoding='utf-8'))
-          q='\n'.join(f"• {k}: {v:+.3f}" for k,v in d['quality_proxy_delta'].items())
-          text=(
-              "*AI DEV × SECURITY｜JOINT FOUNDRY*\n"
-              f"Rounds: {d['rounds']} / Assisted: {d.get('security_assist_rounds',0)}\n"
-              f"Champion: {d['start_champion']} → {d['end_champion']}\n"
-              f"Promotions: {d['promotions_delta']} / Next focus: {d['weakest_next_focus']}\n"
-              f"Joint priority focus: {os.getenv('JOINT_FOCUS') or 'NONE'}\n"
-              f"Security source: {os.getenv('SECURITY_SOURCE_RUN') or 'NONE'} / Eval source: {os.getenv('EVAL_SOURCE_RUN') or 'NONE'}\n"
-              f"Material delta: {str(d['material_delta']).lower()}\n"
-              f"Fingerprint: `{d['report_fingerprint']}`\n"
-              "*Quality proxy delta*\n" + q + "\n"
-              "_Priority-only assist; gates/permissions/scope unchanged. Strategy proxy only._"
-          )
-          json.dump({'text':text},open(os.environ['STATE_DIR']+'/slack-payload.json','w',encoding='utf-8'),ensure_ascii=False)
-          PY
-          curl --fail-with-body --silent --show-error -H 'Content-Type: application/json' --data-binary "@$STATE_DIR/slack-payload.json" "$AI_DEV_SLACK_WEBHOOK_URL"
-          echo "AI Dev Slack delivery OK" | tee -a "$GITHUB_STEP_SUMMARY"
 
       - name: Preserve AI Foundry evidence
         if: always()
@@ -321,20 +168,16 @@ jobs:
             /tmp/ai-dev-foundry/hourly-summary.json
             /tmp/ai-dev-foundry/hourly-summary.md
             /tmp/ai-dev-foundry/history.jsonl
-            /tmp/ai-dev-foundry/security-assist.json
-            /tmp/ai-dev-foundry/eval-assist.json
-            /tmp/ai-dev-foundry/slack-payload.json
 
-      - name: Final joint foundry status
+      - name: Final foundry status
         if: always()
         run: |
-          echo "### AI Dev × Security reporting contract" >> "$GITHUB_STEP_SUMMARY"
-          echo "- cadence: 4 bounded cycles/hour" >> "$GITHUB_STEP_SUMMARY"
+          echo "### AI Dev reporting contract" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Slack channel: #ai-dev (C0BT25UCSBV)" >> "$GITHUB_STEP_SUMMARY"
+          echo "- hourly fingerprint: ${{ steps.evolve.outputs.fingerprint }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- material delta: ${{ steps.evolve.outputs.material }}" >> "$GITHUB_STEP_SUMMARY"
           echo "- rounds: ${{ steps.evolve.outputs.rounds }}" >> "$GITHUB_STEP_SUMMARY"
           echo "- promotions: ${{ steps.evolve.outputs.promotions }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "- joint priority focus: ${{ steps.eval_assist.outputs.focus }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "- assisted rounds: ${{ steps.evolve.outputs.assist_rounds }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Security source: ${{ steps.security_assist.outputs.source_run }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Eval source: ${{ steps.eval_assist.outputs.source_run }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "- authority: priority_only; gates/permissions/external scope unchanged" >> "$GITHUB_STEP_SUMMARY"
-          echo "- privilege: read-only; real code writes remain behind Agent Factory/PR gates" >> "$GITHUB_STEP_SUMMARY"
+          echo "- next focus: ${{ steps.evolve.outputs.next_focus }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- privilege: read-only; real repository modifications stay behind Agent Factory" >> "$GITHUB_STEP_SUMMARY"
+          echo "- identical fingerprints must not produce duplicate Slack reports" >> "$GITHUB_STEP_SUMMARY"

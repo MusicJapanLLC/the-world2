@@ -11,3 +11,4 @@ token.json
 .vscode/
 .idea/
 /reports/standment-security-rnd/
+node_modules/

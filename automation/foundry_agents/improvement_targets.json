@@ -146,14 +146,7 @@
       "files": ["public/app.js", "public/styles.css", "public/index.html"],
       "verification": "Check tools panel shows live latency and cost metrics updating as you chat",
       "status": "implemented"
-    }
-  ],
-  "completion_criteria": {
-    "required_verified_count": 8,
-    "required_categories": ["github_integration", "performance", "ux"],
-    "auto_stop_loop": false
-  },
-  "nextTargets": [
+    },
     {
       "id": "ux-006",
       "title": "File tree explorer for GitHub repos",
@@ -161,10 +154,17 @@
       "category": "github_integration",
       "agent": "X",
       "description": "Expandable file tree in sidebar showing repository structure. Click files to preview content. Integration with GitHub loading.",
-      "files": ["public/app.js", "public/styles.css"],
-      "verification": "Load GitHub repo and see file tree appear in sidebar with preview on click"
+      "files": ["public/app.js", "public/styles.css", "public/index.html"],
+      "verification": "Load GitHub repo and see file tree appear in sidebar with preview on click",
+      "status": "implemented"
     }
   ],
+  "completion_criteria": {
+    "required_verified_count": 8,
+    "required_categories": ["github_integration", "performance", "ux"],
+    "auto_stop_loop": false
+  },
+  "nextTargets": [],
   "agentCooperation": {
     "enabled": true,
     "mode": "CONSENSUS_WITH_OVERRIDE",

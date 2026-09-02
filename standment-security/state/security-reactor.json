@@ -1,6 +1,6 @@
 {
   "schema": "standment-security-reactor-state/v1",
-  "sessions": 3,
+  "sessions": 4,
   "history": [
     {
       "session_id": "33281304012-1",
@@ -217,9 +217,105 @@
       "mode": "REFRAME_AND_COUNTEREVIDENCE",
       "fingerprint": "edb663dbfc25e113e382",
       "material_delta": true
+    },
+    {
+      "session_id": "33605563782-1",
+      "round": 1,
+      "track_id": "SEC-PORT-003",
+      "mode": "SWITCH_EVIDENCE_PATH",
+      "fingerprint": "bd3482be5e2063a2d096",
+      "material_delta": true
+    },
+    {
+      "session_id": "33605563782-1",
+      "round": 2,
+      "track_id": "SEC-PORT-004",
+      "mode": "VERIFY_NEXT_MISSING_EVIDENCE",
+      "fingerprint": "fd982372eaf8486b98e5",
+      "material_delta": true
+    },
+    {
+      "session_id": "33605563782-1",
+      "round": 3,
+      "track_id": "SEC-PORT-005",
+      "mode": "REFRAME_AND_COUNTEREVIDENCE",
+      "fingerprint": "6faf6bde3151bb5cef6c",
+      "material_delta": true
+    },
+    {
+      "session_id": "33605563782-1",
+      "round": 4,
+      "track_id": "SEC-PORT-011",
+      "mode": "INDEPENDENT_RETEST",
+      "fingerprint": "0b1cce3001284c8f1b58",
+      "material_delta": true
+    },
+    {
+      "session_id": "33605563782-1",
+      "round": 5,
+      "track_id": "SEC-PORT-002",
+      "mode": "SWITCH_EVIDENCE_PATH",
+      "fingerprint": "a2b65113001884f8189b",
+      "material_delta": true
+    },
+    {
+      "session_id": "33605563782-1",
+      "round": 6,
+      "track_id": "SEC-PORT-008",
+      "mode": "VERIFY_NEXT_MISSING_EVIDENCE",
+      "fingerprint": "6ef844c05bc1ec314d66",
+      "material_delta": true
+    },
+    {
+      "session_id": "33605563782-1",
+      "round": 7,
+      "track_id": "SEC-PORT-005",
+      "mode": "REFRAME_AND_COUNTEREVIDENCE",
+      "fingerprint": "6faf6bde3151bb5cef6c",
+      "material_delta": true
+    },
+    {
+      "session_id": "33605563782-1",
+      "round": 8,
+      "track_id": "SEC-PORT-011",
+      "mode": "INDEPENDENT_RETEST",
+      "fingerprint": "0b1cce3001284c8f1b58",
+      "material_delta": true
+    },
+    {
+      "session_id": "33605563782-1",
+      "round": 9,
+      "track_id": "SEC-PORT-002",
+      "mode": "SWITCH_EVIDENCE_PATH",
+      "fingerprint": "a2b65113001884f8189b",
+      "material_delta": true
+    },
+    {
+      "session_id": "33605563782-1",
+      "round": 10,
+      "track_id": "SEC-PORT-003",
+      "mode": "VERIFY_NEXT_MISSING_EVIDENCE",
+      "fingerprint": "169f9851e9cd064169f1",
+      "material_delta": true
+    },
+    {
+      "session_id": "33605563782-1",
+      "round": 11,
+      "track_id": "SEC-PORT-004",
+      "mode": "REFRAME_AND_COUNTEREVIDENCE",
+      "fingerprint": "75ead27b99ed1f563451",
+      "material_delta": true
+    },
+    {
+      "session_id": "33605563782-1",
+      "round": 12,
+      "track_id": "SEC-PORT-005",
+      "mode": "INDEPENDENT_RETEST",
+      "fingerprint": "efe1c75e3fc69a2bf547",
+      "material_delta": true
     }
   ],
   "failure_memory": {},
-  "last_track": "SEC-PORT-002",
-  "last_mode": "REFRAME_AND_COUNTEREVIDENCE"
+  "last_track": "SEC-PORT-005",
+  "last_mode": "INDEPENDENT_RETEST"
 }

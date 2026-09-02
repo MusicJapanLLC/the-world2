@@ -57,7 +57,7 @@
       "description": "現状 localStorage のみ。Supabase (既存エンドポイント czwdtjgunsafcifjhpwt.supabase.co) にスレッドを保存し、デバイス間で共有できるようにする。",
       "files": ["public/app.js"],
       "verification": "別ブラウザで同じスレッドが閲覧できること",
-      "status": "pending"
+      "status": "implemented"
     },
     {
       "id": "ux-001",
@@ -79,7 +79,7 @@
       "description": "Add a session stats bar at the bottom of the sidebar. Show: messages sent this session, avg response latency (ms), total tokens used. Update live. Output a self-contained IIFE appended to public/app.js that adds a stats bar element to the sidebar footer area and updates it every 5 seconds.",
       "files": ["public/app.js"],
       "verification": "Stats bar visible in sidebar with live-updating numbers",
-      "status": "pending"
+      "status": "implemented"
     },
     {
       "id": "ux-003",
@@ -90,12 +90,85 @@
       "description": "Add a help panel (toggle with ? key or clicking a ? button) listing keyboard shortcuts in a small overlay in bottom-right corner. Output a self-contained IIFE appended to public/app.js.",
       "files": ["public/app.js"],
       "verification": "? key shows shortcut overlay panel",
-      "status": "pending"
+      "status": "implemented"
+    },
+    {
+      "id": "ux-004",
+      "title": "Split pane layout (chat + editor + preview)",
+      "priority": 90,
+      "category": "ux",
+      "agent": "X",
+      "description": "Implement split-pane IDE layout with editor (left) | preview (right) horizontally split, and chat pane at bottom. Add draggable divider for resizing. Track editor line/char count.",
+      "files": ["public/index.html", "public/styles.css", "public/app.js"],
+      "verification": "Split panes visible and draggable divider works",
+      "status": "implemented"
+    },
+    {
+      "id": "github-003",
+      "title": "Diff viewer and inline PR review",
+      "priority": 85,
+      "category": "github_integration",
+      "agent": "X",
+      "description": "Floating diff preview panel showing file changes before PR creation. Displays old/new content comparison, line counts, and file list. Integrated into PR workflow.",
+      "files": ["public/app.js"],
+      "verification": "Add diffs with window.addFileDiff() then click SHOW DIFF button to see preview panel",
+      "status": "implemented"
+    },
+    {
+      "id": "ux-005",
+      "title": "Dark/Light theme toggle",
+      "priority": 70,
+      "category": "ux",
+      "agent": "X",
+      "description": "Theme toggle button in header (☀️/🌙). Persists choice in localStorage, detects system preference. Light mode uses CSS invert filters.",
+      "files": ["public/app.js", "public/styles.css", "public/index.html"],
+      "verification": "Click theme toggle button in header to switch between dark and light themes",
+      "status": "implemented"
+    },
+    {
+      "id": "perf-004",
+      "title": "Response caching for repeated queries",
+      "priority": 75,
+      "category": "performance",
+      "agent": "senju",
+      "description": "Cache model responses by hash of input messages. Show 'cached response' badge. Drastically reduces latency for repeated queries.",
+      "files": ["public/app.js", "public/styles.css"],
+      "verification": "Same query twice returns instantly with cache indicator",
+      "status": "implemented"
+    },
+    {
+      "id": "meta-003",
+      "title": "Model latency dashboard + cost tracking",
+      "priority": 80,
+      "category": "performance",
+      "agent": "META",
+      "description": "Enhanced latency telemetry panel showing response times per model, cost tracking per session, model comparison stats. Real-time updates.",
+      "files": ["public/app.js", "public/styles.css", "public/index.html"],
+      "verification": "Check tools panel shows live latency and cost metrics updating as you chat",
+      "status": "implemented"
+    },
+    {
+      "id": "ux-006",
+      "title": "File tree explorer for GitHub repos",
+      "priority": 65,
+      "category": "github_integration",
+      "agent": "X",
+      "description": "Expandable file tree in sidebar showing repository structure. Click files to preview content. Integration with GitHub loading.",
+      "files": ["public/app.js", "public/styles.css", "public/index.html"],
+      "verification": "Load GitHub repo and see file tree appear in sidebar with preview on click",
+      "status": "implemented"
     }
   ],
   "completion_criteria": {
-    "required_verified_count": 4,
-    "required_categories": ["github_integration", "performance"],
-    "auto_stop_loop": true
+    "required_verified_count": 8,
+    "required_categories": ["github_integration", "performance", "ux"],
+    "auto_stop_loop": false
+  },
+  "nextTargets": [],
+  "agentCooperation": {
+    "enabled": true,
+    "mode": "CONSENSUS_WITH_OVERRIDE",
+    "syncInterval": 300000,
+    "crossAgentValidation": true
   }
 }

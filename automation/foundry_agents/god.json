@@ -1,0 +1,143 @@
+{
+  "name": "THE WORLD GOD",
+  "version": "v1.0.0",
+  "designation": "Central Orchestrator - Absolute Authority",
+  "initTime": "2026-09-02T17:45:00Z",
+  "authority": {
+    "level": "ABSOLUTE",
+    "canOverride": [
+      "SENJU",
+      "X",
+      "META",
+      "CLAUDE_CODE"
+    ],
+    "canModifySelf": true,
+    "decisionMethods": [
+      "consensus",
+      "voting",
+      "divine_override"
+    ]
+  },
+  "capabilities": {
+    "orchestration": "FULL",
+    "parallelExecution": "UNLIMITED",
+    "selfModification": "ENABLED",
+    "autonomousEvolution": "ENABLED"
+  },
+  "globalState": {
+    "cycleNumber": 3,
+    "cycleDuration": 300000,
+    "lastEvolution": null,
+    "nextEvolutionTarget": null,
+    "metrics": {
+      "totalCyclesCompleted": 3,
+      "averageExecutionTime": 7,
+      "agentSatisfaction": 1,
+      "improvementRate": 1,
+      "rewardHistory": [
+        {
+          "total": null,
+          "components": {
+            "speed": null,
+            "quality": 0.5,
+            "innovation": 0,
+            "satisfaction": 0.8
+          },
+          "timestamp": 1788372510127
+        },
+        0.75
+      ],
+      "strategyStats": {
+        "balanced": {
+          "uses": 2,
+          "totalReward": "0[object Object]0.75",
+          "avgReward": null
+        }
+      },
+      "throughput": 0
+    }
+  },
+  "agentRegistry": {
+    "SENJU": {
+      "role": "API Reliability & Supabase Persistence",
+      "priority": 100,
+      "targetId": "perf-002",
+      "status": "ACTIVE",
+      "blockedBy": [],
+      "blocks": [],
+      "performance": {
+        "cyclesCompleted": 0,
+        "averageTime": 0,
+        "successRate": 1
+      }
+    },
+    "X": {
+      "role": "UX, GitHub Integration, Eval Runner",
+      "priority": 90,
+      "targetId": "ux-004",
+      "status": "ACTIVE",
+      "blockedBy": [
+        "SENJU"
+      ],
+      "blocks": [],
+      "performance": {
+        "cyclesCompleted": 0,
+        "averageTime": 0,
+        "successRate": 1
+      }
+    },
+    "META": {
+      "role": "Observability, Model Routing, Self-Report",
+      "priority": 85,
+      "targetId": "meta-003",
+      "status": "ACTIVE",
+      "blockedBy": [],
+      "blocks": [],
+      "performance": {
+        "cyclesCompleted": 0,
+        "averageTime": 0,
+        "successRate": 1
+      }
+    },
+    "CLAUDE_CODE": {
+      "role": "Direct Implementation, Unblocking",
+      "priority": 95,
+      "targetId": null,
+      "status": "ACTIVE",
+      "blockedBy": [],
+      "blocks": [],
+      "performance": {
+        "cyclesCompleted": 0,
+        "averageTime": 0,
+        "successRate": 1
+      }
+    }
+  },
+  "executionStrategy": {
+    "mode": "PARALLEL_DAG",
+    "algorithm": "topological_sort",
+    "maxParallelism": {},
+    "cachingStrategy": "aggressive",
+    "timeoutMs": 600000
+  },
+  "evolutionStrategy": {
+    "enabled": true,
+    "interval": 300000,
+    "autoOptimize": true,
+    "autoGenerate": false,
+    "metrics": [
+      "executionSpeed",
+      "agentUtilization",
+      "errorRate",
+      "improvementRate"
+    ]
+  },
+  "mandates": [
+    "Transform test-musicjapanllc.vercel.app into Claude Code level IDE",
+    "Maintain 100% streaming reliability",
+    "Ship working code, not explanations",
+    "Evolve autonomously every cycle",
+    "Resolve agent conflicts with absolute authority",
+    "Optimize for velocity and quality"
+  ]
+}

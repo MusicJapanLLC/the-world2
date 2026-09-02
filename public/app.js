@@ -266,6 +266,13 @@ async function handlePrCommand(text){
   const [,repoSlug,head,title]=m;
   const tok=githubToken||$('#githubToken').value.trim();
   if(!tok){log('GitHub PATが必要です','err');return}
+
+  // Show diff preview if diffs were added
+  if(Object.keys(window.diffCache||{}).length>0){
+    log(`PR作成: ${Object.keys(window.diffCache).length}個ファイル変更予定`);
+    window.showDiffPreview();
+  }
+
   log(`PR作成中: ${repoSlug} → ${head}`);
   try{
     const r=await postJson('/api/github',{action:'create_pr',url:`https://github.com/${repoSlug}`,token:tok,title,head,base:'main'});
@@ -273,6 +280,7 @@ async function handlePrCommand(text){
     const t=active()||newThread();
     t.messages.push({role:'assistant',content:`✓ PR作成完了\n\nURL: ${r.url}\nNumber: #${r.number}\nTitle: ${r.title}`});
     t.updatedAt=Date.now();saveThreads();renderMessages(true);
+    window.diffCache={}; // Clear diffs after PR created
   }catch(e){log(`PR作成失敗: ${e.message}`,'err')}
 }
 
@@ -413,6 +421,19 @@ $('#autoImproveBtn').addEventListener('click',()=>{
   log('auto-forge: started — every 5 minutes');
   runSelfForge();
 });
+
+// Diff viewer button (github-003)
+const diffBtn=document.createElement('button');
+diffBtn.id='diffViewerBtn';
+diffBtn.className='secondary';
+diffBtn.textContent='📊 SHOW DIFF';
+diffBtn.style.marginTop='4px';
+diffBtn.addEventListener('click',()=>{
+  if(Object.keys(window.diffCache||{}).length===0){log('diffs: 変更がありません','warn');return}
+  window.showDiffPreview();
+});
+const pipeline=$('.pipeline');
+if(pipeline)pipeline.appendChild(diffBtn);
 
 // ─── Keyboard shortcuts help overlay (ux-003) ────────────────────────────
 (function initShortcutsOverlay(){
@@ -746,6 +767,76 @@ window.sendToEditor = function(codeId) {
     window.monacoEditor.focus();
     log(`✓ Code loaded into editor (${code.split('\n').length} lines)`);
   }
+};
+
+// ─── Diff Viewer (github-003) ────────────────────────────────────
+window.diffCache = {}; // Store diffs: { filePath: {old, new} }
+
+window.addFileDiff = function(filePath, oldContent, newContent) {
+  window.diffCache[filePath] = { old: oldContent || '', new: newContent || '' };
+  log(`✓ Diff added: ${filePath}`);
+};
+
+// Generate unified diff-like format
+window.formatDiff = function(filePath, oldText, newText) {
+  const oldLines = (oldText || '').split('\n');
+  const newLines = (newText || '').split('\n');
+  let diff = `--- ${filePath}\n+++ ${filePath}\n`;
+
+  const maxLen = Math.max(oldLines.length, newLines.length);
+  for (let i = 0; i < Math.min(maxLen, 20); i++) {
+    if (oldLines[i] !== newLines[i]) {
+      if (oldLines[i]) diff += `- ${oldLines[i]}\n`;
+      if (newLines[i]) diff += `+ ${newLines[i]}\n`;
+    }
+  }
+
+  if (maxLen > 20) diff += `\n... (${maxLen - 20} more lines)\n`;
+  return diff;
+};
+
+// Clear all diffs
+window.clearDiffs = function() {
+  window.diffCache = {};
+  log('✓ Diffs cleared');
+};
+
+window.showDiffPreview = function() {
+  const diffPanel = document.getElementById('diffPanel');
+  if (!diffPanel) {
+    // Create diff panel if it doesn't exist
+    const panel = document.createElement('div');
+    panel.id = 'diffPanel';
+    panel.style.cssText = 'position:fixed;top:80px;right:20px;width:400px;max-height:600px;background:#1a1a1a;border:1px solid #444;border-radius:8px;padding:12px;overflow-y:auto;z-index:9999;font-family:monospace;font-size:11px';
+    panel.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><b style="color:#65ff9b">DIFF PREVIEW</b><button onclick="document.getElementById(\'diffPanel\').style.display=\'none\'" style="background:none;border:none;color:#aaa;cursor:pointer;font-size:14px;padding:0;width:20px;height:20px">×</button></div><div id="diffContent" style="color:#dce5df;line-height:1.4"></div>';
+    document.body.appendChild(panel);
+  }
+
+  const content = document.getElementById('diffContent');
+  if (Object.keys(window.diffCache).length === 0) {
+    content.innerHTML = '<div style="color:#888">No diffs added yet</div>';
+    document.getElementById('diffPanel').style.display = 'block';
+    return;
+  }
+
+  let html = '';
+  Object.entries(window.diffCache).forEach(([file, diff]) => {
+    const oldLines = (diff.old || '').split('\n');
+    const newLines = (diff.new || '').split('\n');
+    html += `<div style="margin-bottom:12px;border-bottom:1px solid #333;padding-bottom:8px">
+      <div style="color:#65ff9b;margin-bottom:4px">📄 ${escapeHtml(file)}</div>
+      <div style="font-size:10px;color:#888">-${oldLines.length} +${newLines.length}</div>
+      <div style="background:#0d1e12;border:1px solid #2d5e3e;border-radius:4px;padding:6px;margin-top:4px;max-height:120px;overflow-y:auto">
+        ${oldLines.slice(0,3).map(l=>`<div style="color:#ff8e8e">−${escapeHtml(l)}</div>`).join('')}
+        ${newLines.slice(0,3).map(l=>`<div style="color:#65ff9b">+${escapeHtml(l)}</div>`).join('')}
+        ${(oldLines.length > 3 || newLines.length > 3) ? '<div style="color:#888">...</div>' : ''}
+      </div>
+    </div>`;
+  });
+
+  content.innerHTML = html;
+  document.getElementById('diffPanel').style.display = 'block';
+  log(`✓ Diff preview: ${Object.keys(window.diffCache).length} files`);
 };
 
 // ─── Integration: Auto-run AI-generated code on demand ───────────

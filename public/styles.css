@@ -9,7 +9,7 @@ button{letter-spacing:.055em}
 /* ── Layout ── */
 .shell{height:100dvh;display:grid;grid-template-columns:260px minmax(520px,1fr) 360px;background:#050706;overflow:hidden}
 .sidebar,.tools-pane{background:#070a08;min-width:0;min-height:0}
-.sidebar{border-right:1px solid #1a241e;display:flex;flex-direction:column}
+.sidebar{border-right:1px solid #1a241e;displhay:flex;flex-direction:column}
 .tools-pane{border-left:1px solid #1a241e;display:flex;flex-direction:column;overflow:hidden}
 
 /* ── Brand ── */
@@ -22,7 +22,7 @@ button{letter-spacing:.055em}
 .new-thread{margin:12px;padding:11px;text-align:left;border:1px solid #27352c;background:#0b100d;color:#d9e6dd;cursor:pointer;border-radius:0;font-size:11px;letter-spacing:.08em}
 .new-thread:hover{border-color:#65ff9b;color:#65ff9b}
 .sidebar-label{padding:7px 14px;color:#4d5b52;font-size:8px;letter-spacing:.2em}
-.thread-list{overflow:auto;padding:0 6px 8px;flex:1;min-height:0;overscroll-behavior:contain}
+.thread-list{overflow:auto;padding:0 6px 8px;flex:0 1 120px;min-height:60px;overscroll-behavior:contain}
 .thread{border:1px solid transparent;padding:9px 10px;margin:2px 0;cursor:pointer;display:grid;grid-template-columns:1fr auto;gap:6px;align-items:center}
 .thread:hover{background:#0c110e}.thread.active{border-color:#24442f;background:#0d1510}
 .thread-title{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px;letter-spacing:.01em}

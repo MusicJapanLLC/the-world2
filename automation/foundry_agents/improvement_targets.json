@@ -94,8 +94,52 @@
     }
   ],
   "completion_criteria": {
-    "required_verified_count": 4,
-    "required_categories": ["github_integration", "performance"],
-    "auto_stop_loop": true
+    "required_verified_count": 8,
+    "required_categories": ["github_integration", "performance", "ux"],
+    "auto_stop_loop": false
+  },
+  "nextTargets": [
+    {
+      "id": "ux-004",
+      "title": "Split pane layout (chat + editor + preview)",
+      "priority": 90,
+      "category": "ux",
+      "cooperatingAgents": ["X", "META"],
+      "dependsOn": ["perf-002"],
+      "expectedFrom": {
+        "X": "UI layout + sidebar editor",
+        "META": "latency telemetry in split view"
+      }
+    },
+    {
+      "id": "github-003",
+      "title": "Diff viewer and inline PR review",
+      "priority": 85,
+      "category": "github_integration",
+      "cooperatingAgents": ["X", "CLAUDE_CODE"],
+      "dependsOn": ["github-002"],
+      "expectedFrom": {
+        "X": "Diff UI component",
+        "CLAUDE_CODE": "PR parsing and display logic"
+      }
+    },
+    {
+      "id": "meta-003",
+      "title": "Model latency dashboard + cost tracking",
+      "priority": 80,
+      "category": "performance",
+      "cooperatingAgents": ["META", "SENJU"],
+      "dependsOn": ["meta-001"],
+      "expectedFrom": {
+        "META": "Telemetry collection and aggregation",
+        "SENJU": "API timing instrumentation"
+      }
+    }
+  ],
+  "agentCooperation": {
+    "enabled": true,
+    "mode": "CONSENSUS_WITH_OVERRIDE",
+    "syncInterval": 300000,
+    "crossAgentValidation": true
   }
 }

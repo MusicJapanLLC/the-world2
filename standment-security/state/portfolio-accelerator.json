@@ -1,6 +1,6 @@
 {
   "schema": "standment-security-portfolio-accelerator/v1",
-  "generated_at_jst": "2026-09-03T23:22:36+09:00",
+  "generated_at_jst": "2026-09-04T00:41:34+09:00",
   "company_priority": "P0",
   "mission": "Make customer-inspectable, reproducible security evidence the highest-priority R&D output for Standment and continuously convert THE WORLD research into defensible AI-native security portfolio assets.",
   "primary": {
@@ -79,7 +79,7 @@
     "closure_score": 1690,
     "ai_native": true
   },
-  "stagnation_streak": 0,
+  "stagnation_streak": 1,
   "rotated": false,
   "selection_reason": "HIGHEST_EVIDENCE_CLOSURE_SCORE",
   "next_action": "Convert the strongest white-hat candidate into a bounded reproduction -> remediation -> independent retest evidence bundle.",

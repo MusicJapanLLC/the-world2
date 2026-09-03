@@ -2,16 +2,16 @@
 
 **Company Priority: P0**
 
-Updated JST: `2026-09-03T20:49:04+09:00`
+Updated JST: `2026-09-03T23:22:36+09:00`
 
 ## TODAY'S PRIMARY BET
-- `SEC-PORT-005` — Autonomous-agent security and auditability pack
+- `SEC-PORT-001` — Standment Security Scan dogfood + Before/After case study
 - status: **VISIBLE**
 - evidence coverage: **100%**
-- white-hat candidates: **0**
-- Senju focus: **balance**
-- selection: `ROTATED_AFTER_STAGNATION:SEC-PORT-001->SEC-PORT-005`
-- next material action: Run an independent retest, preserve counterevidence, and document residual risk before any verification claim.
+- white-hat candidates: **4**
+- Senju focus: **robustness**
+- selection: `HIGHEST_EVIDENCE_CLOSURE_SCORE`
+- next material action: Convert the strongest white-hat candidate into a bounded reproduction -> remediation -> independent retest evidence bundle.
 
 ## THREE-LANE R&D
 - Verification closure: `SEC-PORT-001`

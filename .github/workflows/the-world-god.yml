@@ -46,10 +46,11 @@ jobs:
 
           if [[ $(git diff --stat) != '' ]]; then
             git add automation/foundry_agents/god.json automation/foundry_agents/improvement_targets.json
-            git commit -m "chore(god): autonomous cycle update
+            git commit -m "chore(god): autonomous cycle update [skip ci]
 
 - Updated cycle metrics and state
 - Analysis: $(node -e "const g=JSON.parse(require('fs').readFileSync('automation/foundry_agents/god.json')); console.log('Cycle ' + g.globalState.cycleNumber + ' | Improvement: ' + Math.round(g.globalState.metrics.improvementRate * 100) + '%')")"
+            git pull --rebase origin audit/reality-gate-v1 || true
             git push -u origin audit/reality-gate-v1
           else
             echo "No changes to commit"

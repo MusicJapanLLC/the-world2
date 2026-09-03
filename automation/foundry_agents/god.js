@@ -44,6 +44,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const GOD_STATE_FILE = path.join(__dirname, 'god.json');
 const TARGETS_FILE = path.join(__dirname, 'improvement_targets.json');
 const AGENTS_FILE = path.join(__dirname, 'agents.json');
+const GOD_STATUS_FILE = path.join(__dirname, '../../public/god_status.json');
 
 class TheWorldGod {
   constructor() {
@@ -124,7 +125,18 @@ class TheWorldGod {
       console.log('[GOD] 📊 Checking resources...');
       let resources = { utilization: 0.5, cpu: 0.5, memory: 0.5 };
       try {
-        resources = await this.enhancers.resources.monitorAll() || resources;
+        const rawResources = await this.enhancers.resources.monitorAll();
+        if (rawResources) {
+          resources = rawResources;
+          // Derive flat utilization fields from nested monitorAll result
+          const compute = rawResources.resources?.compute;
+          resources.utilization = compute?.memory?.utilization != null
+            ? parseFloat((compute.memory.utilization / 100).toFixed(3)) : 0.5;
+          resources.cpu = compute?.cpu?.usage != null
+            ? parseFloat((compute.cpu.usage / 100).toFixed(3)) : 0.5;
+          resources.memory = resources.utilization;
+          resources.constraints = (rawResources.alerts || []).filter(Boolean);
+        }
         if (resources?.constraints?.length > 0) {
           console.log('[GOD] ⚠️  Resource constraints detected:', resources.constraints);
           const strategy = await this.enhancers.resources.computeOptimalStrategy();
@@ -138,7 +150,17 @@ class TheWorldGod {
 
       // Step 1: Analyze current state + Historical patterns
       console.log('[GOD] 🧠 Analyzing state & learning from history...');
-      const analysis = await this.analyzeState();
+      let analysis = await this.analyzeState();
+
+      // ── Self-Evolution: if backlog is empty, generate new targets ──
+      if (analysis.pendingCount === 0) {
+        console.log('[GOD] ⚠️  Backlog empty — triggering self-evolution target generation');
+        await this.generateEvolutionTargets();
+        // Reload targets and re-analyse
+        this.targets = this.loadTargets();
+        analysis = await this.analyzeState();
+        console.log(`[GOD] ✓ Self-evolution generated ${analysis.pendingCount} new target(s)`);
+      }
 
       // Get historical insights
       let bestStrategy = null;
@@ -167,9 +189,15 @@ class TheWorldGod {
 
       // Step 3: Predict bottlenecks (PredictiveOptimization)
       console.log('[GOD] 🔮 Predicting bottlenecks...');
-      const prediction = this.enhancers.predictor.predictNextBottleneck();
+      const rawPredictions = this.enhancers.predictor.predictNextBottleneck();
+      // predictNextBottleneck returns an array; normalise to single object
+      const prediction = Array.isArray(rawPredictions) && rawPredictions.length > 0
+        ? { ...rawPredictions[0], bottleneck: rawPredictions[0].agentId }
+        : { severity: 'NONE', bottleneck: 'none' };
       if (prediction.severity !== 'NONE') {
         console.log(`[GOD] ⚠️  Predicted bottleneck: ${prediction.bottleneck} (${prediction.severity})`);
+      } else {
+        console.log('[GOD] ✓ No bottlenecks predicted');
       }
 
       // Step 4: Test multiple strategies in parallel (MultiStrategyExecutor)
@@ -262,6 +290,9 @@ class TheWorldGod {
       }
 
       this.updateMetrics(cycleTime, analysis, cycleReward, bestExecutionStrategy?.name || 'balanced');
+
+      // Write public/god_status.json for UI dog-food loop
+      this.writeGodStatus(this.state.globalState.cycleNumber, analysis, cycleReward);
 
       console.log(`\n[GOD] ✨ Cycle complete in ${cycleTime}ms (reward: ${cycleReward.toFixed(3)})`);
       return { success: true, cycleTime, analysis, reward: cycleReward };
@@ -739,6 +770,92 @@ class TheWorldGod {
     return bestDecision;
   }
 
+  // ─── Self-Evolution ─────────────────────────────────────────────────
+
+  /**
+   * generateEvolutionTargets
+   * When the backlog is fully implemented, reset the highest-priority targets
+   * as v2 work items so GOD always has something to improve.
+   */
+  async generateEvolutionTargets() {
+    const allTargets = this.targets?.targets || [];
+    const implemented = allTargets
+      .filter(t => t.status === 'implemented')
+      .sort((a, b) => (b.priority || 0) - (a.priority || 0));
+
+    if (implemented.length === 0) {
+      console.log('[GOD] No implemented targets to evolve from — injecting seed targets');
+      // Inject a minimal seed target so the cycle is never empty
+      this.targets.targets.push({
+        id: 'evo-seed-001',
+        title: 'IDE split-pane layout v1',
+        priority: 90,
+        category: 'ux',
+        agent: 'X',
+        description: 'Implement split-pane layout (chat + editor + preview) in public/index.html',
+        files: ['public/index.html', 'public/app.js', 'public/styles.css'],
+        verification: 'Open app, confirm three-panel layout renders',
+        status: 'pending'
+      });
+      this.saveTargets();
+      return;
+    }
+
+    // Take top 5 implemented, clone them as _v2 with pending status
+    const toEvolve = implemented.slice(0, 5);
+    let maxPriority = Math.max(...allTargets.map(t => t.priority || 0));
+
+    for (const t of toEvolve) {
+      const v2Id = `${t.id}_v2`;
+      // Skip if v2 already exists
+      if (allTargets.some(x => x.id === v2Id)) continue;
+      maxPriority += 1;
+      this.targets.targets.push({
+        ...t,
+        id: v2Id,
+        title: `${t.title} (v2 evolution)`,
+        priority: maxPriority,
+        status: 'pending',
+        dependsOn: [],
+        evolvedFrom: t.id,
+        createdAt: new Date().toISOString()
+      });
+      console.log(`[GOD]   + queued evolution target: ${v2Id}`);
+    }
+
+    this.saveTargets();
+  }
+
+  /**
+   * writeGodStatus — persist current metrics to public/god_status.json
+   * for the UI dog-food loop to consume.
+   */
+  writeGodStatus(cycleNumber, analysis, cycleReward) {
+    try {
+      const pending = this.targets?.targets?.filter(t => t.status === 'pending') || [];
+      const implemented = this.targets?.targets?.filter(t => t.status === 'implemented') || [];
+      const metrics = this.state?.globalState?.metrics || {};
+
+      const topPending = pending.sort((a, b) => (b.priority || 0) - (a.priority || 0))[0];
+
+      const status = {
+        cycle: cycleNumber,
+        timestamp: new Date().toISOString(),
+        pendingTargets: pending.length,
+        implementedTargets: implemented.length,
+        improvementRate: parseFloat((analysis?.improvementRate || metrics.improvementRate || 0).toFixed(4)),
+        avgCycleTime: parseFloat((metrics.averageExecutionTime || 0).toFixed(0)),
+        lastCycleReward: parseFloat((typeof cycleReward === 'number' ? cycleReward : 0.75).toFixed(4)),
+        topPendingTarget: topPending?.title || 'none'
+      };
+
+      fs.writeFileSync(GOD_STATUS_FILE, JSON.stringify(status, null, 2));
+      console.log(`[GOD] 📄 god_status.json written (pending: ${status.pendingTargets}, reward: ${status.lastCycleReward})`);
+    } catch (e) {
+      console.warn('[GOD] Could not write god_status.json:', e.message);
+    }
+  }
+
   // ─── Utilities ──────────────────────────────────────────────────────
 
   saveTargets() {
@@ -762,7 +879,16 @@ class TheWorldGod {
 
     console.log(`\n🎯 PROGRESS:`);
     console.log(`  Targets: ${implemented}/${total} implemented (${(implemented/total*100).toFixed(1)}%)`);
-    console.log(`  Pending: ${this.targets.targets.filter(t => t.status === 'pending').length}`);
+    const pendingList = this.targets.targets
+      .filter(t => t.status === 'pending')
+      .sort((a, b) => (b.priority || 0) - (a.priority || 0));
+    console.log(`  Pending: ${pendingList.length}`);
+    if (pendingList.length > 0) {
+      console.log(`\n📋 TOP PENDING TARGETS:`);
+      pendingList.slice(0, 3).forEach((t, i) => {
+        console.log(`  ${i + 1}. [${t.id}] ${t.title} (priority: ${t.priority}, agent: ${t.agent})`);
+      });
+    }
 
     console.log(`\n⚡ PERFORMANCE METRICS:`);
     console.log(`  Avg cycle time: ${metrics.averageExecutionTime.toFixed(0)}ms`);

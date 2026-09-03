@@ -39,6 +39,7 @@ import SelfLearningEngine from './enhancers/singularity-learning.js';
 import SelfEvaluationEngine from './enhancers/singularity-evaluation.js';
 import SelfModificationEngine from './enhancers/singularity-modification.js';
 import MetaEvolutionEngine from './enhancers/singularity-meta-evolution.js';
+import KnowledgeBridge from './knowledge-bridge.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const GOD_STATE_FILE = path.join(__dirname, 'god.json');
@@ -114,6 +115,14 @@ class TheWorldGod {
     console.log(`\n${'='.repeat(70)}`);
     console.log(`🔮 THE WORLD GOD — CYCLE ${this.state.globalState.cycleNumber}`);
     console.log(`${'='.repeat(70)}\n`);
+
+    // Knowledge DB: load summary and get recommended strategy
+    const knowledgeBridge = new KnowledgeBridge();
+    knowledgeBridge.logSummary();
+    const recommendedStrategy = knowledgeBridge.getBestStrategy();
+    if (recommendedStrategy) {
+      console.log(`[GOD] 📚 Knowledge recommends strategy: ${recommendedStrategy}`);
+    }
 
     try {
       // Ensure state is loaded
@@ -212,6 +221,12 @@ class TheWorldGod {
         console.log(`[GOD] 🎯 Using default strategy: balanced`);
       }
 
+      // Apply knowledge-recommended strategy when it outperforms the selected one
+      if (recommendedStrategy && (!bestExecutionStrategy.score || bestExecutionStrategy.score < 0.85)) {
+        console.log(`[GOD] 📚 Applying knowledge-recommended strategy: ${recommendedStrategy}`);
+        bestExecutionStrategy = { name: recommendedStrategy, score: 0.85 };
+      }
+
       // Step 5: Topological sort for parallel execution
       const layers = this.toposort(dag);
       console.log('[GOD] 📋 Execution layers:', layers.length);
@@ -287,6 +302,25 @@ class TheWorldGod {
         if (typeof cycleReward !== 'number') cycleReward = 0.75;
       } catch (e) {
         // Use default reward
+      }
+
+      // Record cycle learning into the shared knowledge DB
+      try {
+        const topTarget = analysis.pendingTargets
+          ?.slice()
+          .sort((a, b) => (b.priority || 0) - (a.priority || 0))[0]?.title || 'none';
+        knowledgeBridge.recordCycleLearning({
+          cycleNumber: this.state.globalState.cycleNumber,
+          reward: typeof cycleReward === 'number' ? cycleReward : 0.75,
+          strategy: bestExecutionStrategy?.name || 'balanced',
+          executionTimeMs: cycleTime,
+          pendingTargets: analysis.pendingCount || 0,
+          implementedTargets: analysis.implementedCount || 0,
+          topTarget,
+        });
+        console.log(`[KNOWLEDGE] ✅ Cycle learning recorded`);
+      } catch (e) {
+        console.warn('[KNOWLEDGE] Could not record cycle learning:', e.message);
       }
 
       this.updateMetrics(cycleTime, analysis, cycleReward, bestExecutionStrategy?.name || 'balanced');

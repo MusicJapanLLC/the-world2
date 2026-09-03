@@ -4,6 +4,16 @@ on:
   schedule:
     - cron: '*/5 * * * *'  # Every 5 minutes
   workflow_dispatch:
+  push:
+    branches: [audit/reality-gate-v1]
+    paths:
+      - 'automation/foundry_agents/god.js'
+      - 'automation/foundry_agents/enhancers/**'
+      - 'automation/foundry_agents/god.json'
+
+concurrency:
+  group: god-orchestration
+  cancel-in-progress: false
 
 jobs:
   orchestrate:
@@ -22,9 +32,8 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-
-      - name: Install dependencies
-        run: npm install
+        # NOTE: npm install is intentionally skipped.
+        # god.js and all enhancers use only built-in Node.js modules + local imports.
 
       - name: 🎭 THE WORLD GOD AWAKENS
         run: |

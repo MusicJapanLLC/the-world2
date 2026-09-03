@@ -6,6 +6,9 @@ on:
   workflow_dispatch:
   push:
     branches: [main, audit/reality-gate-v1]
+    paths-ignore:
+      - 'automation/foundry_agents/god.json'
+      - 'automation/foundry_agents/improvement_targets.json'
 
 jobs:
   god-orchestrate:
@@ -20,9 +23,12 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
+          cache: 'npm'
 
       - name: Install dependencies
-        run: npm install
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+        run: npm ci
 
       - name: 🔮 THE WORLD GOD — Orchestration Phase
         id: cycle
@@ -48,9 +54,12 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
+          cache: 'npm'
 
       - name: Install dependencies
-        run: npm install
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+        run: npm ci
 
       - name: 🧪 Run unit tests
         run: npm test 2>/dev/null || echo "No tests configured yet"

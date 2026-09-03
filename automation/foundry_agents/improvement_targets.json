@@ -201,6 +201,127 @@
       ],
       "verification": "Load GitHub repo and see file tree appear in sidebar with preview on click",
       "status": "implemented"
+    },
+    {
+      "id": "ux-010",
+      "title": "スプリットペインUI (chat + editor + preview)",
+      "priority": 99,
+      "category": "ux",
+      "agent": "X",
+      "description": "public/index.html を3ペイン構成に改修。左: チャット, 中央: コードエディタ(CodeMirror or textarea), 右: ライブプレビュー(iframe sandbox)。レスポンシブ対応。",
+      "files": ["public/index.html", "public/styles.css", "public/app.js"],
+      "verification": "3ペイン表示 + エディタでコード編集できること",
+      "status": "pending"
+    },
+    {
+      "id": "ux-011",
+      "title": "アーティファクトパネル (生成ファイル表示)",
+      "priority": 97,
+      "category": "ux",
+      "agent": "X",
+      "description": "AIレスポンス内のコードブロックを自動抽出してサイドパネルに表示する。タブ切替でファイルごとに閲覧・コピー・ダウンロード可能。",
+      "files": ["public/app.js", "public/index.html", "public/styles.css"],
+      "verification": "コードを含む回答でアーティファクトパネルが自動表示されること",
+      "status": "pending"
+    },
+    {
+      "id": "meta-010",
+      "title": "モデルレイテンシー表示",
+      "priority": 94,
+      "category": "observability",
+      "agent": "META",
+      "description": "各APIコールの応答時間をUIに表示。ストリーミング開始までのTime-to-first-token (TTFT) とTotal response timeを表示するインジケーター追加。",
+      "files": ["public/app.js", "public/styles.css"],
+      "verification": "レスポンス完了後にレイテンシー(TTFT/Total)がメッセージ下部に表示されること",
+      "status": "pending"
+    },
+    {
+      "id": "github-010",
+      "title": "GitHub リポジトリブラウザ",
+      "priority": 91,
+      "category": "github_integration",
+      "agent": "X",
+      "description": "サイドパネルにファイルツリーを表示するGitHub repo browser実装。リポジトリURLを入力してファイルツリーをツリービューで閲覧し、クリックでファイル内容をエディタに表示。",
+      "files": ["api/github.js", "public/app.js", "public/index.html"],
+      "verification": "GitHubリポジトリのファイルツリーが閲覧できること",
+      "status": "pending"
+    },
+    {
+      "id": "github-011",
+      "title": "Diff ビューワー (PR変更確認)",
+      "priority": 88,
+      "category": "github_integration",
+      "agent": "X",
+      "description": "GitHub PRのdiffをビジュアル表示。AIが提案したコード変更を before/after 2カラムdiffで表示するコンポーネント追加。",
+      "files": ["public/app.js", "public/index.html", "public/styles.css"],
+      "verification": "PR diffが緑/赤でハイライトされた2カラム表示になること",
+      "status": "pending"
+    },
+    {
+      "id": "eval-001",
+      "title": "インラインコード実行 (JS sandbox)",
+      "priority": 86,
+      "category": "code_execution",
+      "agent": "X",
+      "description": "チャット内のJavaScriptコードブロックに「▶ Run」ボタン追加。クリックでsandboxed iframeで実行し結果をその場に表示。",
+      "files": ["public/app.js", "public/styles.css"],
+      "verification": "JSコードブロックの▶ Runボタンで実行結果が表示されること",
+      "status": "pending"
+    },
+    {
+      "id": "perf-010",
+      "title": "Supabase リアルタイム同期",
+      "priority": 83,
+      "category": "persistence",
+      "agent": "senju",
+      "description": "Supabase Realtime を使ってスレッドをデバイス間でリアルタイム同期。既存のsupabase endpointに threads テーブルを追加し、挿入/更新をsubscribeしてUIを即時反映。",
+      "files": ["public/app.js", "api/foundry.js"],
+      "verification": "別タブで同じスレッドが1秒以内に同期されること",
+      "status": "pending"
+    },
+    {
+      "id": "god-001",
+      "title": "GOD セルフレポート機能 (ドッグフーディング)",
+      "priority": 80,
+      "category": "observability",
+      "agent": "claude_code",
+      "description": "automation/foundry_agents/god.js に status report を app に送信する機能追加。GODが実行するたびに cycle metrics を public/god_status.json に書き込み、UIのステータスバーに表示。",
+      "files": ["automation/foundry_agents/god.js", "public/app.js", "public/index.html"],
+      "verification": "UIにGODのサイクル数・改善率・最終実行時刻が表示されること",
+      "status": "pending"
+    },
+    {
+      "id": "ux-012",
+      "title": "キーボードショートカット完全実装",
+      "priority": 77,
+      "category": "ux",
+      "agent": "X",
+      "description": "Cmd+Enter で送信, Cmd+K でスレッドクリア, Cmd+/ でコマンドパレット表示, Cmd+Shift+E でエディタフォーカスをキーボードショートカットとして実装。",
+      "files": ["public/app.js"],
+      "verification": "全ショートカットが動作すること",
+      "status": "pending"
+    },
+    {
+      "id": "meta-011",
+      "title": "自律ループ テレメトリーダッシュボード",
+      "priority": 74,
+      "category": "observability",
+      "agent": "META",
+      "description": "GODの全サイクル履歴をグラフ表示するダッシュボードページ追加。cycle数・改善率推移・エージェント稼働状況をChart.jsで可視化。URL: /dashboard",
+      "files": ["public/dashboard.html", "public/app.js"],
+      "verification": "/dashboardでGODメトリクスのグラフが表示されること",
+      "status": "pending"
+    },
+    {
+      "id": "perf-011",
+      "title": "API レート制限 + リトライ機構",
+      "priority": 71,
+      "category": "reliability",
+      "agent": "senju",
+      "description": "api/foundry.js に exponential backoff retry (最大3回) を追加。429/503エラー時に自動リトライし、UIにリトライ中の表示。",
+      "files": ["api/foundry.js", "public/app.js"],
+      "verification": "APIエラー時にリトライが走りUIに表示されること",
+      "status": "pending"
     }
   ],
   "completion_criteria": {

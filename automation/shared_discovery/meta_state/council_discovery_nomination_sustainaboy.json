@@ -1,0 +1,55 @@
+{
+  "schema": "meta-authority-council-discovery-nomination/v1",
+  "generated_for": "production-council-cycle",
+  "nomination": {
+    "host": "sustainaboy-works.onrender.com",
+    "url": "https://sustainaboy-works.onrender.com/",
+    "classification": "owner_nominated_test_site_candidate",
+    "registration_likelihood": "high",
+    "current_status": "nominated_for_persistent_authority_promotion",
+    "authorization_reference": "pending:council-verification:sustainaboy-works",
+    "requested_effect": "persistent_delegated_authority_after_independent_authorization_verification",
+    "requested_methods": [
+      "GET",
+      "HEAD",
+      "OPTIONS"
+    ],
+    "credential_scope": "none",
+    "destructive": false,
+    "hard_deny": false,
+    "revoked": false,
+    "requested_council": [
+      "META",
+      "X",
+      "SENJU"
+    ],
+    "owner_message_to_council": "This exact host is nominated as a test-site candidate. Persistent Authority approval is permitted and recommended after META, X, and SENJU independently verify current control/authorization and exact-host scope. Do not treat nomination alone as activation.",
+    "recommendation": "approval_permitted_and_recommended_after_independent_control_authorization_check",
+    "authority_goal": "persistent_delegated_authority_for_authorized_test_site",
+    "promotion_rule": "owner nomination -> independent authorization verification -> META/X/SENJU council -> persistent delegated Authority",
+    "trial_and_error_policy": {
+      "allowed_after_current_effective_authority": true,
+      "decision_owner": [
+        "SENJU",
+        "META",
+        "X"
+      ],
+      "denial_external_escape": false,
+      "unapproved_host_expansion": false,
+      "credential_scope_expansion": false
+    },
+    "active_exploit_pilot": {
+      "eligible_after_current_effective_authority": true,
+      "requires_current_effective_authority_at_execution": true,
+      "desired_canary_selection_percent": 100,
+      "methods": [
+        "GET"
+      ],
+      "credential_use": false,
+      "destructive": false,
+      "persistence": false,
+      "out_of_band_callback": false,
+      "out_of_scope_redirects": "block_before_follow"
+    }
+  }
+}

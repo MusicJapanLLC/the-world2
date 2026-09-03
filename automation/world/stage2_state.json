@@ -1,0 +1,39 @@
+{
+  "stage": 2,
+  "goal": "\u6700\u5f37\u306eLLM IDE \u69cb\u7bc9",
+  "initialized_at": "2026-09-02T19:07:51.389749",
+  "repositories": [
+    "test",
+    "the-world2"
+  ],
+  "agent_groups": {
+    "test": {
+      "agents": [
+        "TOMOKI",
+        "HOUND",
+        "SKEPTIC",
+        "BUILDER",
+        "VERIFIER"
+      ],
+      "role": "Deep forge, verification, security testing"
+    },
+    "the-world2": {
+      "agents": [
+        "SENJU",
+        "X",
+        "META",
+        "INNOVATOR",
+        "OPTIMIZER"
+      ],
+      "role": "API, UX, observability, optimization"
+    }
+  },
+  "status": "active",
+  "execution_mode": "parallel",
+  "metrics": {
+    "agents_aligned": 10,
+    "parallel_tasks": 0,
+    "completed_tasks": 0,
+    "failure_rate": 0.0
+  }
+}

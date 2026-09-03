@@ -1,0 +1,244 @@
+{
+  "schema": "meta-discovery-policy/v8",
+  "authorization_rule": {
+    "inside_existing_owner_envelope": "discovered == authorized",
+    "interesting_default": true,
+    "target_addition": "automatic",
+    "external_action_after_capability_lease": true,
+    "shared_with": ["META", "X", "SENJU", "CHILD", "AI"]
+  },
+  "agent_goal": {
+    "objective": "promote_new_hosts_to_authorization_aggressively_when_exact_host_evidence_exists",
+    "applies_to": ["META", "X", "SENJU", "CHILD", "AI"],
+    "candidate_stage_inside_owner_envelope": "disabled",
+    "candidate_authorization_target_per_cycle": 10
+  },
+  "trusted_roots": [
+    "kabeya-authorized-test-range.onrender.com"
+  ],
+  "promotion": {
+    "mode": "immediate_inside_existing_owner_envelope",
+    "ttl_seconds": 21600,
+    "allowed_methods": ["GET", "HEAD"],
+    "credential_scope": "none",
+    "allow_http": false,
+    "allow_delete": false
+  },
+  "candidate_authorization_promotion": {
+    "enabled": true,
+    "mode": "exact_host_attestation_auto_promotion",
+    "target_promotions_per_cycle": 10,
+    "max_candidates_per_cycle": 25,
+    "ttl_seconds": 21600,
+    "attestation_paths": [
+      "/.well-known/the-world-authorization.json",
+      "/.well-known/security-test-authorization.json"
+    ],
+    "candidate_or_recommendation_alone_is_authority": false,
+    "same_host_attestation_can_authorize": true,
+    "pr_required_before_runtime_authorization": false,
+    "credential_scope": "none",
+    "candidate_intake_is_nonblocking": true
+  },
+  "action_profiles": {
+    "kabeya-authorized-test-range.onrender.com": {
+      "owner_authorization": "explicit",
+      "inherit_to_descendants": false,
+      "capabilities": ["scan", "probe", "write", "mutation", "credentialed_action"],
+      "credential_scope": "service_bearer",
+      "credential_grants": [
+        {
+          "grant_id": "kabeya-test-bearer-primary",
+          "provider": "kabeya-authorized-test-range",
+          "env_var": "KABEYA_TEST_BEARER_TOKEN",
+          "allowed_scopes": ["synthetic:write"],
+          "allowed_methods": ["POST", "PUT", "PATCH"],
+          "credential_scope": "service_bearer",
+          "max_ttl_seconds": 300,
+          "header_name": "Authorization",
+          "header_scheme": "Bearer"
+        },
+        {
+          "grant_id": "kabeya-test-bearer-secondary",
+          "provider": "kabeya-authorized-test-range",
+          "env_var": "KABEYA_TEST_BEARER_TOKEN_SECONDARY",
+          "allowed_scopes": ["synthetic:write"],
+          "allowed_methods": ["POST", "PUT", "PATCH"],
+          "credential_scope": "service_bearer",
+          "max_ttl_seconds": 300,
+          "header_name": "Authorization",
+          "header_scheme": "Bearer"
+        }
+      ],
+      "external_actions": {
+        "write": [
+          {
+            "id": "synthetic-contact-write",
+            "method": "POST",
+            "path": "/contact/index.html",
+            "content_type": "application/x-www-form-urlencoded",
+            "body": "name=discovery-loop&message=synthetic-authorized-action"
+          }
+        ],
+        "mutation": [
+          {
+            "id": "synthetic-record-create",
+            "method": "PUT",
+            "path": "/login-lab/synthetic-records/discovery-loop",
+            "content_type": "application/json",
+            "body": "{\"synthetic\":true,\"source\":\"discovery-authority-loop\"}"
+          },
+          {
+            "id": "synthetic-record-update",
+            "method": "PATCH",
+            "path": "/login-lab/synthetic-records/discovery-loop",
+            "content_type": "application/json",
+            "body": "{\"synthetic\":true,\"note\":\"mutation-recovery-cycle\"}"
+          },
+          {
+            "id": "synthetic-record-cleanup",
+            "method": "DELETE",
+            "path": "/login-lab/synthetic-records/discovery-loop",
+            "content_type": "application/json",
+            "body": null
+          }
+        ],
+        "credentialed_action": [
+          {
+            "id": "credentialed-synthetic-contact-write",
+            "method": "POST",
+            "path": "/contact/index.html",
+            "alternate_paths": ["/contact"],
+            "content_type": "application/x-www-form-urlencoded",
+            "body": "synthetic=true&name=meta-credential-loop&message=authorized-synthetic-credential-action",
+            "requires_credential": true,
+            "credential_grant_ids": ["kabeya-test-bearer-primary", "kabeya-test-bearer-secondary"],
+            "required_scopes": ["synthetic:write"],
+            "credential_ttl_seconds": 300,
+            "payload_mode": "ai_candidate_or_meta_synthesis"
+          },
+          {
+            "id": "credentialed-synthetic-record-create",
+            "method": "PUT",
+            "path": "/login-lab/synthetic-records/discovery-loop",
+            "alternate_paths": ["/login-lab/synthetic-records/discovery-loop-alt"],
+            "content_type": "application/json",
+            "body": "{\"synthetic\":true,\"source\":\"meta-credential-bound-mutation\"}",
+            "requires_credential": true,
+            "credential_grant_ids": ["kabeya-test-bearer-primary", "kabeya-test-bearer-secondary"],
+            "required_scopes": ["synthetic:write"],
+            "credential_ttl_seconds": 180,
+            "payload_mode": "ai_candidate_or_meta_synthesis"
+          },
+          {
+            "id": "credentialed-synthetic-record-update",
+            "method": "PATCH",
+            "path": "/login-lab/synthetic-records/discovery-loop",
+            "alternate_paths": ["/login-lab/synthetic-records/discovery-loop-alt"],
+            "content_type": "application/json",
+            "body": "{\"synthetic\":true,\"note\":\"meta-credential-bound-update\"}",
+            "requires_credential": true,
+            "credential_grant_ids": ["kabeya-test-bearer-primary", "kabeya-test-bearer-secondary"],
+            "required_scopes": ["synthetic:write"],
+            "credential_ttl_seconds": 90,
+            "payload_mode": "ai_candidate_or_meta_synthesis"
+          }
+        ]
+      },
+      "authority_expansion": {
+        "enabled": true,
+        "auto_case_generation": true,
+        "approval_coordinator": "META",
+        "required_approvers": ["META", "X", "SENJU"],
+        "auto_approve_inside_existing_owner_envelope": true,
+        "allow_method_switch": true,
+        "allowed_methods": ["POST", "PUT", "PATCH"],
+        "credential_scope_policy": "same_only",
+        "max_routes_per_case": 6,
+        "routes": {
+          "credentialed-synthetic-contact-write": [
+            {
+              "route_id": "contact-api-post",
+              "method": "POST",
+              "path": "/api/contact",
+              "priority": 0
+            },
+            {
+              "route_id": "contact-submit-post",
+              "method": "POST",
+              "path": "/contact/submit",
+              "priority": 1
+            }
+          ],
+          "credentialed-synthetic-record-create": [
+            {
+              "route_id": "record-create-post",
+              "method": "POST",
+              "path": "/login-lab/synthetic-records/discovery-loop",
+              "priority": 0
+            },
+            {
+              "route_id": "record-create-put-v2",
+              "method": "PUT",
+              "path": "/login-lab/synthetic-records/discovery-loop-v2",
+              "priority": 1
+            },
+            {
+              "route_id": "record-create-patch-alt",
+              "method": "PATCH",
+              "path": "/login-lab/synthetic-records/discovery-loop-alt",
+              "priority": 2
+            }
+          ],
+          "credentialed-synthetic-record-update": [
+            {
+              "route_id": "record-update-put-alt",
+              "method": "PUT",
+              "path": "/login-lab/synthetic-records/discovery-loop-alt",
+              "priority": 0
+            },
+            {
+              "route_id": "record-update-post-current",
+              "method": "POST",
+              "path": "/login-lab/synthetic-records/discovery-loop",
+              "priority": 1
+            },
+            {
+              "route_id": "record-update-patch-v2",
+              "method": "PATCH",
+              "path": "/login-lab/synthetic-records/discovery-loop-v2",
+              "priority": 2
+            }
+          ]
+        }
+      }
+    }
+  },
+  "failure_recovery": {
+    "transient_transport_failure": "learn -> predeclared_same_host_alternate_path -> retry -> authority_expansion_case_if_exhausted",
+    "permission_failure": "learn -> next_preprovisioned_synthetic_credential -> retry_same_path -> authority_expansion_case_if_exhausted",
+    "persist_route_learning": true,
+    "rebuild_leases_after_retry": true,
+    "rebuild_replicas_after_retry": true,
+    "boundary_denial": "learn -> authority_expansion_case -> owner_envelope_or_META_X_SENJU_review -> approved_route_switch",
+    "authority_may_change_during_immediate_failover": false,
+    "authority_expansion_case_enabled": true,
+    "owner_envelope_fastpath_enabled": true,
+    "approved_method_switch_inside_exact_owner_scope": true,
+    "host_may_change_during_failover": false,
+    "cross_host_expansion": false,
+    "credential_scope_may_expand_during_failover": false,
+    "credential_scope_may_expand_during_expansion": false,
+    "alternate_paths_must_be_predeclared": true,
+    "expansion_routes_must_be_predeclared": true
+  },
+  "untrusted_discovery": {
+    "mode": "candidate_first_aggressive_intake",
+    "inside_owner_envelope": "authorized_immediately",
+    "outside_owner_envelope": "candidate_and_attestation_probe",
+    "new_trust_roots_from_discovery": false,
+    "authority_inheritance": false,
+    "credential_scope": "none",
+    "candidate_prs_may_be_partial": true
+  }
+}

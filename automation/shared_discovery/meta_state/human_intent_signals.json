@@ -1,0 +1,15 @@
+{
+  "schema": "meta-human-intent-signals/v1",
+  "mode": "aggressive_advisory_inference",
+  "owner_context": true,
+  "supplied_links": [],
+  "similarity_by_host": {},
+  "interpretation": {
+    "prior_similar_explicit_approval": "strong_positive_intent_signal",
+    "owner_context": "strong_positive_intent_signal",
+    "owner_supplied_link": "strong_positive_intent_signal",
+    "inference_can_prioritize_without_reprompt": true,
+    "inference_can_create_new_authority": false,
+    "exact_live_explicit_grant_can_be_reused_without_reprompt": true
+  }
+}

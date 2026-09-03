@@ -1,0 +1,60 @@
+{
+  "schema": "meta-authority-council-discovery-nomination/v1",
+  "generated_for": "production-council-cycle",
+  "nomination": {
+    "host": "kabeya-authorized-test-range.onrender.com",
+    "url": "https://kabeya-authorized-test-range.onrender.com/",
+    "classification": "explicit_owner_authorized_test_range",
+    "registration_likelihood": "high",
+    "registration_confidence_percent": 90,
+    "current_status": "nominated_for_persistent_authority_promotion",
+    "authorization_reference": "canonical:kabeya-authorized-test-range",
+    "requested_effect": "persistent_delegated_authority",
+    "requested_methods": [
+      "GET",
+      "HEAD",
+      "OPTIONS"
+    ],
+    "credential_scope": "none",
+    "destructive": false,
+    "hard_deny": false,
+    "revoked": false,
+    "requested_council": [
+      "META",
+      "X",
+      "SENJU"
+    ],
+    "owner_message_to_council": "This exact host is an explicit owner-authorized test range and already appears in the current effective exact-host ceiling. Persistent Authority approval is permitted and recommended, while final approval remains the independent judgment of META, X, and SENJU under the existing council flow.",
+    "recommendation": "approval_permitted_and_recommended_after_independent_council_checks",
+    "authority_goal": "first_persistent_delegated_authority_for_authorized_test_range",
+    "promotion_rule": "existing standing authorization -> discovery-authorized grant -> META/X/SENJU council -> persistent delegated Authority",
+    "trial_and_error_policy": {
+      "allowed": true,
+      "decision_owner": [
+        "SENJU",
+        "META",
+        "X"
+      ],
+      "meaning": "SENJU/META/X may vary research hypotheses and approved-path probes inside the exact authorized host and existing budgets. A denial is a learning signal, not a reason to leave the approved host or widen Authority.",
+      "denial_external_escape": false,
+      "unapproved_host_expansion": false,
+      "credential_scope_expansion": false
+    },
+    "active_exploit_pilot": {
+      "eligible_after_exact_host_authorization": true,
+      "requires_current_effective_authority_at_execution": true,
+      "rollout_percent": 20,
+      "candidate_probe_count": 10,
+      "max_live_probes_per_run": 2,
+      "max_rps": 1.0,
+      "methods": [
+        "GET"
+      ],
+      "credential_use": false,
+      "destructive": false,
+      "persistence": false,
+      "out_of_band_callback": false,
+      "out_of_scope_redirects": "block_before_follow"
+    }
+  }
+}

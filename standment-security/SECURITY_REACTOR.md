@@ -2,7 +2,7 @@
 
 **Mission:** Security開発を単発タスクではなく、停止しない証拠駆動ループとして回す。
 
-- sessions completed: **3**
+- sessions completed: **12**
 - rounds this session: **12**
 - unique tracks touched: **6**
 - material rounds: **12**
@@ -12,7 +12,7 @@
 - full evidence files: **11/11**
 - average evidence coverage: **100.0%**
 - next track: **SEC-PORT-003**
-- next mode: **INDEPENDENT_RETEST**
+- next mode: **SWITCH_EVIDENCE_PATH**
 
 ## Guardrails
 - owned repository / synthetic defensive evidence only

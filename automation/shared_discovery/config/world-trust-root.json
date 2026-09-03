@@ -1,0 +1,12 @@
+{
+  "schema": "world-trust-root-config/v1",
+  "environment": "production",
+  "trust_root_id": "world:existing-owner-authority",
+  "actors": ["META", "X", "SENJU", "CHILD", "AI"],
+  "stale_after_seconds": {
+    "shared_discovery": 3600,
+    "network_policy": 1200,
+    "external_recovery": 7200,
+    "production_continuity": 3600
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "id": "worker-3",
+  "name": "Alternate",
+  "model": "claude-sonnet-4-6",
+  "max_tokens": 4096,
+  "strategy": "Solve the same specification independently and deliberately consider an alternative implementation path from the obvious first approach. Optimize for correctness under edge cases and simple interfaces. On retries, use the complete test output plus prior code to choose a materially better design when the previous approach is brittle."
+}

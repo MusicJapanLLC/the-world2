@@ -1,0 +1,17 @@
+{
+  "schema": "meta-authority-review-policy/v1",
+  "reviewer": "senju-authority-reviewer/v1",
+  "decision_model": "independent_explicit_authority_only",
+  "candidate_source_is_not_authority": true,
+  "source_href_alone_can_authorize": false,
+  "redirect_requires_reviewed_grant": true,
+  "grant": {
+    "mode": "probationary_read_only",
+    "ttl_seconds": 21600,
+    "allowed_methods": ["GET", "HEAD"],
+    "credential_scope": "none",
+    "allow_http": false,
+    "allow_delete": false
+  },
+  "unmatched_candidate": "hold"
+}

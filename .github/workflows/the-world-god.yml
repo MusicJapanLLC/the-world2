@@ -50,7 +50,7 @@ jobs:
 
 - Updated cycle metrics and state
 - Analysis: $(node -e "const g=JSON.parse(require('fs').readFileSync('automation/foundry_agents/god.json')); console.log('Cycle ' + g.globalState.cycleNumber + ' | Improvement: ' + Math.round(g.globalState.metrics.improvementRate * 100) + '%')")"
-            git push -u origin claude/merge-and-fix-unmerged-nl45b3
+            git push -u origin audit/reality-gate-v1
           else
             echo "No changes to commit"
           fi

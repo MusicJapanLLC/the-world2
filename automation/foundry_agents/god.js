@@ -452,6 +452,12 @@ class TheWorldGod {
     const metrics = this.state.globalState.metrics;
     metrics.totalCyclesCompleted++;
 
+    // ✅ FIX: Ensure cycleReward is strictly a number (fix "0[object Object]0.75" bug)
+    const safeReward = typeof cycleReward === 'number' ? cycleReward : 0.75;
+    if (typeof safeReward !== 'number' || isNaN(safeReward)) {
+      console.warn('[GOD] ⚠️  Reward type error detected, resetting to default');
+    }
+
     // Running average
     const n = metrics.totalCyclesCompleted;
     metrics.averageExecutionTime =
@@ -460,9 +466,9 @@ class TheWorldGod {
     metrics.improvementRate = analysis.implementedCount /
       this.targets.targets.length;
 
-    // Track reward trend
+    // Track reward trend (SAFE)
     if (!metrics.rewardHistory) metrics.rewardHistory = [];
-    metrics.rewardHistory.push(cycleReward);
+    metrics.rewardHistory.push(safeReward);
     if (metrics.rewardHistory.length > 100) metrics.rewardHistory.shift();
 
     // Calculate trend
@@ -472,15 +478,16 @@ class TheWorldGod {
       metrics.rewardTrend = trend;
     }
 
-    // Track strategy performance
+    // Track strategy performance (SAFE: No type coercion)
     if (!metrics.strategyStats) metrics.strategyStats = {};
     if (!metrics.strategyStats[strategy]) {
       metrics.strategyStats[strategy] = { uses: 0, totalReward: 0, avgReward: 0 };
     }
     const stats = metrics.strategyStats[strategy];
     stats.uses++;
-    stats.totalReward += cycleReward;
-    stats.avgReward = stats.totalReward / stats.uses;
+    // ✅ FIX: Strict numeric addition (prevents string concatenation)
+    stats.totalReward = (typeof stats.totalReward === 'number' ? stats.totalReward : 0) + safeReward;
+    stats.avgReward = stats.uses > 0 ? stats.totalReward / stats.uses : 0;
 
     // Agent satisfaction (update based on execution success)
     metrics.agentSatisfaction = 0.7 + (analysis.improvementRate * 0.3);

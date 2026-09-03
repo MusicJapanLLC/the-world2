@@ -24,7 +24,7 @@ jobs:
       AI_DEV_SLACK_WEBHOOK_URL: ${{ secrets.AI_DEV_SLACK_WEBHOOK_URL }}
     steps:
       - name: Checkout current default
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           ref: ${{ env.DEFAULT_BRANCH }}
           fetch-depth: 20

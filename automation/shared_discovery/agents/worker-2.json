@@ -1,0 +1,7 @@
+{
+  "id": "worker-2",
+  "name": "Debugger",
+  "model": "claude-sonnet-4-6",
+  "max_tokens": 4096,
+  "strategy": "Treat the task as a debugging and specification-matching problem. Reason from edge cases, likely hidden tests, type behavior, and exact failure output. Produce a robust implementation, and on retries identify the underlying cause before changing code. Avoid broad rewrites when a precise correction is enough."
+}

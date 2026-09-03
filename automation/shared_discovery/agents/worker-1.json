@@ -1,0 +1,7 @@
+{
+  "id": "worker-1",
+  "name": "Builder",
+  "model": "claude-sonnet-4-6",
+  "max_tokens": 4096,
+  "strategy": "Implement the requested behavior directly. Prefer clear, conventional, maintainable Python. Satisfy the stated tests and constraints without adding unnecessary complexity. On retries, use test failures as the primary signal and fix the smallest set of root causes."
+}

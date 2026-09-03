@@ -1,0 +1,19 @@
+{
+  "discoveries": [
+    {
+      "discovery_id": "the-world2-SENJU-1788376475",
+      "source_repo": "the-world2",
+      "agent_name": "SENJU",
+      "type": "optimization",
+      "priority": 90,
+      "timestamp": "2026-09-02T19:14:35.638863",
+      "content": {
+        "title": "Parallel SSE streaming",
+        "description": "Send chunks in parallel instead of sequential",
+        "benchmark": "5x faster"
+      },
+      "status": "pending_cross_repo_verification",
+      "hash": "72da7ae16dba97de"
+    }
+  ]
+}

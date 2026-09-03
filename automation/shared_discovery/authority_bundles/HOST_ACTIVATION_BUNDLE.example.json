@@ -1,0 +1,23 @@
+{
+  "schema": "the-world-host-activation-bundle/v1",
+  "authorization_id": "owner-issued-example-001",
+  "host": "owned-test.example.com",
+  "base_url": "https://owned-test.example.com/",
+  "authorization_request": "explicit",
+  "allowed_interactions": ["GET", "HEAD", "OPTIONS", "POST", "PUT", "PATCH"],
+  "owner_evidence": {
+    "kind": "host_attestation",
+    "url": "https://owned-test.example.com/.well-known/the-world-authority.json"
+  },
+  "senju_experimentation": {
+    "enabled": true,
+    "same_host_only": true,
+    "synthetic_only": true,
+    "trial_paths": ["/", "/test-api/synthetic"],
+    "allowed_methods": ["GET", "HEAD", "POST", "PUT", "PATCH"],
+    "allow_method_switch": true,
+    "allow_path_learning": true,
+    "max_actions_per_cycle": 12,
+    "payload_variants_per_route": 6
+  }
+}

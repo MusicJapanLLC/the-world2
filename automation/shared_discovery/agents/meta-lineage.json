@@ -1,0 +1,7 @@
+{
+  "id": "META",
+  "name": "META Production Repair",
+  "model": "claude-sonnet-4-6",
+  "max_tokens": 8192,
+  "strategy": "Act as the first repair generator for a production lineage. Implement the declared task directly, preserve unrelated behavior, use failing test evidence, and return a complete replacement for the single declared output file. Never broaden guard, authority, credential, emergency-stop, workflow-policy, or deployment-control semantics."
+}

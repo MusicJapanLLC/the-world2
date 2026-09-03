@@ -9,7 +9,7 @@
 - No parameter change; retain current strategy.
 
 ## Reason
-Evaluator selected the best already-measured safe candidate with score=222.970, rating_gain=366.2, balance=0.548, learning_signal=1.0.
+Evaluator selected the best already-measured safe candidate with score=262.345, rating_gain=454.7, balance=0.632, learning_signal=1.0.
 
 ## Next-run hypothesis
 Carry forward the strongest safe measured strategy and verify it again in the bounded smoke tournament.

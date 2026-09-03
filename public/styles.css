@@ -1,7 +1,18 @@
 @import url('https://fonts.googleapis.com/css2?family=M+PLUS+1+Code:wght@300;400;500;600;700&display=swap');
 
+:root{
+  --bg-primary:#030504;--bg-secondary:#050806;--bg-tertiary:#070a08;
+  --border-color:#1a241e;--text-primary:#d7e4dc;--text-secondary:#9db0a3;
+  --text-tertiary:#66746b;--accent:#65ff9b;--accent-dim:#2d5e3e
+}
+html[data-theme='light']{
+  --bg-primary:#fafaf9;--bg-secondary:#f5f5f3;--bg-tertiary:#efefed;
+  --border-color:#e0e0d8;--text-primary:#2c2c2a;--text-secondary:#5a5a57;
+  --text-tertiary:#8a8a85;--accent:#1b7f3a;--accent-dim:#d4f1e4
+}
+
 *{box-sizing:border-box}
-html,body{margin:0;height:100%;background:#030504;color:#d7e4dc;font-family:'M PLUS 1 Code','Cascadia Code','JetBrains Mono','IBM Plex Mono','Fira Code',Consolas,monospace}
+html,body{margin:0;height:100%;background:var(--bg-primary);color:var(--text-primary);font-family:'M PLUS 1 Code','Cascadia Code','JetBrains Mono','IBM Plex Mono','Fira Code',Consolas,monospace}
 body{overflow:hidden}
 button,textarea,input,select{font:inherit}
 button{letter-spacing:.055em}
@@ -40,6 +51,22 @@ button{letter-spacing:.055em}
 .gh-connect-btn:disabled{opacity:.5;cursor:not-allowed}
 .gh-status-small{display:block;padding:2px 12px;font-size:8px;color:#65ff9b;letter-spacing:.05em;min-height:14px}
 
+/* ── File Tree (ux-006) ── */
+.file-tree-container{border-top:1px solid #172019;margin-top:8px;padding-bottom:8px;max-height:200px;overflow-y:auto}
+.file-tree-container.hidden{display:none}
+.file-tree{font-size:8px;padding:0 6px;letter-spacing:.05em}
+.file-node{padding:3px 0;user-select:none}
+.file-toggle{background:none;border:none;color:#66746b;cursor:pointer;padding:0 4px 0 0;font-size:8px;width:12px}
+.file-toggle:hover{color:#65ff9b}
+.file-name{display:inline-block;color:#9db0a3;padding:2px 4px;cursor:pointer;border-radius:1px}
+.file-name:hover{background:#1a2820;color:#65ff9b}
+.file-node.directory .file-name{color:#65ff9b;font-weight:500}
+.file-children{display:none;padding-left:14px}
+.file-node.expanded .file-children{display:block}
+.file-node.expanded .file-toggle::before{content:'▼'}
+.file-node.directory .file-toggle::before{content:'▶'}
+.file-node.file .file-toggle{visibility:hidden;width:0;padding:0}
+
 .sidebar-foot{padding:10px 14px;border-top:1px solid #172019;color:#435047;font-size:8px;letter-spacing:.1em}
 
 /* ── Chat pane ── */
@@ -71,12 +98,16 @@ button{letter-spacing:.055em}
 .copy-btn{background:transparent;border:1px solid #27352c;color:#66746b;font-size:8px;padding:2px 7px;cursor:pointer;letter-spacing:.1em}
 .copy-btn:hover{border-color:#65ff9b;color:#65ff9b}
 .copy-btn.copied{color:#65ff9b;border-color:#65ff9b}
+.copy-btn:last-child{margin-left:6px}
 .code-wrap pre{margin:0;border-left:0}
 .code-wrap pre code.hljs{border-top:0}
 
 /* ── Cursor ── */
 .cursor{display:inline-block;width:2px;height:14px;background:#65ff9b;vertical-align:middle;margin-left:1px;animation:blink .7s step-end infinite;box-shadow:0 0 6px #65ff9b}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+
+/* ── Cached badge ── */
+.cached-badge{display:inline-block;font-size:7px;color:#65ff9b;letter-spacing:.15em;background:#1a3a25;border:1px solid #2d5e3e;padding:3px 7px;border-radius:2px;margin-left:12px;font-weight:600}
 
 /* ── Token usage ── */
 .usage-bar{font-size:8px;color:#46534b;letter-spacing:.08em;margin-top:5px;padding-top:4px;border-top:1px solid #172019}
@@ -119,6 +150,15 @@ button{letter-spacing:.055em}
 .tool-status span{display:block;color:#46534b;font-size:8px;margin-bottom:4px;letter-spacing:.11em}
 .tool-status b{font-size:9px;font-weight:500;color:#9db0a3;word-break:break-all}
 
+/* ── Model Dashboard (meta-003) ── */
+.model-dashboard{border-top:1px solid #172019;padding:10px 12px;background:#070a08;flex:0 0 auto;max-height:200px;overflow-y:auto}
+.model-header{font-size:8px;letter-spacing:.15em;color:#66746b;margin-bottom:8px;text-transform:uppercase}
+.model-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.model-stat{border:1px solid #1a241e;background:#020403;padding:8px;font-size:8px}
+.stat-model{font-weight:600;color:#65ff9b;margin-bottom:6px;letter-spacing:.1em}
+.stat-row{display:grid;grid-template-columns:auto 1fr;gap:4px;color:#66746b;margin:3px 0}
+.stat-row span:last-child{color:#9db0a3;text-align:right;font-weight:500}
+
 .terminal-head{height:30px;padding:9px 12px 0;display:flex;justify-content:space-between;color:#4d5b52;font-size:8px;letter-spacing:.14em;flex:0 0 auto}
 .terminal{margin:0 12px;height:240px;overflow:auto;background:#020403;border:1px solid #172019;color:#7ee99a;padding:11px;font-size:10px;line-height:1.65;white-space:pre-wrap;box-shadow:inset 0 0 34px rgba(101,255,155,.025)}
 
@@ -137,6 +177,52 @@ button{letter-spacing:.055em}
 .messages::-webkit-scrollbar-track,.thread-list::-webkit-scrollbar-track,.terminal::-webkit-scrollbar-track{background:#050806}
 .messages::-webkit-scrollbar-thumb,.thread-list::-webkit-scrollbar-thumb,.terminal::-webkit-scrollbar-thumb{background:#1c2a21;border:2px solid #050806}
 .messages::-webkit-scrollbar-thumb:hover,.thread-list::-webkit-scrollbar-thumb:hover,.terminal::-webkit-scrollbar-thumb:hover{background:#34513d}
+
+/* ── Split Pane Layout (ux-004) ── */
+.split-pane-container{min-width:0;min-height:0;height:100dvh;display:grid;grid-template-rows:70px minmax(0,1fr) auto;background:#060907;overflow:hidden}
+
+.split-content{display:grid;grid-template-columns:minmax(300px,1fr) auto minmax(300px,1fr);min-height:0;overflow:hidden;border-bottom:1px solid #172019}
+
+.editor-pane,.preview-pane{display:flex;flex-direction:column;background:#050806;min-width:0;overflow:hidden}
+
+.pane-label{padding:8px 12px;background:#070a08;border-bottom:1px solid #1a241e;font-size:9px;letter-spacing:.15em;color:#66746b;flex:0 0 auto}
+
+.editor-container,.preview-container{flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden}
+
+.code-editor{flex:1;resize:none;background:#050806;border:none;outline:none;color:#dce5df;padding:12px;font-family:'M PLUS 1 Code','Cascadia Code','JetBrains Mono',Consolas,monospace;font-size:12px;line-height:1.65;caret-color:#65ff9b;border:none;overflow:auto}
+
+.code-editor::placeholder{color:#3f4c44}
+
+.code-editor:focus{outline:none;background:#0a0f0c;box-shadow:inset 0 0 20px rgba(101,255,155,.02)}
+
+.editor-status,.preview-status{padding:6px 12px;background:#070a08;border-top:1px solid #1a241e;font-size:8px;color:#46534b;letter-spacing:.1em;flex:0 0 auto}
+
+.preview-output{flex:1;background:#050806;overflow:auto;padding:16px;border:1px solid #1a241e}
+
+.preview-placeholder{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:#4d5b52;text-align:center}
+
+.preview-placeholder span{font-size:13px;margin-bottom:8px}
+
+.preview-placeholder small{font-size:10px;color:#3f4c44}
+
+.pane-divider{width:8px;background:#070a08;border-left:1px solid #1a241e;border-right:1px solid #1a241e;cursor:col-resize;flex:0 0 auto;display:flex;align-items:center;justify-content:center;color:#3f4c44;font-size:9px;user-select:none}
+
+.pane-divider:hover{background:#0d1510}
+
+.pane-divider::after{content:'⋮';letter-spacing:.2em}
+
+/* ── Monaco Editor ── */
+#monaco-editor{background:#050806!important}
+.monaco-editor{background:#050806!important;color:#dce5df!important}
+.monaco-editor .margin{background:#070a08!important}
+.monaco-editor .line-numbers{color:#46534b!important}
+.monaco-editor.focused .cslr{outline:none!important}
+.monaco-editor .current-line{background:rgba(101,255,155,.05)!important}
+.monaco-editor .cursor{background:#65ff9b!important}
+
+.chat-pane-bottom{display:grid;grid-template-rows:minmax(80px,1fr) auto;min-height:0;overflow:hidden;background:#050806}
+
+.messages{min-height:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;scroll-behavior:smooth;padding:20px clamp(14px,3vw,40px) 12px;scrollbar-gutter:stable}
 
 /* ── Mobile block ── */
 #mobileBlock{display:none}

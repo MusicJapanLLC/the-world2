@@ -1,0 +1,77 @@
+name: The World God — Autonomous Orchestration
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'  # Every 5 minutes
+  workflow_dispatch:
+
+jobs:
+  orchestrate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: 🎭 THE WORLD GOD AWAKENS
+        run: |
+          echo "════════════════════════════════════════════════════════════════"
+          echo "THE WORLD GOD — AUTONOMOUS ORCHESTRATION CYCLE"
+          echo "════════════════════════════════════════════════════════════════"
+          node automation/foundry_agents/god.js cycle
+
+      - name: 🧠 Self-Evolution Analysis
+        run: |
+          echo ""
+          echo "Analyzing for self-improvement opportunities..."
+          node automation/foundry_agents/god.js status
+
+      - name: 📊 Commit god state
+        run: |
+          git config user.name "The World God"
+          git config user.email "god@the-world.ai"
+
+          if [[ $(git diff --stat) != '' ]]; then
+            git add automation/foundry_agents/god.json automation/foundry_agents/improvement_targets.json
+            git commit -m "chore(god): autonomous cycle update
+
+- Updated cycle metrics and state
+- Analysis: $(node -e "const g=JSON.parse(require('fs').readFileSync('automation/foundry_agents/god.json')); console.log('Cycle ' + g.globalState.cycleNumber + ' | Improvement: ' + Math.round(g.globalState.metrics.improvementRate * 100) + '%')")"
+            git push -u origin audit/reality-gate-v1
+          else
+            echo "No changes to commit"
+          fi
+
+      - name: 📢 Report Status
+        if: always()
+        run: |
+          echo "════════════════════════════════════════════════════════════════"
+          echo "CYCLE STATUS"
+          echo "════════════════════════════════════════════════════════════════"
+          node -e "
+            const god = JSON.parse(require('fs').readFileSync('automation/foundry_agents/god.json'));
+            const targets = JSON.parse(require('fs').readFileSync('automation/foundry_agents/improvement_targets.json'));
+
+            console.log('Cycle:', god.globalState.cycleNumber);
+            console.log('Status: COMPLETE');
+            console.log('Execution Time:', god.globalState.metrics.averageExecutionTime + 'ms');
+            console.log('Improvement Rate:', Math.round(god.globalState.metrics.improvementRate * 100) + '%');
+            console.log('Agents Active:', Object.keys(god.agentRegistry).length);
+            console.log('Targets Implemented:', targets.targets.filter(t => t.status === 'implemented').length + '/' + targets.targets.length);
+            console.log('');
+            console.log('Next Evolution:', new Date(Date.now() + 900000).toISOString());
+          "
+          echo "════════════════════════════════════════════════════════════════"

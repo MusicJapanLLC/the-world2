@@ -235,14 +235,15 @@ Every night at 23:00 UTC:
 
           if [[ $(git diff --stat) != '' ]]; then
             git add automation/foundry_agents/god.json README.md
-            git commit -m "chore(portfolio): daily evolution update
+            git commit -m "chore(portfolio): daily evolution update [skip ci]
 
 - Updated cycle metrics
 - Deployed new features
 - All tests passing
 - Performance improved
 - Portfolio metrics updated"
-            git push -u origin claude/merge-and-fix-unmerged-nl45b3
+            git pull --rebase origin audit/reality-gate-v1 || true
+            git push -u origin audit/reality-gate-v1
           fi
 
   report:

@@ -114,7 +114,7 @@ jobs:
 
           if [[ $(git diff --stat) != '' ]]; then
             git add automation/shared_knowledge.json automation/world/stage2_*.json
-            git commit -m "chore(stage2): Update execution state and knowledge sync
+            git commit -m "chore(stage2): Update execution state and knowledge sync [skip ci]
 
 - Synchronized knowledge between test & the-world2
 - Updated agent cooperation metrics
@@ -123,6 +123,7 @@ jobs:
 
 Stage 2 Status: ACTIVE ✅
 Goal: 最強のLLM IDE 構築"
+            git pull --rebase origin audit/reality-gate-v1 || true
             git push -u origin audit/reality-gate-v1
             echo "✓ Committed execution state"
           fi

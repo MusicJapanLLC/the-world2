@@ -17,7 +17,7 @@
     "@types/node": "^26.4.0",
     "@types/three": "^0.180.0",
     "lighthouse": "^13.4.1",
-    "typescript": "^5.9.2",
+    "typescript": "^7.0.2",
     "vite": "^7.1.0"
   }
 }

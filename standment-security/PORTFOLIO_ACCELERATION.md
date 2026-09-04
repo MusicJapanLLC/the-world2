@@ -2,16 +2,16 @@
 
 **Company Priority: P0**
 
-Updated JST: `2026-09-05T03:55:12+09:00`
+Updated JST: `2026-09-05T07:05:57+09:00`
 
 ## TODAY'S PRIMARY BET
-- `SEC-PORT-001` — Standment Security Scan dogfood + Before/After case study
+- `SEC-PORT-005` — Autonomous-agent security and auditability pack
 - status: **VISIBLE**
 - evidence coverage: **100%**
-- white-hat candidates: **4**
-- Senju focus: **robustness**
-- selection: `HIGHEST_EVIDENCE_CLOSURE_SCORE`
-- next material action: Convert the strongest white-hat candidate into a bounded reproduction -> remediation -> independent retest evidence bundle.
+- white-hat candidates: **0**
+- Senju focus: **balance**
+- selection: `ROTATED_AFTER_STAGNATION:SEC-PORT-001->SEC-PORT-005`
+- next material action: Run an independent retest, preserve counterevidence, and document residual risk before any verification claim.
 
 ## THREE-LANE R&D
 - Verification closure: `SEC-PORT-001`
@@ -24,7 +24,7 @@ Updated JST: `2026-09-05T03:55:12+09:00`
 - average evidence coverage: **100%**
 - open white-hat candidates: **4**
 - unfinished tracks: **9**
-- stagnation streak: **2**
+- stagnation streak: **0**
 
 ## ANTI-STAGNATION
 No material progress for three consecutive selections => automatically rotate to another high-value evidence path. Repeating unchanged activity does not count as R&D progress.

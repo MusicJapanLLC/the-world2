@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-09-02T23:43:04+00:00",
+  "updated_at": "2026-09-03T23:42:58+00:00",
   "strategy": {
     "population": 120,
     "generations": 16,
@@ -10,25 +10,25 @@
     "blue_budget": 16,
     "seed": 20260829
   },
-  "score": 262.345,
+  "score": 263.32,
   "evaluation": {
-    "score": 262.345,
+    "score": 263.32,
     "safe": true,
-    "rating_gain": 454.7,
-    "balance": 0.632,
+    "rating_gain": 463.2,
+    "balance": 0.612,
     "learning_signal": 1.0,
     "reason": "safe balanced learning run"
   },
   "red_champion": {
     "side": "red",
-    "rating": 4799.7,
-    "resources": 28.6586304839793,
-    "generation": 22,
+    "rating": 4850.4,
+    "resources": 28.10609073638731,
+    "generation": 23,
     "genome": {
       "kind": "red",
       "focus": {
         "sqli": 0.179,
-        "nosqli": 0.574,
+        "nosqli": 0.678,
         "xss": 1.0,
         "csrf": 0.234,
         "auth_bypass": 1.0,
@@ -43,7 +43,7 @@
         "ssti": 0.458,
         "race_condition": 0.346,
         "secrets_exposure": 0.752,
-        "misconfig": 0.042
+        "misconfig": 0.233
       },
       "skill": 0.846,
       "stealth": 1.0,
@@ -52,16 +52,16 @@
   },
   "blue_champion": {
     "side": "blue",
-    "rating": 4499.4,
-    "resources": 33.29252696366268,
-    "generation": 7,
+    "rating": 4810.8,
+    "resources": 37.19844694852417,
+    "generation": 11,
     "genome": {
       "kind": "blue",
       "harden": {
         "sqli": 0.413,
         "nosqli": 0.1,
         "xss": 1.0,
-        "csrf": 0.823,
+        "csrf": 0.685,
         "auth_bypass": 0.407,
         "jwt_weak": 0.576,
         "idor": 0.679,
@@ -309,6 +309,16 @@
       "baseline_score": 218.82,
       "best_score": 262.345,
       "selected_score": 262.345,
+      "accepted_strategy_change": true,
+      "changes": [
+        "matches: 400 -> 500"
+      ]
+    },
+    {
+      "at": "2026-09-03T23:42:58+00:00",
+      "baseline_score": 245.98,
+      "best_score": 263.32,
+      "selected_score": 263.32,
       "accepted_strategy_change": true,
       "changes": [
         "matches: 400 -> 500"

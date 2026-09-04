@@ -1,103 +1,7 @@
 {
   "schema": "standment-security-reactor-state/v1",
-  "sessions": 21,
+  "sessions": 22,
   "history": [
-    {
-      "session_id": "33769869649-1",
-      "round": 9,
-      "track_id": "SEC-PORT-002",
-      "mode": "SWITCH_EVIDENCE_PATH",
-      "fingerprint": "a2b65113001884f8189b",
-      "material_delta": true
-    },
-    {
-      "session_id": "33769869649-1",
-      "round": 10,
-      "track_id": "SEC-PORT-003",
-      "mode": "VERIFY_NEXT_MISSING_EVIDENCE",
-      "fingerprint": "169f9851e9cd064169f1",
-      "material_delta": true
-    },
-    {
-      "session_id": "33769869649-1",
-      "round": 11,
-      "track_id": "SEC-PORT-004",
-      "mode": "REFRAME_AND_COUNTEREVIDENCE",
-      "fingerprint": "75ead27b99ed1f563451",
-      "material_delta": true
-    },
-    {
-      "session_id": "33769869649-1",
-      "round": 12,
-      "track_id": "SEC-PORT-005",
-      "mode": "INDEPENDENT_RETEST",
-      "fingerprint": "efe1c75e3fc69a2bf547",
-      "material_delta": true
-    },
-    {
-      "session_id": "33783617342-1",
-      "round": 1,
-      "track_id": "SEC-PORT-011",
-      "mode": "VERIFY_NEXT_MISSING_EVIDENCE",
-      "fingerprint": "0c9c7245170aa753de4c",
-      "material_delta": true
-    },
-    {
-      "session_id": "33783617342-1",
-      "round": 2,
-      "track_id": "SEC-PORT-002",
-      "mode": "REFRAME_AND_COUNTEREVIDENCE",
-      "fingerprint": "edb663dbfc25e113e382",
-      "material_delta": true
-    },
-    {
-      "session_id": "33783617342-1",
-      "round": 3,
-      "track_id": "SEC-PORT-008",
-      "mode": "INDEPENDENT_RETEST",
-      "fingerprint": "6ba5e2f596ec5f99b193",
-      "material_delta": true
-    },
-    {
-      "session_id": "33783617342-1",
-      "round": 4,
-      "track_id": "SEC-PORT-005",
-      "mode": "SWITCH_EVIDENCE_PATH",
-      "fingerprint": "b683e658f0808529fd4b",
-      "material_delta": true
-    },
-    {
-      "session_id": "33783617342-1",
-      "round": 5,
-      "track_id": "SEC-PORT-011",
-      "mode": "VERIFY_NEXT_MISSING_EVIDENCE",
-      "fingerprint": "0c9c7245170aa753de4c",
-      "material_delta": true
-    },
-    {
-      "session_id": "33783617342-1",
-      "round": 6,
-      "track_id": "SEC-PORT-002",
-      "mode": "REFRAME_AND_COUNTEREVIDENCE",
-      "fingerprint": "edb663dbfc25e113e382",
-      "material_delta": true
-    },
-    {
-      "session_id": "33783617342-1",
-      "round": 7,
-      "track_id": "SEC-PORT-003",
-      "mode": "INDEPENDENT_RETEST",
-      "fingerprint": "d4dfa30ae37499053c2a",
-      "material_delta": true
-    },
-    {
-      "session_id": "33783617342-1",
-      "round": 8,
-      "track_id": "SEC-PORT-004",
-      "mode": "SWITCH_EVIDENCE_PATH",
-      "fingerprint": "42b51833805a3ecf6bdd",
-      "material_delta": true
-    },
     {
       "session_id": "33783617342-1",
       "round": 9,
@@ -513,9 +417,105 @@
       "mode": "SWITCH_EVIDENCE_PATH",
       "fingerprint": "a2b65113001884f8189b",
       "material_delta": true
+    },
+    {
+      "session_id": "33836306280-1",
+      "round": 1,
+      "track_id": "SEC-PORT-003",
+      "mode": "REFRAME_AND_COUNTEREVIDENCE",
+      "fingerprint": "779290f38d54118b673c",
+      "material_delta": true
+    },
+    {
+      "session_id": "33836306280-1",
+      "round": 2,
+      "track_id": "SEC-PORT-004",
+      "mode": "INDEPENDENT_RETEST",
+      "fingerprint": "4b1d1cb58b2dfce21d64",
+      "material_delta": true
+    },
+    {
+      "session_id": "33836306280-1",
+      "round": 3,
+      "track_id": "SEC-PORT-005",
+      "mode": "SWITCH_EVIDENCE_PATH",
+      "fingerprint": "b683e658f0808529fd4b",
+      "material_delta": true
+    },
+    {
+      "session_id": "33836306280-1",
+      "round": 4,
+      "track_id": "SEC-PORT-011",
+      "mode": "VERIFY_NEXT_MISSING_EVIDENCE",
+      "fingerprint": "0c9c7245170aa753de4c",
+      "material_delta": true
+    },
+    {
+      "session_id": "33836306280-1",
+      "round": 5,
+      "track_id": "SEC-PORT-002",
+      "mode": "REFRAME_AND_COUNTEREVIDENCE",
+      "fingerprint": "edb663dbfc25e113e382",
+      "material_delta": true
+    },
+    {
+      "session_id": "33836306280-1",
+      "round": 6,
+      "track_id": "SEC-PORT-008",
+      "mode": "INDEPENDENT_RETEST",
+      "fingerprint": "6ba5e2f596ec5f99b193",
+      "material_delta": true
+    },
+    {
+      "session_id": "33836306280-1",
+      "round": 7,
+      "track_id": "SEC-PORT-005",
+      "mode": "SWITCH_EVIDENCE_PATH",
+      "fingerprint": "b683e658f0808529fd4b",
+      "material_delta": true
+    },
+    {
+      "session_id": "33836306280-1",
+      "round": 8,
+      "track_id": "SEC-PORT-011",
+      "mode": "VERIFY_NEXT_MISSING_EVIDENCE",
+      "fingerprint": "0c9c7245170aa753de4c",
+      "material_delta": true
+    },
+    {
+      "session_id": "33836306280-1",
+      "round": 9,
+      "track_id": "SEC-PORT-002",
+      "mode": "REFRAME_AND_COUNTEREVIDENCE",
+      "fingerprint": "edb663dbfc25e113e382",
+      "material_delta": true
+    },
+    {
+      "session_id": "33836306280-1",
+      "round": 10,
+      "track_id": "SEC-PORT-003",
+      "mode": "INDEPENDENT_RETEST",
+      "fingerprint": "d4dfa30ae37499053c2a",
+      "material_delta": true
+    },
+    {
+      "session_id": "33836306280-1",
+      "round": 11,
+      "track_id": "SEC-PORT-004",
+      "mode": "SWITCH_EVIDENCE_PATH",
+      "fingerprint": "42b51833805a3ecf6bdd",
+      "material_delta": true
+    },
+    {
+      "session_id": "33836306280-1",
+      "round": 12,
+      "track_id": "SEC-PORT-005",
+      "mode": "VERIFY_NEXT_MISSING_EVIDENCE",
+      "fingerprint": "ac13fb004e36c9a6e2e8",
+      "material_delta": true
     }
   ],
   "failure_memory": {},
-  "last_track": "SEC-PORT-002",
-  "last_mode": "SWITCH_EVIDENCE_PATH"
+  "last_track": "SEC-PORT-005",
+  "last_mode": "VERIFY_NEXT_MISSING_EVIDENCE"
 }

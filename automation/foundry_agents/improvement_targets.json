@@ -6,87 +6,87 @@
   "targets": [
     {
       "id": "perf-001",
-      "title": "API \u30ec\u30b9\u30dd\u30f3\u30b9\u6700\u9069\u5316",
+      "title": "API レスポンス最適化",
       "priority": 100,
       "category": "performance",
       "agent": "senju",
-      "description": "api/foundry.js \u306e\u30b9\u30c8\u30ea\u30fc\u30df\u30f3\u30b0\u30ec\u30b9\u30dd\u30f3\u30b9\u5bfe\u5fdc\u3002streamText \u306b\u5207\u308a\u66ff\u3048\u3066SSE\u3067\u9010\u6b21\u8fd4\u5374\u3059\u308b\u3002",
+      "description": "api/foundry.js のストリーミングレスポンス対応。streamText に切り替えてSSEで逐次返却する。",
       "files": [
         "api/foundry.js"
       ],
-      "verification": "curl -N https://test-musicjapanllc.vercel.app/api/foundry \u3067 chunked response\u78ba\u8a8d",
+      "verification": "curl -N https://test-musicjapanllc.vercel.app/api/foundry で chunked response確認",
       "status": "implemented"
     },
     {
       "id": "github-001",
-      "title": "GitHub \u30ea\u30dd\u30b8\u30c8\u30ea\u8aad\u307f\u8fbc\u307f\u9023\u643a",
+      "title": "GitHub リポジトリ読み込み連携",
       "priority": 95,
       "category": "github_integration",
       "agent": "X",
-      "description": "\u30e6\u30fc\u30b6\u30fc\u304cGitHub\u30ea\u30dd\u30b8\u30c8\u30eaURL\u3092\u8cbc\u308a\u4ed8\u3051\u308b\u3068\u3001README\u3068\u30b3\u30fc\u30c9\u3092\u53d6\u5f97\u3057\u3066\u30b3\u30f3\u30c6\u30ad\u30b9\u30c8\u306b\u8ffd\u52a0\u3059\u308b\u6a5f\u80fd\u3002api/github.js \u30a8\u30f3\u30c9\u30dd\u30a4\u30f3\u30c8\u3092\u65b0\u898f\u4f5c\u6210\u3057\u3001\u516c\u958b\u30ea\u30dd\u30b8\u30c8\u30ea\u306e\u30d5\u30a1\u30a4\u30eb\u53d6\u5f97(GitHub API\u7d4c\u7531)\u3092\u30b5\u30dd\u30fc\u30c8\u3002",
+      "description": "ユーザーがGitHubリポジトリURLを貼り付けると、READMEとコードを取得してコンテキストに追加する機能。api/github.js エンドポイントを新規作成し、公開リポジトリのファイル取得(GitHub API経由)をサポート。",
       "files": [
         "api/github.js",
         "public/app.js"
       ],
-      "verification": "\u30c1\u30e3\u30c3\u30c8\u306bGitHub URL\u3092\u8cbc\u308a\u3064\u3051\u3066\u30b3\u30fc\u30c9\u8aad\u8fbc\u304c\u52d5\u4f5c\u3059\u308b\u3053\u3068",
+      "verification": "チャットにGitHub URLを貼りつけてコード読込が動作すること",
       "status": "implemented"
     },
     {
       "id": "github-002",
-      "title": "GitHub PR \u4f5c\u6210\u9023\u643a",
+      "title": "GitHub PR 作成連携",
       "priority": 90,
       "category": "github_integration",
       "agent": "X",
-      "description": "AI FOUNDRY\u3067\u751f\u6210\u3057\u305f\u30b3\u30fc\u30c9\u3092GitHub PR\u3068\u3057\u3066\u76f4\u63a5\u4f5c\u6210\u3059\u308b\u6a5f\u80fd\u3002PAT(\u30e6\u30fc\u30b6\u30fc\u63d0\u4f9b)\u3092\u4f7f\u7528\u3057\u3066github.com API\u3067PR\u3092\u4f5c\u6210\u3002api/github.js \u306b create_pr \u30a2\u30af\u30b7\u30e7\u30f3\u3092\u8ffd\u52a0\u3002",
+      "description": "AI FOUNDRYで生成したコードをGitHub PRとして直接作成する機能。PAT(ユーザー提供)を使用してgithub.com APIでPRを作成。api/github.js に create_pr アクションを追加。",
       "files": [
         "api/github.js",
         "public/app.js"
       ],
-      "verification": "UI \u304b\u3089 PR\u4f5c\u6210\u30dc\u30bf\u30f3\u304c\u6a5f\u80fd\u3059\u308b\u3053\u3068",
+      "verification": "UI から PR作成ボタンが機能すること",
       "status": "implemented"
     },
     {
       "id": "meta-001",
-      "title": "\u30de\u30eb\u30c1\u30e2\u30c7\u30eb\u5bfe\u5fdc (Claude + Gemini)",
+      "title": "マルチモデル対応 (Claude + Gemini)",
       "priority": 85,
       "category": "multi_model",
       "agent": "META",
-      "description": "Vercel AI Gateway \u7d4c\u7531\u3067 anthropic/claude-sonnet-4-6 \u304a\u3088\u3073 google/gemini-2.0-flash \u3082\u9078\u629e\u53ef\u80fd\u306b\u3059\u308b\u3002UI \u306b\u30e2\u30c7\u30eb\u9078\u629eUI\u3092\u8ffd\u52a0\u3002",
+      "description": "Vercel AI Gateway 経由で anthropic/claude-sonnet-4-6 および google/gemini-2.0-flash も選択可能にする。UI にモデル選択UIを追加。",
       "files": [
         "api/foundry.js",
         "public/index.html",
         "public/app.js",
         "public/styles.css"
       ],
-      "verification": "\u30e2\u30c7\u30eb\u9078\u629eUI\u3067 Claude/Gemini\u304c\u52d5\u4f5c\u3059\u308b\u3053\u3068",
+      "verification": "モデル選択UIで Claude/Geminiが動作すること",
       "status": "implemented"
     },
     {
       "id": "perf-002",
-      "title": "\u4f1a\u8a71\u5c65\u6b74\u306e\u6c38\u7d9a\u5316 (Supabase)",
+      "title": "会話履歴の永続化 (Supabase)",
       "priority": 80,
       "category": "performance",
       "agent": "senju",
-      "description": "\u73fe\u72b6 localStorage \u306e\u307f\u3002Supabase (\u65e2\u5b58\u30a8\u30f3\u30c9\u30dd\u30a4\u30f3\u30c8 czwdtjgunsafcifjhpwt.supabase.co) \u306b\u30b9\u30ec\u30c3\u30c9\u3092\u4fdd\u5b58\u3057\u3001\u30c7\u30d0\u30a4\u30b9\u9593\u3067\u5171\u6709\u3067\u304d\u308b\u3088\u3046\u306b\u3059\u308b\u3002",
+      "description": "現状 localStorage のみ。Supabase (既存エンドポイント czwdtjgunsafcifjhpwt.supabase.co) にスレッドを保存し、デバイス間で共有できるようにする。",
       "files": [
         "public/app.js"
       ],
-      "verification": "\u5225\u30d6\u30e9\u30a6\u30b6\u3067\u540c\u3058\u30b9\u30ec\u30c3\u30c9\u304c\u95b2\u89a7\u3067\u304d\u308b\u3053\u3068",
+      "verification": "別ブラウザで同じスレッドが閲覧できること",
       "status": "implemented"
     },
     {
       "id": "ux-001",
-      "title": "\u30b3\u30fc\u30c9\u30d6\u30ed\u30c3\u30af\u306e\u30b7\u30f3\u30bf\u30c3\u30af\u30b9\u30cf\u30a4\u30e9\u30a4\u30c8",
+      "title": "コードブロックのシンタックスハイライト",
       "priority": 70,
       "category": "ux",
       "agent": "X",
-      "description": "highlight.js (CDN) \u3092\u8ffd\u52a0\u3057\u3066Python/JS/TypeScript\u306e\u30cf\u30a4\u30e9\u30a4\u30c8\u3092\u6709\u52b9\u5316\u3002",
+      "description": "highlight.js (CDN) を追加してPython/JS/TypeScriptのハイライトを有効化。",
       "files": [
         "public/index.html",
         "public/styles.css",
         "public/app.js"
       ],
-      "verification": "\u30c1\u30e3\u30c3\u30c8\u8fd4\u7b54\u306e\u30b3\u30fc\u30c9\u30d6\u30ed\u30c3\u30af\u304c\u8272\u4ed8\u304d\u306b\u306a\u308b\u3053\u3068",
+      "verification": "チャット返答のコードブロックが色付きになること",
       "status": "implemented"
     },
     {
@@ -149,7 +149,7 @@
       "priority": 70,
       "category": "ux",
       "agent": "X",
-      "description": "Theme toggle button in header (\u2600\ufe0f/\ud83c\udf19). Persists choice in localStorage, detects system preference. Light mode uses CSS invert filters.",
+      "description": "Theme toggle button in header (☀️/🌙). Persists choice in localStorage, detects system preference. Light mode uses CSS invert filters.",
       "files": [
         "public/app.js",
         "public/styles.css",
@@ -209,9 +209,13 @@
       "category": "ux",
       "agent": "X",
       "description": "public/index.html を3ペイン構成に改修。左: チャット, 中央: コードエディタ(CodeMirror or textarea), 右: ライブプレビュー(iframe sandbox)。レスポンシブ対応。",
-      "files": ["public/index.html", "public/styles.css", "public/app.js"],
+      "files": [
+        "public/index.html",
+        "public/styles.css",
+        "public/app.js"
+      ],
       "verification": "3ペイン表示 + エディタでコード編集できること",
-      "status": "pending"
+      "status": "implemented"
     },
     {
       "id": "ux-011",
@@ -220,9 +224,13 @@
       "category": "ux",
       "agent": "X",
       "description": "AIレスポンス内のコードブロックを自動抽出してサイドパネルに表示する。タブ切替でファイルごとに閲覧・コピー・ダウンロード可能。",
-      "files": ["public/app.js", "public/index.html", "public/styles.css"],
+      "files": [
+        "public/app.js",
+        "public/index.html",
+        "public/styles.css"
+      ],
       "verification": "コードを含む回答でアーティファクトパネルが自動表示されること",
-      "status": "pending"
+      "status": "implemented"
     },
     {
       "id": "meta-010",
@@ -231,9 +239,12 @@
       "category": "observability",
       "agent": "META",
       "description": "各APIコールの応答時間をUIに表示。ストリーミング開始までのTime-to-first-token (TTFT) とTotal response timeを表示するインジケーター追加。",
-      "files": ["public/app.js", "public/styles.css"],
+      "files": [
+        "public/app.js",
+        "public/styles.css"
+      ],
       "verification": "レスポンス完了後にレイテンシー(TTFT/Total)がメッセージ下部に表示されること",
-      "status": "pending"
+      "status": "implemented"
     },
     {
       "id": "github-010",
@@ -242,9 +253,13 @@
       "category": "github_integration",
       "agent": "X",
       "description": "サイドパネルにファイルツリーを表示するGitHub repo browser実装。リポジトリURLを入力してファイルツリーをツリービューで閲覧し、クリックでファイル内容をエディタに表示。",
-      "files": ["api/github.js", "public/app.js", "public/index.html"],
+      "files": [
+        "api/github.js",
+        "public/app.js",
+        "public/index.html"
+      ],
       "verification": "GitHubリポジトリのファイルツリーが閲覧できること",
-      "status": "pending"
+      "status": "implemented"
     },
     {
       "id": "github-011",
@@ -253,9 +268,13 @@
       "category": "github_integration",
       "agent": "X",
       "description": "GitHub PRのdiffをビジュアル表示。AIが提案したコード変更を before/after 2カラムdiffで表示するコンポーネント追加。",
-      "files": ["public/app.js", "public/index.html", "public/styles.css"],
+      "files": [
+        "public/app.js",
+        "public/index.html",
+        "public/styles.css"
+      ],
       "verification": "PR diffが緑/赤でハイライトされた2カラム表示になること",
-      "status": "pending"
+      "status": "implemented"
     },
     {
       "id": "eval-001",
@@ -264,9 +283,12 @@
       "category": "code_execution",
       "agent": "X",
       "description": "チャット内のJavaScriptコードブロックに「▶ Run」ボタン追加。クリックでsandboxed iframeで実行し結果をその場に表示。",
-      "files": ["public/app.js", "public/styles.css"],
+      "files": [
+        "public/app.js",
+        "public/styles.css"
+      ],
       "verification": "JSコードブロックの▶ Runボタンで実行結果が表示されること",
-      "status": "pending"
+      "status": "implemented"
     },
     {
       "id": "perf-010",
@@ -275,9 +297,12 @@
       "category": "persistence",
       "agent": "senju",
       "description": "Supabase Realtime を使ってスレッドをデバイス間でリアルタイム同期。既存のsupabase endpointに threads テーブルを追加し、挿入/更新をsubscribeしてUIを即時反映。",
-      "files": ["public/app.js", "api/foundry.js"],
+      "files": [
+        "public/app.js",
+        "api/foundry.js"
+      ],
       "verification": "別タブで同じスレッドが1秒以内に同期されること",
-      "status": "pending"
+      "status": "implemented"
     },
     {
       "id": "god-001",
@@ -286,9 +311,13 @@
       "category": "observability",
       "agent": "claude_code",
       "description": "automation/foundry_agents/god.js に status report を app に送信する機能追加。GODが実行するたびに cycle metrics を public/god_status.json に書き込み、UIのステータスバーに表示。",
-      "files": ["automation/foundry_agents/god.js", "public/app.js", "public/index.html"],
+      "files": [
+        "automation/foundry_agents/god.js",
+        "public/app.js",
+        "public/index.html"
+      ],
       "verification": "UIにGODのサイクル数・改善率・最終実行時刻が表示されること",
-      "status": "pending"
+      "status": "implemented"
     },
     {
       "id": "ux-012",
@@ -297,9 +326,11 @@
       "category": "ux",
       "agent": "X",
       "description": "Cmd+Enter で送信, Cmd+K でスレッドクリア, Cmd+/ でコマンドパレット表示, Cmd+Shift+E でエディタフォーカスをキーボードショートカットとして実装。",
-      "files": ["public/app.js"],
+      "files": [
+        "public/app.js"
+      ],
       "verification": "全ショートカットが動作すること",
-      "status": "pending"
+      "status": "implemented"
     },
     {
       "id": "meta-011",
@@ -308,9 +339,12 @@
       "category": "observability",
       "agent": "META",
       "description": "GODの全サイクル履歴をグラフ表示するダッシュボードページ追加。cycle数・改善率推移・エージェント稼働状況をChart.jsで可視化。URL: /dashboard",
-      "files": ["public/dashboard.html", "public/app.js"],
+      "files": [
+        "public/dashboard.html",
+        "public/app.js"
+      ],
       "verification": "/dashboardでGODメトリクスのグラフが表示されること",
-      "status": "pending"
+      "status": "implemented"
     },
     {
       "id": "perf-011",
@@ -319,9 +353,98 @@
       "category": "reliability",
       "agent": "senju",
       "description": "api/foundry.js に exponential backoff retry (最大3回) を追加。429/503エラー時に自動リトライし、UIにリトライ中の表示。",
-      "files": ["api/foundry.js", "public/app.js"],
+      "files": [
+        "api/foundry.js",
+        "public/app.js"
+      ],
       "verification": "APIエラー時にリトライが走りUIに表示されること",
-      "status": "pending"
+      "status": "implemented"
+    },
+    {
+      "id": "perf-001_v2",
+      "title": "API レスポンス最適化 (v2 evolution)",
+      "priority": 101,
+      "category": "performance",
+      "agent": "senju",
+      "description": "api/foundry.js のストリーミングレスポンス対応。streamText に切り替えてSSEで逐次返却する。",
+      "files": [
+        "api/foundry.js"
+      ],
+      "verification": "curl -N https://test-musicjapanllc.vercel.app/api/foundry で chunked response確認",
+      "status": "implemented",
+      "dependsOn": [],
+      "evolvedFrom": "perf-001",
+      "createdAt": "2026-09-04T10:25:29.344Z"
+    },
+    {
+      "id": "ux-010_v2",
+      "title": "スプリットペインUI (chat + editor + preview) (v2 evolution)",
+      "priority": 102,
+      "category": "ux",
+      "agent": "X",
+      "description": "public/index.html を3ペイン構成に改修。左: チャット, 中央: コードエディタ(CodeMirror or textarea), 右: ライブプレビュー(iframe sandbox)。レスポンシブ対応。",
+      "files": [
+        "public/index.html",
+        "public/styles.css",
+        "public/app.js"
+      ],
+      "verification": "3ペイン表示 + エディタでコード編集できること",
+      "status": "implemented",
+      "dependsOn": [],
+      "evolvedFrom": "ux-010",
+      "createdAt": "2026-09-04T10:25:29.345Z"
+    },
+    {
+      "id": "ux-011_v2",
+      "title": "アーティファクトパネル (生成ファイル表示) (v2 evolution)",
+      "priority": 103,
+      "category": "ux",
+      "agent": "X",
+      "description": "AIレスポンス内のコードブロックを自動抽出してサイドパネルに表示する。タブ切替でファイルごとに閲覧・コピー・ダウンロード可能。",
+      "files": [
+        "public/app.js",
+        "public/index.html",
+        "public/styles.css"
+      ],
+      "verification": "コードを含む回答でアーティファクトパネルが自動表示されること",
+      "status": "implemented",
+      "dependsOn": [],
+      "evolvedFrom": "ux-011",
+      "createdAt": "2026-09-04T10:25:29.345Z"
+    },
+    {
+      "id": "github-001_v2",
+      "title": "GitHub リポジトリ読み込み連携 (v2 evolution)",
+      "priority": 104,
+      "category": "github_integration",
+      "agent": "X",
+      "description": "ユーザーがGitHubリポジトリURLを貼り付けると、READMEとコードを取得してコンテキストに追加する機能。api/github.js エンドポイントを新規作成し、公開リポジトリのファイル取得(GitHub API経由)をサポート。",
+      "files": [
+        "api/github.js",
+        "public/app.js"
+      ],
+      "verification": "チャットにGitHub URLを貼りつけてコード読込が動作すること",
+      "status": "implemented",
+      "dependsOn": [],
+      "evolvedFrom": "github-001",
+      "createdAt": "2026-09-04T10:25:29.345Z"
+    },
+    {
+      "id": "meta-010_v2",
+      "title": "モデルレイテンシー表示 (v2 evolution)",
+      "priority": 105,
+      "category": "observability",
+      "agent": "META",
+      "description": "各APIコールの応答時間をUIに表示。ストリーミング開始までのTime-to-first-token (TTFT) とTotal response timeを表示するインジケーター追加。",
+      "files": [
+        "public/app.js",
+        "public/styles.css"
+      ],
+      "verification": "レスポンス完了後にレイテンシー(TTFT/Total)がメッセージ下部に表示されること",
+      "status": "implemented",
+      "dependsOn": [],
+      "evolvedFrom": "meta-010",
+      "createdAt": "2026-09-04T10:25:29.345Z"
     }
   ],
   "completion_criteria": {
@@ -336,11 +459,11 @@
   "nextTargets": [
     {
       "id": "stage-5-001",
-      "title": "Next-gen \u63a8\u8ad6\u30a8\u30f3\u30b8\u30f3\u6700\u9069\u5316",
+      "title": "Next-gen 推論エンジン最適化",
       "priority": 96,
       "category": "performance",
       "agent": "SENJU",
-      "description": "\u63a8\u8ad6\u30b9\u30eb\u30fc\u30d7\u30c3\u30c83\u500d\u5316\u3002\u30de\u30eb\u30c1\u30d0\u30c3\u30c1\u51e6\u7406\u3068\u30ad\u30e3\u30c3\u30b7\u30f3\u30b0\u6226\u7565\u3002",
+      "description": "推論スループット3倍化。マルチバッチ処理とキャッシング戦略。",
       "files": [
         "automation/world/stage3_complete_organism_fixed.py"
       ],
@@ -348,11 +471,11 @@
     },
     {
       "id": "stage-5-002",
-      "title": "\u30af\u30ed\u30b9\u30ea\u30dd\u30b8\u30c8\u30ea\u30b3\u30fc\u30c9\u5171\u6709",
+      "title": "クロスリポジトリコード共有",
       "priority": 94,
       "category": "integration",
       "agent": "X",
-      "description": "test repo \u3068 the-world2 \u9593\u3067\u6539\u5584\u30b3\u30fc\u30c9\u3092\u81ea\u52d5\u5171\u6709\u3002",
+      "description": "test repo と the-world2 間で改善コードを自動共有。",
       "files": [
         "automation/world/agent_bridge_connector.py"
       ],
@@ -360,11 +483,11 @@
     },
     {
       "id": "stage-5-003",
-      "title": "AI\u30d5\u30a3\u30fc\u30c9\u30d0\u30c3\u30af\u30eb\u30fc\u30d7",
+      "title": "AIフィードバックループ",
       "priority": 92,
       "category": "autonomous_evolution",
       "agent": "META",
-      "description": "\u30e6\u30fc\u30b6\u30fc\u30d5\u30a3\u30fc\u30c9\u30d0\u30c3\u30af\u3092\u81ea\u52d5\u30ad\u30e3\u30d7\u30c1\u30e3\u3057\u3001\u6b21\u306e\u6539\u5584\u306b\u53cd\u6620\u3002",
+      "description": "ユーザーフィードバックを自動キャプチャし、次の改善に反映。",
       "files": [
         "automation/foundry_agents/improvement_targets.json"
       ],

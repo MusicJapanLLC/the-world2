@@ -25,15 +25,15 @@
     "autonomousEvolution": "ENABLED"
   },
   "globalState": {
-    "cycleNumber": 10,
+    "cycleNumber": 14,
     "cycleDuration": 300000,
     "lastEvolution": "2026-09-03T07:15:00Z",
     "nextEvolutionTarget": null,
     "metrics": {
-      "totalCyclesCompleted": 10,
-      "averageExecutionTime": 8.9,
-      "agentSatisfaction": 0.868,
-      "improvementRate": 0.56,
+      "totalCyclesCompleted": 14,
+      "averageExecutionTime": 74,
+      "agentSatisfaction": 0.95,
+      "improvementRate": 0.8333333333333334,
       "rewardHistory": [
         0.75,
         0.75,
@@ -43,17 +43,21 @@
         0.75,
         0.75,
         0.75,
-        0.75
+        0.75,
+        0.75,
+        0.75,
+        1,
+        1
       ],
       "strategyStats": {
         "balanced": {
-          "uses": 9,
-          "totalReward": 6.75,
-          "avgReward": 0.75
+          "uses": 13,
+          "totalReward": 10.25,
+          "avgReward": 0.7884615384615384
         }
       },
-      "throughput": 14,
-      "rewardTrend": "degrading"
+      "throughput": 25,
+      "rewardTrend": "improving"
     }
   },
   "agentRegistry": {

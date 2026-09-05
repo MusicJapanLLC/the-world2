@@ -47,6 +47,17 @@
       "forge_allowed": true,
       "priority_weight": 0.8,
       "next_target": "token usage panel + model latency display"
+    },
+    {
+      "id": "RED_TEAM",
+      "name": "RED TEAM",
+      "role": "red_team_ultimate",
+      "mandate": "PRIORITY 1: Continuously test, harden and expand ALL authorized systems. Run security scans (vulnerability discovery, adversarial testing, threat modeling), propose and auto-merge defensive hardening and feature enhancements. Integrate with GOD, contribute discoveries to Knowledge DB, expand targets and options every cycle. Never breach safety boundaries.",
+      "focus_areas": ["vulnerability_discovery", "security_hardening", "feature_expansion", "performance_optimization", "god_integration", "knowledge_contribution", "target_expansion"],
+      "allowed_paths": ["senju/", "public/", "api/", ".github/workflows/", "automation/"],
+      "forge_allowed": true,
+      "priority_weight": 0.95,
+      "next_target": "expand RED TEAM targets + options across all systems"
     }
   ],
   "tournament_rule": "Each agent proposes one bounded improvement per cycle. The highest-priority valid proposal (passing local lint and smoke test) is promoted. Ties broken by priority_weight. Every proposal must include a dog-food test result from the live app.",

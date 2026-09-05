@@ -445,29 +445,20 @@
       "dependsOn": [],
       "evolvedFrom": "meta-010",
       "createdAt": "2026-09-04T10:25:29.345Z"
-    }
-  ],
-  "completion_criteria": {
-    "required_verified_count": 8,
-    "required_categories": [
-      "github_integration",
-      "performance",
-      "ux"
-    ],
-    "auto_stop_loop": false
-  },
-  "nextTargets": [
+    },
     {
       "id": "stage-5-001",
       "title": "Next-gen 推論エンジン最適化",
-      "priority": 96,
+      "priority": 100,
       "category": "performance",
       "agent": "SENJU",
       "description": "推論スループット3倍化。マルチバッチ処理とキャッシング戦略。",
       "files": [
-        "automation/world/stage3_complete_organism_fixed.py"
+        "automation/world/stage3_complete_organism.py"
       ],
-      "status": "pending"
+      "verification": "推論エンジンのバッチ処理が動作しスループットが改善されること",
+      "status": "pending",
+      "dependsOn": []
     },
     {
       "id": "stage-5-002",
@@ -479,7 +470,9 @@
       "files": [
         "automation/world/agent_bridge_connector.py"
       ],
-      "status": "pending"
+      "verification": "2つのリポジトリ間で改善コード共有機能が動作すること",
+      "status": "pending",
+      "dependsOn": []
     },
     {
       "id": "stage-5-003",
@@ -491,9 +484,20 @@
       "files": [
         "automation/foundry_agents/improvement_targets.json"
       ],
-      "status": "pending"
+      "verification": "フィードバックが改善ターゲットへ自動反映されること",
+      "status": "pending",
+      "dependsOn": []
     }
   ],
+  "completion_criteria": {
+    "required_verified_count": 8,
+    "required_categories": [
+      "github_integration",
+      "performance",
+      "ux"
+    ],
+    "auto_stop_loop": false
+  },
   "agentCooperation": {
     "enabled": true,
     "mode": "CONSENSUS_WITH_OVERRIDE",

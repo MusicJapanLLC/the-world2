@@ -54,7 +54,7 @@ jobs:
           git config user.email "god@the-world.ai"
 
           if [[ $(git diff --stat) != '' ]]; then
-            git add automation/foundry_agents/god.json automation/foundry_agents/improvement_targets.json
+            git add automation/foundry_agents/god.json automation/foundry_agents/improvement_targets.json public/god_status.json
             git commit -m "chore(god): autonomous cycle update [skip ci]
 
 - Updated cycle metrics and state

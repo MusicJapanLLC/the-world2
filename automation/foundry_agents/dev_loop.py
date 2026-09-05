@@ -114,7 +114,8 @@ def get_file_content(file_path):
 def apply_improvement(target, code):
     file_path = REPO_ROOT / target["files"][0]
     current = file_path.read_text(encoding="utf-8")
-    marker = f"// ── FORGE: {target['id']} ──"
+    comment = "#" if file_path.suffix == ".py" else "//"
+    marker = f"{comment} ── FORGE: {target['id']} ──"
     if marker in current:
         log(f"  Marker already present in {target['files'][0]}, skipping append")
         return False

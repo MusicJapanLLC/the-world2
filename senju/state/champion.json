@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-09-03T23:42:58+00:00",
+  "updated_at": "2026-09-04T23:35:32+00:00",
   "strategy": {
     "population": 120,
     "generations": 16,
@@ -10,20 +10,20 @@
     "blue_budget": 16,
     "seed": 20260829
   },
-  "score": 263.32,
+  "score": 221.655,
   "evaluation": {
-    "score": 263.32,
+    "score": 221.655,
     "safe": true,
-    "rating_gain": 463.2,
-    "balance": 0.612,
+    "rating_gain": 385.3,
+    "balance": 0.468,
     "learning_signal": 1.0,
     "reason": "safe balanced learning run"
   },
   "red_champion": {
     "side": "red",
-    "rating": 4850.4,
-    "resources": 28.10609073638731,
-    "generation": 23,
+    "rating": 5163.8,
+    "resources": 27.892536686567546,
+    "generation": 24,
     "genome": {
       "kind": "red",
       "focus": {
@@ -52,16 +52,16 @@
   },
   "blue_champion": {
     "side": "blue",
-    "rating": 4810.8,
-    "resources": 37.19844694852417,
-    "generation": 11,
+    "rating": 4940.2,
+    "resources": 39.43955599993559,
+    "generation": 9,
     "genome": {
       "kind": "blue",
       "harden": {
         "sqli": 0.413,
         "nosqli": 0.1,
         "xss": 1.0,
-        "csrf": 0.685,
+        "csrf": 0.935,
         "auth_bypass": 0.407,
         "jwt_weak": 0.576,
         "idor": 0.679,
@@ -72,11 +72,11 @@
         "deserial": 1.0,
         "xxe": 0.45,
         "ssti": 0.575,
-        "race_condition": 0.749,
+        "race_condition": 0.864,
         "secrets_exposure": 0.369,
         "misconfig": 0.677
       },
-      "detection": 0.82,
+      "detection": 0.807,
       "patch_speed": 0.567,
       "coverage": 0.612
     }
@@ -319,6 +319,16 @@
       "baseline_score": 245.98,
       "best_score": 263.32,
       "selected_score": 263.32,
+      "accepted_strategy_change": true,
+      "changes": [
+        "matches: 400 -> 500"
+      ]
+    },
+    {
+      "at": "2026-09-04T23:35:32+00:00",
+      "baseline_score": 185.5,
+      "best_score": 221.655,
+      "selected_score": 221.655,
       "accepted_strategy_change": true,
       "changes": [
         "matches: 400 -> 500"

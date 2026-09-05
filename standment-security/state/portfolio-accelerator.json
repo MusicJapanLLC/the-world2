@@ -1,26 +1,26 @@
 {
   "schema": "standment-security-portfolio-accelerator/v1",
-  "generated_at_jst": "2026-09-05T07:05:57+09:00",
+  "generated_at_jst": "2026-09-05T09:39:55+09:00",
   "company_priority": "P0",
   "mission": "Make customer-inspectable, reproducible security evidence the highest-priority R&D output for Standment and continuously convert THE WORLD research into defensible AI-native security portfolio assets.",
   "primary": {
-    "id": "SEC-PORT-005",
-    "title": "Autonomous-agent security and auditability pack",
-    "priority": 1100,
+    "id": "SEC-PORT-001",
+    "title": "Standment Security Scan dogfood + Before/After case study",
+    "priority": 1200,
     "status": "VISIBLE",
     "evidence_ratio": 1.0,
     "evidence_present": [
-      "company-society/AUTONOMY.md",
-      "automation/security/workflow_policy.py",
-      ".github/workflows/security-guard.yml",
-      "standment-security/evidence-packs/agent-auditability/README.md"
+      "PORTFOLIO.md",
+      "security/STANDMENT_SECURITY_STANDARD.md",
+      "standment-security/SECURITY_BASELINE.md",
+      "standment-security/case-studies/security-scan-before-after/README.md"
     ],
     "evidence_missing": [],
-    "whitehat_candidates": 0,
-    "senju_focus": "balance",
-    "customer_usefulness": "An operator can inspect what an autonomous AI was allowed to do, what it actually did, what failed, and how evidence was preserved for review.",
-    "closure_score": 1690,
-    "ai_native": true
+    "whitehat_candidates": 4,
+    "senju_focus": "robustness",
+    "customer_usefulness": "A buyer can see what was found, what was changed, and whether the defensive change actually improved the owned system instead of trusting a generic security claim.",
+    "closure_score": 1880,
+    "ai_native": false
   },
   "verification_lane": {
     "id": "SEC-PORT-001",
@@ -80,9 +80,9 @@
     "ai_native": true
   },
   "stagnation_streak": 0,
-  "rotated": true,
-  "selection_reason": "ROTATED_AFTER_STAGNATION:SEC-PORT-001->SEC-PORT-005",
-  "next_action": "Run an independent retest, preserve counterevidence, and document residual risk before any verification claim.",
+  "rotated": false,
+  "selection_reason": "HIGHEST_EVIDENCE_CLOSURE_SCORE",
+  "next_action": "Convert the strongest white-hat candidate into a bounded reproduction -> remediation -> independent retest evidence bundle.",
   "north_star": {
     "tracks_total": 11,
     "tracks_verified": 2,

@@ -1,6 +1,6 @@
 {
   "schema": "standment-security-reactor-session/v1",
-  "session_id": "34002263348-1",
+  "session_id": "34014816579-1",
   "rounds_completed": 12,
   "unique_tracks": 6,
   "material_rounds": 12,
@@ -8,12 +8,12 @@
   "records": [
     {
       "round": 1,
-      "track_id": "SEC-PORT-011",
-      "mode": "INDEPENDENT_RETEST",
-      "status_before": "BUILDING",
+      "track_id": "SEC-PORT-005",
+      "mode": "SWITCH_EVIDENCE_PATH",
+      "status_before": "VISIBLE",
       "evidence_before": 1.0,
       "evidence_target": "independent_retest_and_counterevidence",
-      "fingerprint": "0b1cce3001284c8f1b58",
+      "fingerprint": "b683e658f0808529fd4b",
       "material_delta": true,
       "created_or_updated": [
         "standment-security/PORTFOLIO_INDEX.md"
@@ -24,17 +24,17 @@
         "Could the same result occur without the intended authorization or isolation boundary?",
         "Does an independent rerun reproduce the same outcome on a fresh runner or fixture?",
         "Which residual risk remains explicitly outside the verified scope?",
-        "Research mode INDEPENDENT_RETEST: what alternate evidence path would contradict the current hypothesis?"
+        "Research mode SWITCH_EVIDENCE_PATH: what alternate evidence path would contradict the current hypothesis?"
       ]
     },
     {
       "round": 2,
-      "track_id": "SEC-PORT-002",
-      "mode": "SWITCH_EVIDENCE_PATH",
-      "status_before": "VISIBLE",
+      "track_id": "SEC-PORT-011",
+      "mode": "VERIFY_NEXT_MISSING_EVIDENCE",
+      "status_before": "BUILDING",
       "evidence_before": 1.0,
       "evidence_target": "independent_retest_and_counterevidence",
-      "fingerprint": "a2b65113001884f8189b",
+      "fingerprint": "0c9c7245170aa753de4c",
       "material_delta": true,
       "created_or_updated": [
         "standment-security/PORTFOLIO_INDEX.md"
@@ -45,17 +45,17 @@
         "Could the same result occur without the intended authorization or isolation boundary?",
         "Does an independent rerun reproduce the same outcome on a fresh runner or fixture?",
         "Which residual risk remains explicitly outside the verified scope?",
-        "Research mode SWITCH_EVIDENCE_PATH: what alternate evidence path would contradict the current hypothesis?"
+        "Research mode VERIFY_NEXT_MISSING_EVIDENCE: what alternate evidence path would contradict the current hypothesis?"
       ]
     },
     {
       "round": 3,
-      "track_id": "SEC-PORT-008",
-      "mode": "VERIFY_NEXT_MISSING_EVIDENCE",
+      "track_id": "SEC-PORT-002",
+      "mode": "REFRAME_AND_COUNTEREVIDENCE",
       "status_before": "VISIBLE",
       "evidence_before": 1.0,
       "evidence_target": "independent_retest_and_counterevidence",
-      "fingerprint": "6ef844c05bc1ec314d66",
+      "fingerprint": "edb663dbfc25e113e382",
       "material_delta": true,
       "created_or_updated": [
         "standment-security/PORTFOLIO_INDEX.md"
@@ -66,17 +66,17 @@
         "Could the same result occur without the intended authorization or isolation boundary?",
         "Does an independent rerun reproduce the same outcome on a fresh runner or fixture?",
         "Which residual risk remains explicitly outside the verified scope?",
-        "Research mode VERIFY_NEXT_MISSING_EVIDENCE: what alternate evidence path would contradict the current hypothesis?"
+        "Research mode REFRAME_AND_COUNTEREVIDENCE: what alternate evidence path would contradict the current hypothesis?"
       ]
     },
     {
       "round": 4,
-      "track_id": "SEC-PORT-005",
-      "mode": "REFRAME_AND_COUNTEREVIDENCE",
+      "track_id": "SEC-PORT-003",
+      "mode": "INDEPENDENT_RETEST",
       "status_before": "VISIBLE",
       "evidence_before": 1.0,
       "evidence_target": "independent_retest_and_counterevidence",
-      "fingerprint": "6faf6bde3151bb5cef6c",
+      "fingerprint": "d4dfa30ae37499053c2a",
       "material_delta": true,
       "created_or_updated": [
         "standment-security/PORTFOLIO_INDEX.md"
@@ -87,17 +87,17 @@
         "Could the same result occur without the intended authorization or isolation boundary?",
         "Does an independent rerun reproduce the same outcome on a fresh runner or fixture?",
         "Which residual risk remains explicitly outside the verified scope?",
-        "Research mode REFRAME_AND_COUNTEREVIDENCE: what alternate evidence path would contradict the current hypothesis?"
+        "Research mode INDEPENDENT_RETEST: what alternate evidence path would contradict the current hypothesis?"
       ]
     },
     {
       "round": 5,
-      "track_id": "SEC-PORT-011",
-      "mode": "INDEPENDENT_RETEST",
-      "status_before": "BUILDING",
+      "track_id": "SEC-PORT-004",
+      "mode": "SWITCH_EVIDENCE_PATH",
+      "status_before": "VISIBLE",
       "evidence_before": 1.0,
       "evidence_target": "independent_retest_and_counterevidence",
-      "fingerprint": "0b1cce3001284c8f1b58",
+      "fingerprint": "42b51833805a3ecf6bdd",
       "material_delta": true,
       "created_or_updated": [
         "standment-security/PORTFOLIO_INDEX.md"
@@ -108,38 +108,17 @@
         "Could the same result occur without the intended authorization or isolation boundary?",
         "Does an independent rerun reproduce the same outcome on a fresh runner or fixture?",
         "Which residual risk remains explicitly outside the verified scope?",
-        "Research mode INDEPENDENT_RETEST: what alternate evidence path would contradict the current hypothesis?"
+        "Research mode SWITCH_EVIDENCE_PATH: what alternate evidence path would contradict the current hypothesis?"
       ]
     },
     {
       "round": 6,
-      "track_id": "SEC-PORT-002",
-      "mode": "SWITCH_EVIDENCE_PATH",
-      "status_before": "VISIBLE",
-      "evidence_before": 1.0,
-      "evidence_target": "independent_retest_and_counterevidence",
-      "fingerprint": "a2b65113001884f8189b",
-      "material_delta": true,
-      "created_or_updated": [
-        "standment-security/PORTFOLIO_INDEX.md"
-      ],
-      "failure_count": 0,
-      "counterevidence": [
-        "What observation would falsify the claim that independent_retest_and_counterevidence improves this defensive control?",
-        "Could the same result occur without the intended authorization or isolation boundary?",
-        "Does an independent rerun reproduce the same outcome on a fresh runner or fixture?",
-        "Which residual risk remains explicitly outside the verified scope?",
-        "Research mode SWITCH_EVIDENCE_PATH: what alternate evidence path would contradict the current hypothesis?"
-      ]
-    },
-    {
-      "round": 7,
-      "track_id": "SEC-PORT-003",
+      "track_id": "SEC-PORT-005",
       "mode": "VERIFY_NEXT_MISSING_EVIDENCE",
       "status_before": "VISIBLE",
       "evidence_before": 1.0,
       "evidence_target": "independent_retest_and_counterevidence",
-      "fingerprint": "169f9851e9cd064169f1",
+      "fingerprint": "ac13fb004e36c9a6e2e8",
       "material_delta": true,
       "created_or_updated": [
         "standment-security/PORTFOLIO_INDEX.md"
@@ -154,13 +133,13 @@
       ]
     },
     {
-      "round": 8,
-      "track_id": "SEC-PORT-004",
+      "round": 7,
+      "track_id": "SEC-PORT-011",
       "mode": "REFRAME_AND_COUNTEREVIDENCE",
-      "status_before": "VISIBLE",
+      "status_before": "BUILDING",
       "evidence_before": 1.0,
       "evidence_target": "independent_retest_and_counterevidence",
-      "fingerprint": "75ead27b99ed1f563451",
+      "fingerprint": "2a185117e90599afba66",
       "material_delta": true,
       "created_or_updated": [
         "standment-security/PORTFOLIO_INDEX.md"
@@ -175,13 +154,13 @@
       ]
     },
     {
-      "round": 9,
-      "track_id": "SEC-PORT-005",
+      "round": 8,
+      "track_id": "SEC-PORT-002",
       "mode": "INDEPENDENT_RETEST",
       "status_before": "VISIBLE",
       "evidence_before": 1.0,
       "evidence_target": "independent_retest_and_counterevidence",
-      "fingerprint": "efe1c75e3fc69a2bf547",
+      "fingerprint": "f9f3f6e9434a0080841f",
       "material_delta": true,
       "created_or_updated": [
         "standment-security/PORTFOLIO_INDEX.md"
@@ -196,13 +175,13 @@
       ]
     },
     {
-      "round": 10,
-      "track_id": "SEC-PORT-011",
+      "round": 9,
+      "track_id": "SEC-PORT-008",
       "mode": "SWITCH_EVIDENCE_PATH",
-      "status_before": "BUILDING",
+      "status_before": "VISIBLE",
       "evidence_before": 1.0,
       "evidence_target": "independent_retest_and_counterevidence",
-      "fingerprint": "15be50e563596fdd919e",
+      "fingerprint": "cbfbd1599cf047f6f6a7",
       "material_delta": true,
       "created_or_updated": [
         "standment-security/PORTFOLIO_INDEX.md"
@@ -217,13 +196,13 @@
       ]
     },
     {
-      "round": 11,
-      "track_id": "SEC-PORT-002",
+      "round": 10,
+      "track_id": "SEC-PORT-005",
       "mode": "VERIFY_NEXT_MISSING_EVIDENCE",
       "status_before": "VISIBLE",
       "evidence_before": 1.0,
       "evidence_target": "independent_retest_and_counterevidence",
-      "fingerprint": "e39e22c562a9e96fe509",
+      "fingerprint": "ac13fb004e36c9a6e2e8",
       "material_delta": true,
       "created_or_updated": [
         "standment-security/PORTFOLIO_INDEX.md"
@@ -238,13 +217,13 @@
       ]
     },
     {
-      "round": 12,
-      "track_id": "SEC-PORT-008",
+      "round": 11,
+      "track_id": "SEC-PORT-011",
       "mode": "REFRAME_AND_COUNTEREVIDENCE",
-      "status_before": "VISIBLE",
+      "status_before": "BUILDING",
       "evidence_before": 1.0,
       "evidence_target": "independent_retest_and_counterevidence",
-      "fingerprint": "1cf10232ad37bb007648",
+      "fingerprint": "2a185117e90599afba66",
       "material_delta": true,
       "created_or_updated": [
         "standment-security/PORTFOLIO_INDEX.md"
@@ -256,6 +235,27 @@
         "Does an independent rerun reproduce the same outcome on a fresh runner or fixture?",
         "Which residual risk remains explicitly outside the verified scope?",
         "Research mode REFRAME_AND_COUNTEREVIDENCE: what alternate evidence path would contradict the current hypothesis?"
+      ]
+    },
+    {
+      "round": 12,
+      "track_id": "SEC-PORT-002",
+      "mode": "INDEPENDENT_RETEST",
+      "status_before": "VISIBLE",
+      "evidence_before": 1.0,
+      "evidence_target": "independent_retest_and_counterevidence",
+      "fingerprint": "f9f3f6e9434a0080841f",
+      "material_delta": true,
+      "created_or_updated": [
+        "standment-security/PORTFOLIO_INDEX.md"
+      ],
+      "failure_count": 0,
+      "counterevidence": [
+        "What observation would falsify the claim that independent_retest_and_counterevidence improves this defensive control?",
+        "Could the same result occur without the intended authorization or isolation boundary?",
+        "Does an independent rerun reproduce the same outcome on a fresh runner or fixture?",
+        "Which residual risk remains explicitly outside the verified scope?",
+        "Research mode INDEPENDENT_RETEST: what alternate evidence path would contradict the current hypothesis?"
       ]
     }
   ],
@@ -266,8 +266,8 @@
     "tracks_full_evidence": 11,
     "average_evidence_ratio": 1.0
   },
-  "next_track": "SEC-PORT-005",
-  "next_mode": "INDEPENDENT_RETEST",
+  "next_track": "SEC-PORT-003",
+  "next_mode": "SWITCH_EVIDENCE_PATH",
   "verification_claimed": false,
   "external_targets_touched": 0
 }

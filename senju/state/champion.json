@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-09-04T23:35:32+00:00",
+  "updated_at": "2026-09-05T23:28:17+00:00",
   "strategy": {
     "population": 120,
     "generations": 16,
@@ -10,20 +10,20 @@
     "blue_budget": 16,
     "seed": 20260829
   },
-  "score": 221.655,
+  "score": 237.7,
   "evaluation": {
-    "score": 221.655,
+    "score": 237.7,
     "safe": true,
-    "rating_gain": 385.3,
-    "balance": 0.468,
+    "rating_gain": 382.0,
+    "balance": 0.64,
     "learning_signal": 1.0,
     "reason": "safe balanced learning run"
   },
   "red_champion": {
     "side": "red",
-    "rating": 5163.8,
-    "resources": 27.892536686567546,
-    "generation": 24,
+    "rating": 5335.7,
+    "resources": 26.126402394104062,
+    "generation": 25,
     "genome": {
       "kind": "red",
       "focus": {
@@ -45,16 +45,16 @@
         "secrets_exposure": 0.752,
         "misconfig": 0.233
       },
-      "skill": 0.846,
+      "skill": 0.821,
       "stealth": 1.0,
       "aggression": 0.189
     }
   },
   "blue_champion": {
     "side": "blue",
-    "rating": 4940.2,
-    "resources": 39.43955599993559,
-    "generation": 9,
+    "rating": 5130.5,
+    "resources": 36.70842221112598,
+    "generation": 14,
     "genome": {
       "kind": "blue",
       "harden": {
@@ -62,12 +62,12 @@
         "nosqli": 0.1,
         "xss": 1.0,
         "csrf": 0.935,
-        "auth_bypass": 0.407,
-        "jwt_weak": 0.576,
+        "auth_bypass": 0.698,
+        "jwt_weak": 0.583,
         "idor": 0.679,
         "priv_esc": 0.551,
         "ssrf": 0.712,
-        "rce": 0.128,
+        "rce": 0.29,
         "path_trav": 1.0,
         "deserial": 1.0,
         "xxe": 0.45,
@@ -76,7 +76,7 @@
         "secrets_exposure": 0.369,
         "misconfig": 0.677
       },
-      "detection": 0.807,
+      "detection": 0.767,
       "patch_speed": 0.567,
       "coverage": 0.612
     }
@@ -329,6 +329,16 @@
       "baseline_score": 185.5,
       "best_score": 221.655,
       "selected_score": 221.655,
+      "accepted_strategy_change": true,
+      "changes": [
+        "matches: 400 -> 500"
+      ]
+    },
+    {
+      "at": "2026-09-05T23:28:17+00:00",
+      "baseline_score": 218.04,
+      "best_score": 237.7,
+      "selected_score": 237.7,
       "accepted_strategy_change": true,
       "changes": [
         "matches: 400 -> 500"

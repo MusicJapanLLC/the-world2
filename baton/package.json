@@ -14,7 +14,7 @@
     "three": "^0.185.1"
   },
   "devDependencies": {
-    "@types/node": "^26.4.0",
+    "@types/node": "^26.4.1",
     "@types/three": "^0.180.0",
     "lighthouse": "^13.4.1",
     "typescript": "^7.0.2",

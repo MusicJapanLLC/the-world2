@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-09-05T23:28:17+00:00",
+  "updated_at": "2026-09-06T23:22:11+00:00",
   "strategy": {
     "population": 120,
     "generations": 16,
@@ -10,27 +10,27 @@
     "blue_budget": 16,
     "seed": 20260829
   },
-  "score": 237.7,
+  "score": 251.895,
   "evaluation": {
-    "score": 237.7,
+    "score": 251.895,
     "safe": true,
-    "rating_gain": 382.0,
-    "balance": 0.64,
+    "rating_gain": 455.7,
+    "balance": 0.524,
     "learning_signal": 1.0,
     "reason": "safe balanced learning run"
   },
   "red_champion": {
     "side": "red",
-    "rating": 5335.7,
-    "resources": 26.126402394104062,
-    "generation": 25,
+    "rating": 5447.6,
+    "resources": 31.409511167621837,
+    "generation": 26,
     "genome": {
       "kind": "red",
       "focus": {
         "sqli": 0.179,
         "nosqli": 0.678,
         "xss": 1.0,
-        "csrf": 0.234,
+        "csrf": 0.0,
         "auth_bypass": 1.0,
         "jwt_weak": 1.0,
         "idor": 0.917,
@@ -52,19 +52,19 @@
   },
   "blue_champion": {
     "side": "blue",
-    "rating": 5130.5,
-    "resources": 36.70842221112598,
-    "generation": 14,
+    "rating": 5337.2,
+    "resources": 36.41355080833732,
+    "generation": 10,
     "genome": {
       "kind": "blue",
       "harden": {
-        "sqli": 0.413,
-        "nosqli": 0.1,
+        "sqli": 0.468,
+        "nosqli": 0.396,
         "xss": 1.0,
         "csrf": 0.935,
         "auth_bypass": 0.698,
         "jwt_weak": 0.583,
-        "idor": 0.679,
+        "idor": 0.88,
         "priv_esc": 0.551,
         "ssrf": 0.712,
         "rce": 0.29,
@@ -339,6 +339,16 @@
       "baseline_score": 218.04,
       "best_score": 237.7,
       "selected_score": 237.7,
+      "accepted_strategy_change": true,
+      "changes": [
+        "matches: 400 -> 500"
+      ]
+    },
+    {
+      "at": "2026-09-06T23:22:11+00:00",
+      "baseline_score": 205.745,
+      "best_score": 251.895,
+      "selected_score": 251.895,
       "accepted_strategy_change": true,
       "changes": [
         "matches: 400 -> 500"

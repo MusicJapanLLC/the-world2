@@ -2,7 +2,7 @@
 
 **Mission:** 顧客が開いて確認できる、防御的かつ再現可能なSecurity Evidenceを毎日増やす。
 
-Latest autonomous lab note: `standment-security/lab-notes/2026-09-06/SEC-PORT-001.md`
+Latest autonomous lab note: `standment-security/lab-notes/2026-09-07/SEC-PORT-001.md`
 
 | Track | Portfolio | Priority | Evidence | Senju |
 |---|---|---:|---:|---|

@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-09-06T23:22:11+00:00",
+  "updated_at": "2026-09-09T23:42:06+00:00",
   "strategy": {
     "population": 120,
     "generations": 16,
@@ -10,33 +10,33 @@
     "blue_budget": 16,
     "seed": 20260829
   },
-  "score": 251.895,
+  "score": 237.98,
   "evaluation": {
-    "score": 251.895,
+    "score": 237.98,
     "safe": true,
-    "rating_gain": 455.7,
-    "balance": 0.524,
+    "rating_gain": 374.8,
+    "balance": 0.668,
     "learning_signal": 1.0,
     "reason": "safe balanced learning run"
   },
   "red_champion": {
     "side": "red",
-    "rating": 5447.6,
-    "resources": 31.409511167621837,
-    "generation": 26,
+    "rating": 5979.1,
+    "resources": 31.37513723771658,
+    "generation": 29,
     "genome": {
       "kind": "red",
       "focus": {
         "sqli": 0.179,
-        "nosqli": 0.678,
+        "nosqli": 0.7,
         "xss": 1.0,
-        "csrf": 0.0,
-        "auth_bypass": 1.0,
-        "jwt_weak": 1.0,
+        "csrf": 0.344,
+        "auth_bypass": 0.784,
+        "jwt_weak": 0.48,
         "idor": 0.917,
         "priv_esc": 0.96,
         "ssrf": 0.809,
-        "rce": 0.24,
+        "rce": 0.387,
         "path_trav": 0.82,
         "deserial": 0.628,
         "xxe": 0.149,
@@ -52,31 +52,31 @@
   },
   "blue_champion": {
     "side": "blue",
-    "rating": 5337.2,
-    "resources": 36.41355080833732,
-    "generation": 10,
+    "rating": 5942.0,
+    "resources": 38.34661351763917,
+    "generation": 15,
     "genome": {
       "kind": "blue",
       "harden": {
         "sqli": 0.468,
         "nosqli": 0.396,
         "xss": 1.0,
-        "csrf": 0.935,
-        "auth_bypass": 0.698,
-        "jwt_weak": 0.583,
+        "csrf": 0.713,
+        "auth_bypass": 0.75,
+        "jwt_weak": 0.881,
         "idor": 0.88,
-        "priv_esc": 0.551,
+        "priv_esc": 0.809,
         "ssrf": 0.712,
         "rce": 0.29,
         "path_trav": 1.0,
         "deserial": 1.0,
-        "xxe": 0.45,
+        "xxe": 0.612,
         "ssti": 0.575,
         "race_condition": 0.864,
         "secrets_exposure": 0.369,
         "misconfig": 0.677
       },
-      "detection": 0.767,
+      "detection": 0.862,
       "patch_speed": 0.567,
       "coverage": 0.612
     }
@@ -349,6 +349,36 @@
       "baseline_score": 205.745,
       "best_score": 251.895,
       "selected_score": 251.895,
+      "accepted_strategy_change": true,
+      "changes": [
+        "matches: 400 -> 500"
+      ]
+    },
+    {
+      "at": "2026-09-07T23:52:19+00:00",
+      "baseline_score": 196.35,
+      "best_score": 257.07,
+      "selected_score": 257.07,
+      "accepted_strategy_change": true,
+      "changes": [
+        "matches: 400 -> 500"
+      ]
+    },
+    {
+      "at": "2026-09-08T23:46:15+00:00",
+      "baseline_score": 209.75,
+      "best_score": 231.575,
+      "selected_score": 231.575,
+      "accepted_strategy_change": true,
+      "changes": [
+        "matches: 400 -> 500"
+      ]
+    },
+    {
+      "at": "2026-09-09T23:42:06+00:00",
+      "baseline_score": 221.15,
+      "best_score": 237.98,
+      "selected_score": 237.98,
       "accepted_strategy_change": true,
       "changes": [
         "matches: 400 -> 500"

@@ -1,6 +1,6 @@
 # Standment Security — White-Hat Candidate Index
 
-Updated JST: `2026-09-13T08:57:40.101936+09:00`
+Updated JST: `2026-09-14T10:54:14.101558+09:00`
 
 These are adversarial R&D portfolio candidates, not verified customer claims.
 

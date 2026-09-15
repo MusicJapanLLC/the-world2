@@ -1,59 +1,59 @@
 {
   "version": 1,
-  "updated_at": "2026-09-11T23:43:23+00:00",
+  "updated_at": "2026-09-15T00:06:09+00:00",
   "strategy": {
     "population": 120,
     "generations": 16,
     "matches": 400,
-    "mutation_rate": 0.09,
+    "mutation_rate": 0.06,
     "red_budget": 16,
     "blue_budget": 16,
     "seed": 20260829
   },
-  "score": 241.96,
+  "score": 238.635,
   "evaluation": {
-    "score": 241.96,
+    "score": 238.635,
     "safe": true,
-    "rating_gain": 385.6,
-    "balance": 0.67,
+    "rating_gain": 416.1,
+    "balance": 0.53,
     "learning_signal": 1.0,
     "reason": "safe balanced learning run"
   },
   "red_champion": {
     "side": "red",
-    "rating": 6485.1,
-    "resources": 32.321243141438,
-    "generation": 31,
+    "rating": 6971.6,
+    "resources": 26.677500554422114,
+    "generation": 34,
     "genome": {
       "kind": "red",
       "focus": {
         "sqli": 0.179,
         "nosqli": 0.7,
         "xss": 1.0,
-        "csrf": 0.344,
+        "csrf": 0.284,
         "auth_bypass": 0.784,
-        "jwt_weak": 0.48,
-        "idor": 0.84,
+        "jwt_weak": 0.289,
+        "idor": 0.825,
         "priv_esc": 0.96,
         "ssrf": 0.809,
         "rce": 0.506,
-        "path_trav": 0.82,
+        "path_trav": 0.91,
         "deserial": 0.628,
         "xxe": 0.149,
         "ssti": 0.458,
         "race_condition": 0.426,
-        "secrets_exposure": 0.752,
-        "misconfig": 0.233
+        "secrets_exposure": 0.991,
+        "misconfig": 0.224
       },
-      "skill": 0.821,
+      "skill": 0.971,
       "stealth": 1.0,
       "aggression": 0.098
     }
   },
   "blue_champion": {
     "side": "blue",
-    "rating": 6275.0,
-    "resources": 41.15940919153296,
+    "rating": 6819.1,
+    "resources": 43.66945381113296,
     "generation": 15,
     "genome": {
       "kind": "blue",
@@ -62,56 +62,26 @@
         "nosqli": 0.396,
         "xss": 1.0,
         "csrf": 0.713,
-        "auth_bypass": 0.75,
+        "auth_bypass": 0.527,
         "jwt_weak": 0.881,
-        "idor": 1.0,
-        "priv_esc": 0.805,
-        "ssrf": 0.712,
+        "idor": 0.771,
+        "priv_esc": 1.0,
+        "ssrf": 0.853,
         "rce": 0.32,
         "path_trav": 1.0,
         "deserial": 1.0,
         "xxe": 0.612,
         "ssti": 0.575,
-        "race_condition": 0.864,
-        "secrets_exposure": 0.369,
-        "misconfig": 0.677
+        "race_condition": 0.591,
+        "secrets_exposure": 0.46,
+        "misconfig": 0.883
       },
-      "detection": 0.862,
+      "detection": 1.0,
       "patch_speed": 0.567,
-      "coverage": 0.437
+      "coverage": 0.167
     }
   },
   "history": [
-    {
-      "at": "2026-08-29T10:50:53+00:00",
-      "baseline_score": 163.425,
-      "best_score": 202.84,
-      "selected_score": 202.84,
-      "accepted_strategy_change": true,
-      "changes": [
-        "mutation_rate: 0.15 -> 0.18"
-      ]
-    },
-    {
-      "at": "2026-08-29T11:46:01+00:00",
-      "baseline_score": 212.985,
-      "best_score": 223.74,
-      "selected_score": 223.74,
-      "accepted_strategy_change": true,
-      "changes": [
-        "mutation_rate: 0.18 -> 0.15"
-      ]
-    },
-    {
-      "at": "2026-08-29T11:47:08+00:00",
-      "baseline_score": 231.0,
-      "best_score": 233.575,
-      "selected_score": 233.575,
-      "accepted_strategy_change": true,
-      "changes": [
-        "mutation_rate: 0.15 -> 0.12"
-      ]
-    },
     {
       "at": "2026-08-29T11:51:03+00:00",
       "baseline_score": 217.685,
@@ -381,6 +351,36 @@
       "accepted_strategy_change": true,
       "changes": [
         "mutation_rate: 0.06 -> 0.09"
+      ]
+    },
+    {
+      "at": "2026-09-12T23:37:23+00:00",
+      "baseline_score": 222.87,
+      "best_score": 259.785,
+      "selected_score": 259.785,
+      "accepted_strategy_change": true,
+      "changes": [
+        "matches: 400 -> 500"
+      ]
+    },
+    {
+      "at": "2026-09-13T23:48:35+00:00",
+      "baseline_score": 215.39,
+      "best_score": 251.655,
+      "selected_score": 251.655,
+      "accepted_strategy_change": true,
+      "changes": [
+        "matches: 400 -> 500"
+      ]
+    },
+    {
+      "at": "2026-09-15T00:06:09+00:00",
+      "baseline_score": 210.43,
+      "best_score": 238.635,
+      "selected_score": 238.635,
+      "accepted_strategy_change": true,
+      "changes": [
+        "mutation_rate: 0.09 -> 0.06"
       ]
     }
   ]

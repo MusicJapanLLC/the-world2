@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-09-15T00:06:09+00:00",
+  "updated_at": "2026-09-15T23:51:28+00:00",
   "strategy": {
     "population": 120,
     "generations": 16,
@@ -10,20 +10,20 @@
     "blue_budget": 16,
     "seed": 20260829
   },
-  "score": 238.635,
+  "score": 229.33,
   "evaluation": {
-    "score": 238.635,
+    "score": 229.33,
     "safe": true,
-    "rating_gain": 416.1,
-    "balance": 0.53,
+    "rating_gain": 413.8,
+    "balance": 0.445,
     "learning_signal": 1.0,
     "reason": "safe balanced learning run"
   },
   "red_champion": {
     "side": "red",
-    "rating": 6971.6,
-    "resources": 26.677500554422114,
-    "generation": 34,
+    "rating": 7207.8,
+    "resources": 31.164544149338454,
+    "generation": 35,
     "genome": {
       "kind": "red",
       "focus": {
@@ -35,15 +35,15 @@
         "jwt_weak": 0.289,
         "idor": 0.825,
         "priv_esc": 0.96,
-        "ssrf": 0.809,
+        "ssrf": 0.654,
         "rce": 0.506,
         "path_trav": 0.91,
         "deserial": 0.628,
-        "xxe": 0.149,
+        "xxe": 0.109,
         "ssti": 0.458,
         "race_condition": 0.426,
         "secrets_exposure": 0.991,
-        "misconfig": 0.224
+        "misconfig": 0.497
       },
       "skill": 0.971,
       "stealth": 1.0,
@@ -52,28 +52,28 @@
   },
   "blue_champion": {
     "side": "blue",
-    "rating": 6819.1,
-    "resources": 43.66945381113296,
+    "rating": 7061.4,
+    "resources": 48.5250971768471,
     "generation": 15,
     "genome": {
       "kind": "blue",
       "harden": {
-        "sqli": 0.704,
+        "sqli": 0.571,
         "nosqli": 0.396,
         "xss": 1.0,
-        "csrf": 0.713,
+        "csrf": 0.984,
         "auth_bypass": 0.527,
         "jwt_weak": 0.881,
         "idor": 0.771,
         "priv_esc": 1.0,
-        "ssrf": 0.853,
+        "ssrf": 1.0,
         "rce": 0.32,
         "path_trav": 1.0,
         "deserial": 1.0,
         "xxe": 0.612,
         "ssti": 0.575,
         "race_condition": 0.591,
-        "secrets_exposure": 0.46,
+        "secrets_exposure": 0.604,
         "misconfig": 0.883
       },
       "detection": 1.0,
@@ -82,16 +82,6 @@
     }
   },
   "history": [
-    {
-      "at": "2026-08-29T11:51:03+00:00",
-      "baseline_score": 217.685,
-      "best_score": 252.18,
-      "selected_score": 252.18,
-      "accepted_strategy_change": true,
-      "changes": [
-        "mutation_rate: 0.12 -> 0.09"
-      ]
-    },
     {
       "at": "2026-08-29T11:52:54+00:00",
       "baseline_score": 209.43,
@@ -381,6 +371,16 @@
       "accepted_strategy_change": true,
       "changes": [
         "mutation_rate: 0.09 -> 0.06"
+      ]
+    },
+    {
+      "at": "2026-09-15T23:51:28+00:00",
+      "baseline_score": 229.33,
+      "best_score": 229.33,
+      "selected_score": 229.33,
+      "accepted_strategy_change": false,
+      "changes": [
+        "no strategy change"
       ]
     }
   ]

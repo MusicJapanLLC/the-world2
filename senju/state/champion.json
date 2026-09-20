@@ -1,29 +1,29 @@
 {
   "version": 1,
-  "updated_at": "2026-09-18T23:46:36+00:00",
+  "updated_at": "2026-09-19T23:48:21+00:00",
   "strategy": {
     "population": 120,
     "generations": 16,
     "matches": 400,
-    "mutation_rate": 0.09,
+    "mutation_rate": 0.12,
     "red_budget": 16,
     "blue_budget": 16,
     "seed": 20260829
   },
-  "score": 222.535,
+  "score": 248.325,
   "evaluation": {
-    "score": 222.535,
+    "score": 248.325,
     "safe": true,
-    "rating_gain": 380.1,
-    "balance": 0.495,
+    "rating_gain": 419.5,
+    "balance": 0.615,
     "learning_signal": 1.0,
     "reason": "safe balanced learning run"
   },
   "red_champion": {
     "side": "red",
-    "rating": 7811.3,
-    "resources": 32.779157142571194,
-    "generation": 38,
+    "rating": 7948.9,
+    "resources": 33.55573682294128,
+    "generation": 39,
     "genome": {
       "kind": "red",
       "focus": {
@@ -39,7 +39,7 @@
         "rce": 0.506,
         "path_trav": 0.91,
         "deserial": 0.628,
-        "xxe": 0.109,
+        "xxe": 0.149,
         "ssti": 0.36,
         "race_condition": 0.426,
         "secrets_exposure": 0.991,
@@ -52,25 +52,25 @@
   },
   "blue_champion": {
     "side": "blue",
-    "rating": 7518.3,
-    "resources": 41.86959840137659,
-    "generation": 15,
+    "rating": 7834.9,
+    "resources": 43.73574693950624,
+    "generation": 6,
     "genome": {
       "kind": "blue",
       "harden": {
         "sqli": 0.571,
-        "nosqli": 0.31,
+        "nosqli": 0.143,
         "xss": 1.0,
-        "csrf": 0.984,
+        "csrf": 0.87,
         "auth_bypass": 0.8,
         "jwt_weak": 0.881,
         "idor": 0.771,
-        "priv_esc": 1.0,
+        "priv_esc": 0.587,
         "ssrf": 0.87,
         "rce": 0.0,
         "path_trav": 1.0,
         "deserial": 1.0,
-        "xxe": 0.612,
+        "xxe": 0.8,
         "ssti": 0.575,
         "race_condition": 0.591,
         "secrets_exposure": 0.604,
@@ -82,16 +82,6 @@
     }
   },
   "history": [
-    {
-      "at": "2026-08-29T12:06:34+00:00",
-      "baseline_score": 261.825,
-      "best_score": 261.825,
-      "selected_score": 261.825,
-      "accepted_strategy_change": false,
-      "changes": [
-        "no strategy change"
-      ]
-    },
     {
       "at": "2026-08-29T12:07:34+00:00",
       "baseline_score": 217.48,
@@ -381,6 +371,16 @@
       "accepted_strategy_change": true,
       "changes": [
         "mutation_rate: 0.06 -> 0.09"
+      ]
+    },
+    {
+      "at": "2026-09-19T23:48:21+00:00",
+      "baseline_score": 200.805,
+      "best_score": 248.325,
+      "selected_score": 248.325,
+      "accepted_strategy_change": true,
+      "changes": [
+        "mutation_rate: 0.09 -> 0.12"
       ]
     }
   ]

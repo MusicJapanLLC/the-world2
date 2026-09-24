@@ -1,49 +1,49 @@
 {
   "version": 1,
-  "updated_at": "2026-09-19T23:48:21+00:00",
+  "updated_at": "2026-09-24T00:08:33+00:00",
   "strategy": {
     "population": 120,
     "generations": 16,
-    "matches": 400,
-    "mutation_rate": 0.12,
+    "matches": 500,
+    "mutation_rate": 0.09,
     "red_budget": 16,
     "blue_budget": 16,
     "seed": 20260829
   },
-  "score": 248.325,
+  "score": 220.96,
   "evaluation": {
-    "score": 248.325,
+    "score": 220.96,
     "safe": true,
-    "rating_gain": 419.5,
-    "balance": 0.615,
+    "rating_gain": 417.6,
+    "balance": 0.348,
     "learning_signal": 1.0,
     "reason": "safe balanced learning run"
   },
   "red_champion": {
     "side": "red",
-    "rating": 7948.9,
-    "resources": 33.55573682294128,
-    "generation": 39,
+    "rating": 8737.5,
+    "resources": 25.82418686585332,
+    "generation": 43,
     "genome": {
       "kind": "red",
       "focus": {
-        "sqli": 0.179,
-        "nosqli": 0.7,
-        "xss": 1.0,
+        "sqli": 0.0,
+        "nosqli": 0.347,
+        "xss": 0.986,
         "csrf": 0.284,
         "auth_bypass": 0.784,
         "jwt_weak": 0.289,
-        "idor": 0.725,
+        "idor": 0.744,
         "priv_esc": 0.96,
         "ssrf": 0.514,
-        "rce": 0.506,
+        "rce": 0.474,
         "path_trav": 0.91,
         "deserial": 0.628,
-        "xxe": 0.149,
+        "xxe": 0.316,
         "ssti": 0.36,
         "race_condition": 0.426,
-        "secrets_exposure": 0.991,
-        "misconfig": 0.497
+        "secrets_exposure": 1.0,
+        "misconfig": 0.389
       },
       "skill": 1.0,
       "stealth": 1.0,
@@ -52,76 +52,36 @@
   },
   "blue_champion": {
     "side": "blue",
-    "rating": 7834.9,
-    "resources": 43.73574693950624,
-    "generation": 6,
+    "rating": 8444.5,
+    "resources": 36.82416172450796,
+    "generation": 13,
     "genome": {
       "kind": "blue",
       "harden": {
-        "sqli": 0.571,
+        "sqli": 0.683,
         "nosqli": 0.143,
         "xss": 1.0,
-        "csrf": 0.87,
-        "auth_bypass": 0.8,
-        "jwt_weak": 0.881,
-        "idor": 0.771,
-        "priv_esc": 0.587,
-        "ssrf": 0.87,
-        "rce": 0.0,
+        "csrf": 0.494,
+        "auth_bypass": 1.0,
+        "jwt_weak": 0.897,
+        "idor": 0.598,
+        "priv_esc": 0.374,
+        "ssrf": 1.0,
+        "rce": 0.37,
         "path_trav": 1.0,
         "deserial": 1.0,
-        "xxe": 0.8,
-        "ssti": 0.575,
-        "race_condition": 0.591,
-        "secrets_exposure": 0.604,
+        "xxe": 0.522,
+        "ssti": 0.346,
+        "race_condition": 1.0,
+        "secrets_exposure": 0.602,
         "misconfig": 0.99
       },
-      "detection": 1.0,
-      "patch_speed": 0.567,
+      "detection": 0.842,
+      "patch_speed": 0.659,
       "coverage": 0.167
     }
   },
   "history": [
-    {
-      "at": "2026-08-29T12:07:34+00:00",
-      "baseline_score": 217.48,
-      "best_score": 273.865,
-      "selected_score": 273.865,
-      "accepted_strategy_change": true,
-      "changes": [
-        "matches: 400 -> 500"
-      ]
-    },
-    {
-      "at": "2026-08-29T12:08:20+00:00",
-      "baseline_score": 213.57,
-      "best_score": 268.015,
-      "selected_score": 268.015,
-      "accepted_strategy_change": true,
-      "changes": [
-        "matches: 400 -> 500"
-      ]
-    },
-    {
-      "at": "2026-08-29T12:09:32+00:00",
-      "baseline_score": 210.345,
-      "best_score": 243.695,
-      "selected_score": 243.695,
-      "accepted_strategy_change": true,
-      "changes": [
-        "matches: 400 -> 500"
-      ]
-    },
-    {
-      "at": "2026-08-29T12:09:58+00:00",
-      "baseline_score": 238.395,
-      "best_score": 265.99,
-      "selected_score": 265.99,
-      "accepted_strategy_change": true,
-      "changes": [
-        "matches: 400 -> 500"
-      ]
-    },
     {
       "at": "2026-08-29T12:10:28+00:00",
       "baseline_score": 234.485,
@@ -381,6 +341,46 @@
       "accepted_strategy_change": true,
       "changes": [
         "mutation_rate: 0.09 -> 0.12"
+      ]
+    },
+    {
+      "at": "2026-09-20T23:44:18+00:00",
+      "baseline_score": 194.495,
+      "best_score": 217.575,
+      "selected_score": 217.575,
+      "accepted_strategy_change": true,
+      "changes": [
+        "matches: 400 -> 500"
+      ]
+    },
+    {
+      "at": "2026-09-22T00:26:06+00:00",
+      "baseline_score": 232.12,
+      "best_score": 232.12,
+      "selected_score": 232.12,
+      "accepted_strategy_change": false,
+      "changes": [
+        "no strategy change"
+      ]
+    },
+    {
+      "at": "2026-09-22T23:55:47+00:00",
+      "baseline_score": 201.355,
+      "best_score": 221.24,
+      "selected_score": 221.24,
+      "accepted_strategy_change": true,
+      "changes": [
+        "mutation_rate: 0.12 -> 0.09"
+      ]
+    },
+    {
+      "at": "2026-09-24T00:08:33+00:00",
+      "baseline_score": 195.02,
+      "best_score": 220.96,
+      "selected_score": 220.96,
+      "accepted_strategy_change": true,
+      "changes": [
+        "matches: 400 -> 500"
       ]
     }
   ]

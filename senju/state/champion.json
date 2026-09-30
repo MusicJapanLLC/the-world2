@@ -1,29 +1,29 @@
 {
   "version": 1,
-  "updated_at": "2026-09-29T01:22:15+00:00",
+  "updated_at": "2026-09-30T00:55:22+00:00",
   "strategy": {
     "population": 120,
     "generations": 16,
     "matches": 400,
-    "mutation_rate": 0.09,
+    "mutation_rate": 0.06,
     "red_budget": 16,
     "blue_budget": 16,
     "seed": 20260829
   },
-  "score": 227.275,
+  "score": 248.01,
   "evaluation": {
-    "score": 227.275,
+    "score": 248.01,
     "safe": true,
-    "rating_gain": 396.5,
-    "balance": 0.485,
+    "rating_gain": 408.6,
+    "balance": 0.65,
     "learning_signal": 1.0,
     "reason": "safe balanced learning run"
   },
   "red_champion": {
     "side": "red",
-    "rating": 9552.4,
-    "resources": 30.324800662708505,
-    "generation": 18,
+    "rating": 9793.2,
+    "resources": 30.195907827083897,
+    "generation": 19,
     "genome": {
       "kind": "red",
       "focus": {
@@ -35,7 +35,7 @@
         "jwt_weak": 0.33,
         "idor": 0.744,
         "priv_esc": 1.0,
-        "ssrf": 0.65,
+        "ssrf": 0.88,
         "rce": 0.506,
         "path_trav": 1.0,
         "deserial": 0.62,
@@ -52,8 +52,8 @@
   },
   "blue_champion": {
     "side": "blue",
-    "rating": 9364.3,
-    "resources": 43.067875950017054,
+    "rating": 9564.8,
+    "resources": 40.17334309495562,
     "generation": 15,
     "genome": {
       "kind": "blue",
@@ -76,23 +76,12 @@
         "secrets_exposure": 0.704,
         "misconfig": 0.852
       },
-      "detection": 0.842,
+      "detection": 0.998,
       "patch_speed": 1.0,
       "coverage": 0.167
     }
   },
   "history": [
-    {
-      "at": "2026-08-29T13:11:19+00:00",
-      "baseline_score": 214.95,
-      "best_score": 256.555,
-      "selected_score": 256.555,
-      "accepted_strategy_change": true,
-      "changes": [
-        "red_budget: 14 -> 16",
-        "blue_budget: 14 -> 16"
-      ]
-    },
     {
       "at": "2026-08-29T13:31:02+00:00",
       "baseline_score": 215.54,
@@ -381,6 +370,16 @@
       "accepted_strategy_change": true,
       "changes": [
         "mutation_rate: 0.12 -> 0.09"
+      ]
+    },
+    {
+      "at": "2026-09-30T00:55:22+00:00",
+      "baseline_score": 185.245,
+      "best_score": 248.01,
+      "selected_score": 248.01,
+      "accepted_strategy_change": true,
+      "changes": [
+        "mutation_rate: 0.09 -> 0.06"
       ]
     }
   ]

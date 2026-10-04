@@ -1,33 +1,33 @@
 {
   "version": 1,
-  "updated_at": "2026-10-02T01:12:54+00:00",
+  "updated_at": "2026-09-29T01:22:15+00:00",
   "strategy": {
     "population": 120,
     "generations": 16,
-    "matches": 500,
+    "matches": 400,
     "mutation_rate": 0.09,
     "red_budget": 16,
     "blue_budget": 16,
     "seed": 20260829
   },
-  "score": 247.0,
+  "score": 227.275,
   "evaluation": {
-    "score": 247.0,
+    "score": 227.275,
     "safe": true,
-    "rating_gain": 420.0,
-    "balance": 0.6,
+    "rating_gain": 396.5,
+    "balance": 0.485,
     "learning_signal": 1.0,
     "reason": "safe balanced learning run"
   },
   "red_champion": {
     "side": "red",
-    "rating": 10159.8,
-    "resources": 26.28282831569739,
-    "generation": 21,
+    "rating": 9552.4,
+    "resources": 30.324800662708505,
+    "generation": 18,
     "genome": {
       "kind": "red",
       "focus": {
-        "sqli": 0.723,
+        "sqli": 0.443,
         "nosqli": 0.523,
         "xss": 0.986,
         "csrf": 0.284,
@@ -35,7 +35,7 @@
         "jwt_weak": 0.33,
         "idor": 0.744,
         "priv_esc": 1.0,
-        "ssrf": 0.88,
+        "ssrf": 0.65,
         "rce": 0.506,
         "path_trav": 1.0,
         "deserial": 0.62,
@@ -52,9 +52,9 @@
   },
   "blue_champion": {
     "side": "blue",
-    "rating": 9919.2,
-    "resources": 34.97913797342563,
-    "generation": 16,
+    "rating": 9364.3,
+    "resources": 43.067875950017054,
+    "generation": 15,
     "genome": {
       "kind": "blue",
       "harden": {
@@ -63,25 +63,56 @@
         "xss": 1.0,
         "csrf": 0.548,
         "auth_bypass": 1.0,
-        "jwt_weak": 0.705,
+        "jwt_weak": 0.92,
         "idor": 0.598,
-        "priv_esc": 0.431,
-        "ssrf": 0.724,
+        "priv_esc": 0.374,
+        "ssrf": 1.0,
         "rce": 0.386,
         "path_trav": 0.367,
-        "deserial": 1.0,
+        "deserial": 0.799,
         "xxe": 0.045,
         "ssti": 0.453,
         "race_condition": 1.0,
-        "secrets_exposure": 0.923,
-        "misconfig": 1.0
+        "secrets_exposure": 0.704,
+        "misconfig": 0.852
       },
-      "detection": 0.998,
-      "patch_speed": 0.973,
+      "detection": 0.842,
+      "patch_speed": 1.0,
       "coverage": 0.167
     }
   },
   "history": [
+    {
+      "at": "2026-08-29T13:11:19+00:00",
+      "baseline_score": 214.95,
+      "best_score": 256.555,
+      "selected_score": 256.555,
+      "accepted_strategy_change": true,
+      "changes": [
+        "red_budget: 14 -> 16",
+        "blue_budget: 14 -> 16"
+      ]
+    },
+    {
+      "at": "2026-08-29T13:31:02+00:00",
+      "baseline_score": 215.54,
+      "best_score": 222.525,
+      "selected_score": 222.525,
+      "accepted_strategy_change": true,
+      "changes": [
+        "mutation_rate: 0.09 -> 0.06"
+      ]
+    },
+    {
+      "at": "2026-08-29T23:42:55+00:00",
+      "baseline_score": 194.97,
+      "best_score": 222.97,
+      "selected_score": 222.97,
+      "accepted_strategy_change": true,
+      "changes": [
+        "matches: 400 -> 500"
+      ]
+    },
     {
       "at": "2026-09-02T23:43:04+00:00",
       "baseline_score": 218.82,
@@ -350,36 +381,6 @@
       "accepted_strategy_change": true,
       "changes": [
         "mutation_rate: 0.12 -> 0.09"
-      ]
-    },
-    {
-      "at": "2026-09-30T00:55:22+00:00",
-      "baseline_score": 185.245,
-      "best_score": 248.01,
-      "selected_score": 248.01,
-      "accepted_strategy_change": true,
-      "changes": [
-        "mutation_rate: 0.09 -> 0.06"
-      ]
-    },
-    {
-      "at": "2026-10-01T00:56:13+00:00",
-      "baseline_score": 217.1,
-      "best_score": 219.61,
-      "selected_score": 219.61,
-      "accepted_strategy_change": true,
-      "changes": [
-        "mutation_rate: 0.06 -> 0.09"
-      ]
-    },
-    {
-      "at": "2026-10-02T01:12:54+00:00",
-      "baseline_score": 242.095,
-      "best_score": 247.0,
-      "selected_score": 247.0,
-      "accepted_strategy_change": true,
-      "changes": [
-        "matches: 400 -> 500"
       ]
     }
   ]

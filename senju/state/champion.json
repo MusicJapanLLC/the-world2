@@ -1,42 +1,42 @@
 {
   "version": 1,
-  "updated_at": "2026-10-09T01:35:36+00:00",
+  "updated_at": "2026-10-10T01:25:01+00:00",
   "strategy": {
     "population": 120,
     "generations": 16,
-    "matches": 500,
-    "mutation_rate": 0.12,
+    "matches": 400,
+    "mutation_rate": 0.09,
     "red_budget": 16,
     "blue_budget": 16,
     "seed": 20260829
   },
-  "score": 246.015,
+  "score": 220.14,
   "evaluation": {
-    "score": 246.015,
+    "score": 220.14,
     "safe": true,
-    "rating_gain": 446.9,
-    "balance": 0.496,
+    "rating_gain": 370.4,
+    "balance": 0.505,
     "learning_signal": 1.0,
     "reason": "safe balanced learning run"
   },
   "red_champion": {
     "side": "red",
-    "rating": 11609.5,
-    "resources": 33.30383872333055,
-    "generation": 28,
+    "rating": 11853.5,
+    "resources": 41.50759465122761,
+    "generation": 15,
     "genome": {
       "kind": "red",
       "focus": {
         "sqli": 0.68,
         "nosqli": 0.523,
-        "xss": 0.986,
+        "xss": 1.0,
         "csrf": 0.069,
         "auth_bypass": 0.832,
         "jwt_weak": 0.106,
         "idor": 0.867,
-        "priv_esc": 0.94,
+        "priv_esc": 1.0,
         "ssrf": 1.0,
-        "rce": 0.506,
+        "rce": 0.767,
         "path_trav": 1.0,
         "deserial": 0.589,
         "xxe": 0.352,
@@ -52,9 +52,9 @@
   },
   "blue_champion": {
     "side": "blue",
-    "rating": 11396.2,
-    "resources": 34.38248222281311,
-    "generation": 12,
+    "rating": 11627.4,
+    "resources": 39.31122411068268,
+    "generation": 13,
     "genome": {
       "kind": "blue",
       "harden": {
@@ -67,11 +67,11 @@
         "idor": 0.598,
         "priv_esc": 0.375,
         "ssrf": 0.613,
-        "rce": 0.072,
+        "rce": 0.0,
         "path_trav": 0.709,
         "deserial": 1.0,
-        "xxe": 0.0,
-        "ssti": 0.285,
+        "xxe": 0.273,
+        "ssti": 0.245,
         "race_condition": 0.863,
         "secrets_exposure": 0.923,
         "misconfig": 0.822
@@ -82,16 +82,6 @@
     }
   },
   "history": [
-    {
-      "at": "2026-09-09T23:42:06+00:00",
-      "baseline_score": 221.15,
-      "best_score": 237.98,
-      "selected_score": 237.98,
-      "accepted_strategy_change": true,
-      "changes": [
-        "matches: 400 -> 500"
-      ]
-    },
     {
       "at": "2026-09-10T23:35:00+00:00",
       "baseline_score": 228.205,
@@ -380,6 +370,16 @@
       "accepted_strategy_change": true,
       "changes": [
         "matches: 400 -> 500"
+      ]
+    },
+    {
+      "at": "2026-10-10T01:25:01+00:00",
+      "baseline_score": 201.285,
+      "best_score": 220.14,
+      "selected_score": 220.14,
+      "accepted_strategy_change": true,
+      "changes": [
+        "mutation_rate: 0.12 -> 0.09"
       ]
     }
   ]

@@ -1,12 +1,6 @@
 name: AI Factory - BOSS Watchdog
 
 on:
-  schedule:
-    # Keep the existing twice-hourly BOSS cadence, but split 00:03 UTC so
-    # exactly one run per day can also emit a low-noise CEO heartbeat.
-    - cron: '3 0 * * *'
-    - cron: '33 0 * * *'
-    - cron: '3,33 1-23 * * *'
   workflow_dispatch:
   push:
     branches: ['claude/employee-onboarding-setup-udm86']

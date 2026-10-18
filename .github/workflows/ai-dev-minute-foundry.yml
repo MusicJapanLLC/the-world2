@@ -1,10 +1,6 @@
 name: AI Dev - Minute Foundry
 
 on:
-  schedule:
-    # Four bounded cycles/hour. Each run is ~12 minutes, so Security/Eval feedback
-    # reaches AI strategy materially faster than the former hour-long loop.
-    - cron: '3,18,33,48 * * * *'
   workflow_dispatch:
   pull_request:
     branches: ['claude/employee-onboarding-setup-udm86']

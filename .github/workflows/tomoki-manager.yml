@@ -2,8 +2,6 @@ name: TOMOKI - MANAGER
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: '*/15 * * * *'
   push:
     branches: ['claude/employee-onboarding-setup-udm86']
     paths:

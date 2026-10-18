@@ -1,8 +1,6 @@
 name: Foundry Autonomous Dev Loop
 
 on:
-  schedule:
-    - cron: "*/5 * * * *"
   workflow_dispatch:
     inputs:
       dry_run:

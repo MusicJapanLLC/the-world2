@@ -2,9 +2,6 @@ name: Outside World Scout
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: '13,43 * * * *'
-
 concurrency:
   group: outside-world-scout
   cancel-in-progress: true

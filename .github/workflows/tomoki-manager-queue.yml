@@ -4,8 +4,6 @@ name: TOMOKI - MANAGER Queue Bridge
 # canonical. Realtime Kernel, THE CORE, and the independent security scan are redundant
 # wake paths so a dropped GitHub schedule cannot leave the canonical Manager heartbeat stale indefinitely.
 on:
-  schedule:
-    - cron: '*/5 * * * *'
   workflow_dispatch:
   workflow_run:
     workflows:

@@ -2,8 +2,6 @@ name: THE COVENANT - Autonomy & Fellowship Cycle
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: '41 */2 * * *'
   push:
     branches: ['claude/employee-onboarding-setup-udm86']
     paths:

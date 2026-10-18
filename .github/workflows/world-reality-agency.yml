@@ -19,9 +19,6 @@ on:
       - ".github/workflows/world-reality-agency.yml"
       - "outside-world/**"
       - "automation/world/external_feedback.py"
-  schedule:
-    - cron: '7,22,37,52 * * * *'
-
 concurrency:
   group: the-world-reality-agency
   cancel-in-progress: false

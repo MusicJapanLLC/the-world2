@@ -1,8 +1,6 @@
 name: THE WORLD - Resident Task Worker
 
 on:
-  schedule:
-    - cron: '*/5 * * * *'
   workflow_dispatch:
   push:
     branches: ['claude/employee-onboarding-setup-udm86']

@@ -2,9 +2,6 @@ name: THE WORLD - Citizen Registry
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: '13 */6 * * *'
-
 concurrency:
   group: world-citizen-registry
   cancel-in-progress: true

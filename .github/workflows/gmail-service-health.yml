@@ -1,8 +1,6 @@
 name: Gmail Service Health
 
 on:
-  schedule:
-    - cron: '7,22,37,52 * * * *'
   workflow_dispatch:
   push:
     branches: ['claude/employee-onboarding-setup-udm86']

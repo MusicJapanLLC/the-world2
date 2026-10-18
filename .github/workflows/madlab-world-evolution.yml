@@ -6,9 +6,6 @@ on:
     branches: ["claude/employee-onboarding-setup-udm86"]
     paths:
       - ".github/workflows/madlab-world-evolution.yml"
-  schedule:
-    - cron: '17 */6 * * *'
-
 concurrency:
   group: madlab-world-evolution
   cancel-in-progress: false

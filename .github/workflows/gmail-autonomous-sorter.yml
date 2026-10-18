@@ -1,8 +1,6 @@
 name: Gmail Autonomous Sorter
 
 on:
-  schedule:
-    - cron: "*/15 * * * *"
   workflow_dispatch:
     inputs:
       dry_run:

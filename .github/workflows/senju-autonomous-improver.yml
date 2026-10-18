@@ -1,8 +1,6 @@
 name: Senju GitHub Native Autonomous Improver
 
 on:
-  schedule:
-    - cron: "30 22 * * *" # 07:30 JST, after R&D coupling at 07:20
   workflow_dispatch:
   push:
     branches: ["claude/employee-onboarding-setup-udm86"]

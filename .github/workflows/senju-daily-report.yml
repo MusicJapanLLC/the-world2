@@ -1,8 +1,6 @@
 name: Senju Daily Self Evolution
 
 on:
-  schedule:
-    - cron: "0 22 * * *" # 07:00 JST
   pull_request:
     branches: ["claude/employee-onboarding-setup-udm86"]
     paths:

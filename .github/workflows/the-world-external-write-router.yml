@@ -2,8 +2,6 @@ name: THE WORLD External Write Router
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: '12,27,42,57 * * * *'
   push:
     branches: ["claude/employee-onboarding-setup-udm86"]
     paths:

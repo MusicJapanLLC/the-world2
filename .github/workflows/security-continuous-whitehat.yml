@@ -1,10 +1,6 @@
 name: SECURITY - Continuous Elite White-Hat Portfolio
 
 on:
-  schedule:
-    # Twelve bounded rounds every five minutes. AI Foundry + AI Security Eval may
-    # change research priority only; scope, permissions and verification gates stay fixed.
-    - cron: '*/5 * * * *'
   workflow_dispatch:
   pull_request:
     branches: ['claude/employee-onboarding-setup-udm86']

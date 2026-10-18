@@ -1,9 +1,6 @@
 name: THE WORLD - Agent Factory Tournament
 
 on:
-  schedule:
-    # Hourly bounded AI/Security R&D tournament. Concurrency prevents pile-up.
-    - cron: '23 * * * *'
   workflow_dispatch:
   push:
     branches: ['claude/employee-onboarding-setup-udm86']

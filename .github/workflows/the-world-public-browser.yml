@@ -2,8 +2,6 @@ name: THE WORLD Public Browser
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: "23 * * * *"
   push:
     branches: ["claude/employee-onboarding-setup-udm86"]
     paths:

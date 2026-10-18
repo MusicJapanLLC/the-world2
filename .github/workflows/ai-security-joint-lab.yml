@@ -1,9 +1,6 @@
 name: THE WORLD - AI x Security Joint Lab
 
 on:
-  schedule:
-    # Fast cross-assist cadence. This lab is read-only and produces evidence artifacts.
-    - cron: '*/10 * * * *'
   workflow_dispatch:
   pull_request:
     branches: ['claude/employee-onboarding-setup-udm86']
